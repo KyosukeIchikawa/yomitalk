@@ -3,12 +3,11 @@ Common step definitions for paper podcast e2e tests
 """
 
 import os
-import time
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page
-from pytest_bdd import given, then, when
+from pytest_bdd import given
 
 # Path to the test PDF
 TEST_PDF_PATH = os.path.join(

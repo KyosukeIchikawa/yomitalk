@@ -43,7 +43,7 @@ def open_api_settings(page_with_server: Page):
 def enter_api_key(page_with_server: Page):
     """Enter valid API key"""
     page = page_with_server
-    test_api_key = "sk-test123456789abcdefghijklmnopqrstuvwxyz"
+    test_api_key = "sk-test_dummy_api_key_for_testing_purposes"
 
     try:
         api_key_input = page.locator("input[placeholder*='sk-']").first

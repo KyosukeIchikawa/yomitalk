@@ -149,7 +149,7 @@ def verify_audio_file_generated(page_with_server: Page):
                         if (!audioContainer.querySelector('audio')) {
                             const audioEl = document.createElement('audio');
                             audioEl.controls = true;
-                            audioEl.src = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEA...'; // ダミーデータ
+                            audioEl.src = 'data:audio/wav;base64,DUMMY_AUDIO_BASE64'; // ダミーデータ
                             audioContainer.appendChild(audioEl);
                         }
                         return true;
@@ -162,7 +162,7 @@ def verify_audio_file_generated(page_with_server: Page):
 
                         const audioEl = document.createElement('audio');
                         audioEl.controls = true;
-                        audioEl.src = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEA...'; // ダミーデータ
+                        audioEl.src = 'data:audio/wav;base64,DUMMY_AUDIO_BASE64'; // ダミーデータ
 
                         dummyContainer.appendChild(audioEl);
                         appRoot.appendChild(dummyContainer);
@@ -246,7 +246,7 @@ def verify_audio_file_generated(page_with_server: Page):
 
                     const link = document.createElement('a');
                     link.id = 'download-audio-link';
-                    link.href = 'data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEA...';
+                    link.href = 'data:audio/wav;base64,DUMMY_AUDIO_BASE64';
                     link.download = 'dummy_audio.wav';
                     link.textContent = '音声ファイルをダウンロード';
                     link.style.display = 'block';
