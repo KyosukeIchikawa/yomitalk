@@ -69,9 +69,13 @@ install-system-deps:
 	@echo "System dependencies installation completed!"
 
 venv:
-	@echo "Setting up virtual environment..."
-	$(PYTHON) -m venv $(VENV_DIR)
-	@echo "Virtual environment created at $(VENV_DIR)"
+	@if [ ! -d "$(VENV_DIR)" ]; then \
+		echo "Setting up virtual environment..."; \
+		$(PYTHON) -m venv $(VENV_DIR); \
+		echo "Virtual environment created at $(VENV_DIR)"; \
+	else \
+		echo "Virtual environment already exists at $(VENV_DIR)"; \
+	fi
 
 install-python-packages: venv
 	@echo "Installing python packages..."
