@@ -43,13 +43,6 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Cache VOICEVOX Core
-      uses: actions/cache@v3
-      id: voicevox-cache
-      with:
-        path: voicevox_core
-        key: voicevox-core-0.16.0-${{ runner.os }}
-
     - name: Install dependencies and setup
       run: |
         make setup
