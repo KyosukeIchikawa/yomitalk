@@ -1,0 +1,110 @@
+"""
+Common step definitions for paper podcast e2e tests
+"""
+
+import os
+import time
+from pathlib import Path
+
+import pytest
+from playwright.sync_api import Page
+from pytest_bdd import given, then, when
+
+# Path to the test PDF
+TEST_PDF_PATH = os.path.join(
+    os.path.dirname(__file__), "../../../../tests/data/sample_paper.pdf"
+)
+
+# データディレクトリ内にもサンプルPDFがあるか確認
+DATA_PDF_PATH = os.path.join(
+    os.path.dirname(__file__), "../../../../data/sample_paper.pdf"
+)
+# テスト用PDFが存在するか確認
+if not os.path.exists(TEST_PDF_PATH):
+    # テストデータフォルダにPDFがない場合、データディレクトリのファイルを使用
+    if os.path.exists(DATA_PDF_PATH):
+        TEST_PDF_PATH = DATA_PDF_PATH
+    else:
+        # どちらにもない場合はエラーログ出力
+        print(f"警告: サンプルPDFが見つかりません。パス: {TEST_PDF_PATH}")
+
+
+# テスト用のヘルパー関数
+def voicevox_core_exists():
+    """VOICEVOXのライブラリファイルが存在するかを確認する"""
+    from pathlib import Path
+
+    project_root = Path(os.path.dirname(__file__)).parent.parent.parent.parent
+    voicevox_dir = project_root / "voicevox_core"
+
+    if not voicevox_dir.exists():
+        return False
+
+    # ライブラリファイルを探す
+    has_so = len(list(voicevox_dir.glob("**/*.so"))) > 0
+    has_dll = len(list(voicevox_dir.glob("**/*.dll"))) > 0
+    has_dylib = len(list(voicevox_dir.glob("**/*.dylib"))) > 0
+
+    return has_so or has_dll or has_dylib
+
+
+# VOICEVOX Coreが利用可能かどうかを確認
+# まずファイルシステム上でVOICEVOXの存在を確認
+VOICEVOX_DEFAULT_AVAILABLE = voicevox_core_exists()
+# 環境変数で上書き可能だが、指定がなければファイルの存在確認結果を使用
+VOICEVOX_AVAILABLE = (
+    os.environ.get("VOICEVOX_AVAILABLE", str(VOICEVOX_DEFAULT_AVAILABLE).lower())
+    == "true"
+)
+
+# 環境変数がfalseでも、VOICEVOXの存在を報告
+if VOICEVOX_AVAILABLE:
+    print("VOICEVOXのライブラリファイルが見つかりました。利用可能としてマーク。")
+else:
+    if VOICEVOX_DEFAULT_AVAILABLE:
+        print("VOICEVOXのライブラリファイルは存在しますが、環境変数でオフにされています。")
+    else:
+        print("VOICEVOXディレクトリが見つからないか、ライブラリファイルがありません。")
+
+
+# VOICEVOX利用可能時のみ実行するテストをマークするデコレータ
+def require_voicevox(func):
+    """VOICEVOXが必要なテストをスキップするデコレータ"""
+
+    def wrapper(*args, **kwargs):
+        if not VOICEVOX_AVAILABLE:
+            message = """
+        -------------------------------------------------------
+        VOICEVOX Coreが必要なテストがスキップされました。
+
+        VOICEVOXのステータス:
+        - ファイル存在チェック: {"成功" if VOICEVOX_DEFAULT_AVAILABLE else "失敗"}
+        - 環境変数設定: {os.environ.get("VOICEVOX_AVAILABLE", "未設定")}
+
+        テストを有効にするには以下のコマンドを実行してください:
+        $ VOICEVOX_AVAILABLE=true make test-e2e
+
+        VOICEVOXがインストールされていない場合は:
+        $ make download-voicevox-core
+        -------------------------------------------------------
+            """
+            print(message)
+            pytest.skip("VOICEVOX Coreが利用できないためスキップします")
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
+@given("the user has opened the application")
+def user_opens_app(page_with_server: Page, server_port):
+    """User has opened the application"""
+    page = page_with_server
+    # Wait for the page to fully load - reduced timeout
+    page.wait_for_load_state("networkidle", timeout=2000)
+    assert page.url.rstrip("/") == f"http://localhost:{server_port}"
+
+
+@given("a sample PDF file is available")
+def sample_pdf_file_exists():
+    """Verify sample PDF file exists"""
+    assert Path(TEST_PDF_PATH).exists(), "Test PDF file not found"
