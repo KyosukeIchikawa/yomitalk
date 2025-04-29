@@ -199,7 +199,7 @@ def server_process(server_port):
     # Start the server process with appropriate environment
     print(f"Starting server on port {server_port}")
     _server_process = subprocess.Popen(
-        ["python", "main.py"],
+        [f"{os.environ.get('VENV_PATH', './venv')}/bin/python", "main.py"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,  # Pass current environment with VOICEVOX settings
