@@ -29,7 +29,8 @@ except ImportError as e:
 class AudioGenerator:
     """Class for generating audio from text."""
 
-    # VOICEVOX Core paths as constants (VOICEVOX version is managed in VOICEVOX_VERSION in Makefile)
+    # VOICEVOX Core paths as constants (VOICEVOX version is managed in
+    # VOICEVOX_VERSION in Makefile)
     VOICEVOX_BASE_PATH = Path("voicevox_core/voicevox_core")
     VOICEVOX_MODELS_PATH = VOICEVOX_BASE_PATH / "models/vvms"
     VOICEVOX_DICT_PATH = VOICEVOX_BASE_PATH / "dict/open_jtalk_dic_utf_8-1.11"
@@ -77,7 +78,8 @@ class AudioGenerator:
                 open_jtalk = OpenJtalk(str(self.VOICEVOX_DICT_PATH))
 
                 # Load ONNX Runtime without specifying a file path
-                # This will use the ONNX runtime that comes with the voicevox-core package
+                # This will use the ONNX runtime that comes with the voicevox-core
+                # package
                 runtime_path = str(
                     self.VOICEVOX_LIB_PATH / "libvoicevox_onnxruntime.so.1.17.3"
                 )

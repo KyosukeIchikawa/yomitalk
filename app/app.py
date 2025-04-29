@@ -43,8 +43,15 @@ class PaperPodcastApp:
             VOICEVOX_CORE_AVAILABLE and self.audio_generator.core_initialized
         )
 
+        # APIキーの状態を確認
+        api_key_status = (
+            "✅ 設定済み" if self.text_processor.openai_model.api_key else "❌ 未設定"
+        )
+
         # システムログの初期化
-        self.system_log = f"VOICEVOXステータス: {self.check_voicevox_core()}"
+        self.system_log = (
+            f"OpenAI API: {api_key_status}\nVOICEVOXステータス: {self.check_voicevox_core()}"
+        )
 
     def set_api_key(self, api_key: str) -> Tuple[str, str]:
         """
@@ -205,7 +212,7 @@ class PaperPodcastApp:
             return "Please extract text from a PDF first.", self.system_log
 
         podcast_text = self.text_processor.process_text(text)
-        self.update_log("ポッドキャストテキスト生成: 完了")
+        self.update_log("トークテキスト生成: 完了")
 
         return podcast_text, self.system_log
 
@@ -267,74 +274,81 @@ class PaperPodcastApp:
             )
 
             with gr.Row():
+                # OpenAI API settings at the top
+                with gr.Column():
+                    gr.Markdown("## OpenAI APIキー")
+                    with gr.Row():
+                        api_key_input = gr.Textbox(
+                            placeholder="sk-...",
+                            type="password",
+                            show_label=False,
+                            scale=3,
+                        )
+                        api_key_status = gr.Textbox(
+                            interactive=False,
+                            placeholder="APIキーをセットしてください",
+                            value=self.get_api_key_status(),
+                            show_label=False,
+                            scale=3,
+                        )
+                    api_key_btn = gr.Button("保存", variant="primary")
+
+            with gr.Row():
                 # PDF upload and text extraction
                 with gr.Column():
+                    gr.Markdown("## PDF File")
                     pdf_file = gr.File(
-                        label="PDF File",
                         file_types=[".pdf"],
                         type="filepath",
+                        show_label=False,
                     )
                     extract_btn = gr.Button("テキストを抽出", variant="primary")
 
             with gr.Row():
-                # API settings accordion
-                with gr.Accordion(label="OpenAI API設定", open=False):
-                    with gr.Column():
-                        api_key_input = gr.Textbox(
-                            label="OpenAI APIキー",
-                            placeholder="sk-...",
-                            type="password",
-                        )
-                        api_key_status = gr.Textbox(
-                            label="ステータス",
-                            interactive=False,
-                            placeholder="APIキーをセットしてください",
-                        )
-                        api_key_btn = gr.Button("保存", variant="primary")
-
-            with gr.Row():
-                # Prompt template settings accordion
-                with gr.Accordion(label="プロンプトテンプレート設定", open=False):
-                    with gr.Column():
-                        prompt_template = gr.Textbox(
-                            label="プロンプトテンプレート",
-                            placeholder="プロンプトテンプレートを入力してください...",
-                            lines=10,
-                            elem_id="prompt-template",
-                            value=self.get_prompt_template(),
-                        )
-                        prompt_template_status = gr.Textbox(
-                            label="ステータス",
-                            interactive=False,
-                            placeholder="テンプレートを編集して保存してください",
-                        )
-                        prompt_template_btn = gr.Button("保存", variant="primary")
-
-            with gr.Row():
                 # Text processing
                 with gr.Column():
+                    gr.Markdown("## 抽出テキスト（トークの元ネタ）")
                     extracted_text = gr.Textbox(
-                        label="抽出されたテキスト",
                         placeholder="PDFを選択してテキストを抽出してください...",
                         lines=10,
+                        show_label=False,
                     )
-                    process_btn = gr.Button("ポッドキャストテキストを生成", variant="primary")
+
+                    # Prompt template settings accordion
+                    with gr.Accordion(label="プロンプトテンプレート設定", open=False):
+                        with gr.Column():
+                            prompt_template = gr.Textbox(
+                                placeholder="プロンプトテンプレートを入力してください...",
+                                lines=10,
+                                elem_id="prompt-template",
+                                value=self.get_prompt_template(),
+                                show_label=False,
+                            )
+                            prompt_template_status = gr.Textbox(
+                                interactive=False,
+                                placeholder="テンプレートを編集して保存してください",
+                                show_label=False,
+                            )
+                            prompt_template_btn = gr.Button("保存", variant="primary")
+
+                    process_btn = gr.Button("トークを生成", variant="primary")
                     podcast_text = gr.Textbox(
-                        label="生成されたポッドキャストテキスト",
-                        placeholder="テキストを処理してポッドキャストテキストを生成してください...",
+                        label="生成されたトーク",
+                        placeholder="テキストを処理してトークを生成してください...",
                         lines=15,
                     )
 
             with gr.Row():
                 # Audio generation section
                 with gr.Column():
+                    gr.Markdown("## トーク音声")
                     generate_btn = gr.Button("音声を生成", variant="primary")
                     audio_output = gr.Audio(
-                        label="生成された音声",
                         type="filepath",
                         format="wav",
                         interactive=False,
                         show_download_button=True,
+                        show_label=False,
                     )
                     download_btn = gr.Button("音声をダウンロード", elem_id="download_audio_btn")
 
@@ -438,6 +452,20 @@ class PaperPodcastApp:
             )
 
         return app
+
+    # 既存のAPIキー状態を取得するメソッドを追加
+    def get_api_key_status(self) -> str:
+        """
+        現在のAPIキーの状態を取得します。
+
+        Returns:
+            str: APIキーのステータスメッセージ
+        """
+        return (
+            "✅ APIキーが設定されています"
+            if self.text_processor.openai_model.api_key
+            else "APIキーをセットしてください"
+        )
 
 
 # Create and launch application instance
