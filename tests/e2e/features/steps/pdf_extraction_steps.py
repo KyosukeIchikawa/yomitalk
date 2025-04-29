@@ -2,7 +2,6 @@
 PDF extraction steps for paper podcast e2e tests
 """
 
-import time
 from pathlib import Path
 
 import pytest
