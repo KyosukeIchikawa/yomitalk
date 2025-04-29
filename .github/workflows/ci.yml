@@ -47,11 +47,6 @@ jobs:
       run: |
         make setup
 
-    - name: Verify Gradio installation
-      run: |
-        $VENV_PATH/bin/pip list | grep gradio
-        $VENV_PATH/bin/python -c "import gradio" || echo "Failed to import gradio"
-
     - name: Install Playwright browsers
       run: |
         $VENV_PATH/bin/python -m playwright install chromium

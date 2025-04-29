@@ -81,8 +81,6 @@ install-python-packages: venv
 	@echo "Installing python packages..."
 	$(VENV_PIP) install --upgrade pip
 	$(VENV_PIP) install -r requirements.txt
-	$(VENV_PIP) install gradio
-	$(VENV_PYTHON) -c "import gradio" || (echo "Error: gradio installation failed!" && exit 1)
 	$(MAKE) install-voicevox-core-module
 	@echo "Python packages installed"
 
