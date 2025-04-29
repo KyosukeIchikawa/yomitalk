@@ -8,6 +8,16 @@ repos:
     -   id: check-added-large-files
     -   id: check-toml
 
+-   repo: local
+    hooks:
+    -   id: detect-custom-tokens
+        name: detect custom tokens
+        description: Detect application specific tokens and secrets
+        entry: .pre-commit-hooks/detect_custom_tokens.py
+        language: python
+        types: [text]
+        stages: [pre-commit]
+
 -   repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
