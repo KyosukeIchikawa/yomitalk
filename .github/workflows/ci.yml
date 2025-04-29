@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  VENV_PATH: ./venv
+  VOICEVOX_SKIP_DOWNLOAD: true
+
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install linting dependencies
+      run: |
+        make setup-lint
+
+    - name: Run pre-commit hooks
+      run: |
+        make pre-commit-run
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: format-check
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache VOICEVOX Core
+      uses: actions/cache@v3
+      id: voicevox-cache
+      with:
+        path: voicevox_core
+        key: voicevox-core-0.16.0-${{ runner.os }}
+
+    - name: Install dependencies and setup
+      run: |
+        make setup
+
+    - name: Install Playwright browsers
+      run: |
+        $VENV_PATH/bin/python -m playwright install chromium
+
+    - name: Run E2E tests
+      run: |
+        $VENV_PATH/bin/python -m pytest tests/e2e/ -v -s

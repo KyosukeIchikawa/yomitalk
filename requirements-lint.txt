@@ -1,0 +1,8 @@
+# フォーマットチェック用ツール
+black==23.7.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.5.1
+pre-commit==3.4.0
+types-requests==2.31.0.2
+pytest-timeout==2.2.0

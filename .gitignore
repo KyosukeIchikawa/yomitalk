@@ -1,0 +1,63 @@
+# 仮想環境
+venv/
+env/
+ENV/
+
+# Python関連のキャッシュファイル
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.vscode/settings.json
+
+# Project specific
+data/temp/*
+data/output/*
+voicevox_core/
+*.log
+.env
+
+# テスト関連
+.pytest_cache/
+.coverage
+htmlcov/
+
+# データ・キャッシュディレクトリ
+data/temp/*
+data/output/*
+data/logs/*
+!data/temp/.gitkeep
+!data/output/.gitkeep
+!data/logs/.gitkeep
+
+# IDE関連
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# システム関連
+.DS_Store
+Thumbs.db
+
+# ビルド関連
+build/
+dist/
+*.spec
+
+# VOICEVOX Core
+voicevox_core/
