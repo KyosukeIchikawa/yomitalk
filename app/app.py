@@ -260,7 +260,7 @@ class PaperPodcastApp:
         with app:
             gr.Markdown(
                 """
-                # Yomitalk
+                # YomiTalk
 
                 論文PDFから「ずんだもん」と「四国めたん」によるポッドキャスト音声を生成します。
                 """
