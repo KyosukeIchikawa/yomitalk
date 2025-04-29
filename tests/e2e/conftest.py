@@ -4,7 +4,6 @@ Pytest configuration for e2e tests with Gherkin support
 
 import http.client
 import os
-import random
 import socket
 import subprocess
 import time
@@ -43,22 +42,6 @@ def get_free_port():
     port = sock.getsockname()[1]
     sock.close()
     return port
-
-
-def get_worker_id():
-    """Get the current worker ID or None for single process"""
-    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "")
-    return worker_id if worker_id else "main"
-
-
-def get_worker_base_port(worker_id):
-    """Get a base port number deterministically from worker ID"""
-    if worker_id == "main":
-        return 35000
-    # Use different port ranges for different workers
-    # gw0 -> 36000, gw1 -> 37000, etc.
-    worker_num = int(worker_id[2:]) if worker_id.startswith("gw") else 0
-    return 36000 + (worker_num * 1000)
 
 
 # サーバープロセス保持用のグローバル変数
@@ -138,13 +121,9 @@ def server_port():
     if _server_port is not None:
         return _server_port
 
-    # Get worker ID for parallel execution
-    worker_id = get_worker_id()
-    base_port = get_worker_base_port(worker_id)
-
-    # Get a random port in the range specific to this worker
-    _server_port = random.randint(base_port, base_port + 999)
-    print(f"Worker {worker_id} using port {_server_port} for server")
+    # Get a free port
+    _server_port = get_free_port()
+    print(f"Using port {_server_port} for server")
     return _server_port
 
 
@@ -162,11 +141,18 @@ def server_process(server_port):
 
     # If we already have a server process, reuse it
     if _server_process is not None:
-        yield _server_process
-        return
+        # Check if process is still running
+        if _server_process.poll() is None:
+            print(f"Reusing existing server on port {server_port}")
+            yield _server_process
+            return
+        else:
+            print(
+                f"Previous server process exited with code {_server_process.returncode}"
+            )
+            _server_process = None
 
-    worker_id = get_worker_id()
-    print(f"Worker {worker_id} starting server on port {server_port}")
+    print(f"Starting server on port {server_port}")
 
     # Change to the project root directory
     os.chdir(os.path.join(os.path.dirname(__file__), "../.."))
@@ -208,10 +194,10 @@ def server_process(server_port):
     # Use environment variable to pass test mode flag
     env = os.environ.copy()
     env["E2E_TEST_MODE"] = "true"  # Add test mode flag to speed up app initialization
-    env["PORT"] = str(server_port)  # Set custom port for parallel testing
+    env["PORT"] = str(server_port)  # Set custom port for testing
 
     # Start the server process with appropriate environment
-    print(f"Worker {worker_id}: Starting server on port {server_port}")
+    print(f"Starting server on port {server_port}")
     _server_process = subprocess.Popen(
         ["python", "main.py"],
         stdout=subprocess.PIPE,
@@ -219,7 +205,7 @@ def server_process(server_port):
         env=env,  # Pass current environment with VOICEVOX settings
     )
 
-    print(f"Worker {worker_id}: Waiting for server to start on port {server_port}...")
+    print(f"Waiting for server to start on port {server_port}...")
 
     # Wait for the server to start and be ready
     max_retries = 60  # Increase max retries
@@ -232,9 +218,7 @@ def server_process(server_port):
             response = conn.getresponse()
             conn.close()
             if response.status < 400:
-                print(
-                    f"Worker {worker_id}: Server is ready on port {server_port} after {i+1} attempts"
-                )
+                print(f"Server is ready on port {server_port} after {i+1} attempts")
                 break
         except (
             ConnectionRefusedError,
@@ -247,17 +231,12 @@ def server_process(server_port):
 
                 # Check if process is still running
                 if _server_process.poll() is not None:
-                    print(
-                        f"Worker {worker_id}: Server process exited with code {_server_process.returncode}"
-                    )
-                    # Read error output
                     stdout, stderr = _server_process.communicate()
                     print(
-                        f"Worker {worker_id}: Server stdout: {stdout.decode('utf-8', errors='ignore')}"
+                        f"Server process exited with code {_server_process.returncode}"
                     )
-                    print(
-                        f"Worker {worker_id}: Server stderr: {stderr.decode('utf-8', errors='ignore')}"
-                    )
+                    print(f"Server stdout: {stdout.decode('utf-8', errors='ignore')}")
+                    print(f"Server stderr: {stderr.decode('utf-8', errors='ignore')}")
                     pytest.fail("Server process died before becoming available")
 
                 continue
@@ -265,14 +244,10 @@ def server_process(server_port):
                 # Last attempt failed
                 if _server_process.poll() is not None:
                     stdout, stderr = _server_process.communicate()
-                    print(
-                        f"Worker {worker_id}: Server stdout: {stdout.decode('utf-8', errors='ignore')}"
-                    )
-                    print(
-                        f"Worker {worker_id}: Server stderr: {stderr.decode('utf-8', errors='ignore')}"
-                    )
+                    print(f"Server stdout: {stdout.decode('utf-8', errors='ignore')}")
+                    print(f"Server stderr: {stderr.decode('utf-8', errors='ignore')}")
                 pytest.fail(
-                    f"Worker {worker_id}: Failed to connect to the server on port {server_port} after multiple attempts"
+                    f"Failed to connect to the server on port {server_port} after multiple attempts"
                 )
 
     yield _server_process
@@ -340,26 +315,23 @@ def cleanup_server_process():
     yield
 
     global _server_process
-    worker_id = get_worker_id()
 
     if _server_process is not None:
-        print(f"Worker {worker_id}: Terminating server process...")
+        print("Terminating server process...")
         try:
             # Try to terminate the process gracefully first
             _server_process.terminate()
             try:
                 # Wait a bit for the process to terminate
                 _server_process.wait(timeout=5)
-                print(f"Worker {worker_id}: Server process terminated gracefully")
+                print("Server process terminated gracefully")
             except subprocess.TimeoutExpired:
                 # If it doesn't terminate within the timeout, kill it
-                print(
-                    f"Worker {worker_id}: Server process didn't terminate gracefully, killing it"
-                )
+                print("Server process didn't terminate gracefully, killing it")
                 _server_process.kill()
                 _server_process.wait()
         except Exception as e:
-            print(f"Worker {worker_id}: Error terminating server process: {e}")
+            print(f"Error terminating server process: {e}")
 
         _server_process = None
-        print(f"Worker {worker_id}: Server process cleanup complete")
+        print("Server process cleanup complete")
