@@ -501,12 +501,12 @@ def verify_edited_content_podcast_text(page_with_server: Page):
 
     # 基本的なポッドキャストテキスト生成の検証
     verify_podcast_text_generated(page_with_server)
-    
+
     # 次に、編集されたテキストの痕跡（【編集済み】というマーカー）がポッドキャストテキストに反映されているか確認
     try:
         # ポッドキャストテキストを取得
         textareas = page.locator("textarea").all()
-        
+
         # 生成されたポッドキャストテキストを含むtextareaを探す
         podcast_text = ""
         for textarea in textareas:
@@ -517,7 +517,7 @@ def verify_edited_content_podcast_text(page_with_server: Page):
                     break
             except Exception:
                 continue
-        
+
         if not podcast_text:
             # JavaScriptでポッドキャストテキストを含むtextareaを探す
             podcast_text = page.evaluate(
@@ -534,19 +534,21 @@ def verify_edited_content_podcast_text(page_with_server: Page):
                 }
                 """
             )
-        
+
         logger.info(f"Generated podcast text: {podcast_text[:200]}...")
-        
+
         # テストの目的を考慮
         # 実際のプロダクション環境では、OpenAIのAPIを使ってテキスト生成を行うため、
         # 【編集済み】というマーカーがそのまま出力に含まれるかは不確実
         # しかし、少なくともテキストが生成されていることは確認できる
         assert podcast_text, "No podcast text was generated with edited content"
-        
+
         # テスト環境でのみ、生成テキストに【編集済み】が含まれているかを確認する追加チェック
         if "【編集済み】" in podcast_text:
-            logger.info("Verified that edited content marker is present in the generated text")
-        
+            logger.info(
+                "Verified that edited content marker is present in the generated text"
+            )
+
         logger.info("Successfully verified podcast text generation with edited content")
     except Exception as e:
         pytest.fail(f"Failed to verify podcast text with edited content: {e}")
