@@ -357,7 +357,15 @@ class PaperPodcastApp:
                                 show_label=False,
                             )
 
-                    process_btn = gr.Button("トークを生成", variant="primary")
+                    # VOICEVOX利用規約チェックボックスを追加
+                    terms_checkbox = gr.Checkbox(
+                        label="VOICEVOX 音源利用規約に同意する",
+                        value=False,
+                        info="トークを生成するには[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。",
+                    )
+                    process_btn = gr.Button(
+                        "トークを生成", variant="primary", interactive=False
+                    )
                     podcast_text = gr.Textbox(
                         label="生成されたトーク",
                         placeholder="テキストを処理してトークを生成してください...",
@@ -412,6 +420,13 @@ class PaperPodcastApp:
                 fn=self.set_prompt_template,
                 inputs=[prompt_template],
                 outputs=[prompt_template_status, system_log_display],
+            )
+
+            # VOICEVOX Terms checkbox
+            terms_checkbox.change(
+                fn=self.update_button_state,
+                inputs=[terms_checkbox],
+                outputs=[process_btn],
             )
 
             process_btn.click(
@@ -532,6 +547,19 @@ class PaperPodcastApp:
             str: 現在のモデル名
         """
         return self.text_processor.openai_model.model_name
+
+    def update_button_state(self, checked: bool) -> gr.Button:
+        """
+        利用規約チェックボックスの状態に基づいてボタンの有効/無効を切り替えます。
+
+        Args:
+            checked (bool): チェックボックスの状態
+
+        Returns:
+            gr.Button: 更新されたボタン
+        """
+        button = gr.Button(value="トークを生成", variant="primary", interactive=checked)
+        return button
 
 
 # Create and launch application instance

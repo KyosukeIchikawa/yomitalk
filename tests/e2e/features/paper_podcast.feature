@@ -52,3 +52,12 @@ Feature: Generate podcast from research paper PDF
     When the user clicks the audio generation button
     Then an audio file is generated
     And an audio player is displayed
+
+  Scenario: Terms of service agreement
+    Given text has been extracted from a PDF
+    When the user views the terms of service checkbox
+    Then the "トークを生成" button should be disabled
+    When the user checks the terms of service checkbox
+    Then the "トークを生成" button should be enabled
+    When the user unchecks the terms of service checkbox
+    Then the "トークを生成" button should be disabled

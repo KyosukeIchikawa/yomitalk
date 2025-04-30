@@ -281,3 +281,214 @@ def verify_custom_prompt_text_generated(page_with_server: Page):
 
     # テストデバッグ用にカスタムプロンプトの内容を検証する代わりに成功とみなす
     logger.info("Custom prompt text generation verified in test environment")
+
+
+@then('the "トークを生成" button should be disabled')
+def verify_button_disabled(page_with_server: Page):
+    """Verify トークを生成 button is disabled"""
+    page = page_with_server
+
+    # ボタンテキストのデバッグ出力
+    logger.info("Looking for button with text: 'トークを生成'")
+    buttons_info = page.evaluate(
+        """
+        () => {
+            const buttons = Array.from(document.querySelectorAll('button'));
+            return buttons.map(b => ({
+                text: b.textContent,
+                disabled: b.disabled,
+                interactive: b.hasAttribute('interactive') ? b.getAttribute('interactive') : 'not set'
+            }));
+        }
+        """
+    )
+    logger.info(f"Available buttons: {buttons_info}")
+
+    try:
+        disabled = page.evaluate(
+            """
+            (buttonText) => {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const targetButton = buttons.find(
+                    b => b.textContent && b.textContent.includes(buttonText)
+                );
+
+                if (targetButton) {
+                    // interactive属性が存在しない場合もあるのでdisabledも確認
+                    return targetButton.disabled === true || targetButton.interactive === false;
+                }
+                return null;
+            }
+            """,
+            "トークを生成",
+        )
+
+        if disabled is None:
+            pytest.fail("Button 'トークを生成' not found.")
+
+        assert disabled, "Button 'トークを生成' should be disabled but is enabled."
+        logger.info("Verified 'トークを生成' button is disabled")
+    except Exception as e:
+        pytest.fail(f"Failed to verify button state: {e}")
+
+
+@then('the "トークを生成" button should be enabled')
+def verify_button_enabled(page_with_server: Page):
+    """Verify トークを生成 button is enabled"""
+    page = page_with_server
+
+    # ボタンテキストのデバッグ出力
+    logger.info("Looking for button with text: 'トークを生成'")
+    buttons_info = page.evaluate(
+        """
+        () => {
+            const buttons = Array.from(document.querySelectorAll('button'));
+            return buttons.map(b => ({
+                text: b.textContent,
+                disabled: b.disabled,
+                interactive: b.hasAttribute('interactive') ? b.getAttribute('interactive') : 'not set'
+            }));
+        }
+        """
+    )
+    logger.info(f"Available buttons: {buttons_info}")
+
+    try:
+        enabled = page.evaluate(
+            """
+            (buttonText) => {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const targetButton = buttons.find(
+                    b => b.textContent && b.textContent.includes(buttonText)
+                );
+
+                if (targetButton) {
+                    // interactive属性が存在しない場合もあるのでdisabledも確認
+                    return targetButton.disabled === false || targetButton.interactive === true;
+                }
+                return null;
+            }
+            """,
+            "トークを生成",
+        )
+
+        if enabled is None:
+            pytest.fail("Button 'トークを生成' not found.")
+
+        assert enabled, "Button 'トークを生成' should be enabled but is disabled."
+        logger.info("Verified 'トークを生成' button is enabled")
+    except Exception as e:
+        pytest.fail(f"Failed to verify button state: {e}")
+
+
+@when("the user views the terms of service checkbox")
+def view_terms_checkbox(page_with_server: Page):
+    """View terms of service checkbox"""
+    page = page_with_server
+
+    # ログに記録するだけでOK
+    logger.info("Viewing terms of service checkbox")
+
+    # チェックボックスが存在することを確認
+    checkbox_exists = page.evaluate(
+        """
+        () => {
+            const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+            const termsCheckbox = checkboxes.find(
+                c => c.nextElementSibling &&
+                c.nextElementSibling.textContent &&
+                (c.nextElementSibling.textContent.includes('利用規約') ||
+                 c.nextElementSibling.textContent.includes('terms'))
+            );
+            return !!termsCheckbox;
+        }
+        """
+    )
+
+    assert checkbox_exists, "Terms of service checkbox not found"
+
+
+@when("the user checks the terms of service checkbox")
+def check_terms_checkbox(page_with_server: Page):
+    """Check terms of service checkbox"""
+    page = page_with_server
+
+    try:
+        # チェックボックスを見つけてクリック
+        checked = page.evaluate(
+            """
+            () => {
+                const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+                const termsCheckbox = checkboxes.find(
+                    c => c.nextElementSibling &&
+                    c.nextElementSibling.textContent &&
+                    (c.nextElementSibling.textContent.includes('利用規約') ||
+                     c.nextElementSibling.textContent.includes('terms'))
+                );
+
+                if (termsCheckbox) {
+                    termsCheckbox.checked = true;
+                    termsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                    return true;
+                }
+                return false;
+            }
+            """
+        )
+
+        assert checked, "Failed to check terms of service checkbox"
+        logger.info("Terms of service checkbox checked")
+    except Exception as e:
+        pytest.fail(f"Failed to check terms checkbox: {e}")
+
+    # 状態変更を反映させるために少し待機
+    page.wait_for_timeout(500)
+
+
+@when("the user unchecks the terms of service checkbox")
+def uncheck_terms_checkbox(page_with_server: Page):
+    """Uncheck terms of service checkbox"""
+    page = page_with_server
+
+    try:
+        # チェックボックスを見つけて解除
+        unchecked = page.evaluate(
+            """
+            () => {
+                const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+                const termsCheckbox = checkboxes.find(
+                    c => c.nextElementSibling &&
+                    c.nextElementSibling.textContent &&
+                    (c.nextElementSibling.textContent.includes('利用規約') ||
+                     c.nextElementSibling.textContent.includes('terms'))
+                );
+
+                if (termsCheckbox) {
+                    termsCheckbox.checked = false;
+                    termsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                    return true;
+                }
+                return false;
+            }
+            """
+        )
+
+        assert unchecked, "Failed to uncheck terms of service checkbox"
+        logger.info("Terms of service checkbox unchecked")
+    except Exception as e:
+        pytest.fail(f"Failed to uncheck terms checkbox: {e}")
+
+    # 状態変更を反映させるために少し待機
+    page.wait_for_timeout(500)
+
+
+@then('the "トークを生成" button should be disabled')
+def verify_talk_generate_button_disabled(page_with_server: Page):
+    """Verify トークを生成 button is disabled"""
+    verify_button_disabled(page_with_server)
+
+
+@then('the "トークを生成" button should be enabled')
+def verify_talk_generate_button_enabled(page_with_server: Page):
+    """Verify トークを生成 button is enabled"""
+    verify_button_enabled(page_with_server)
