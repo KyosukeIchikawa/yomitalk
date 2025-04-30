@@ -482,6 +482,104 @@ def uncheck_terms_checkbox(page_with_server: Page):
     page.wait_for_timeout(500)
 
 
+@then('the "音声を生成" button should be disabled')
+def verify_audio_button_disabled(page_with_server: Page):
+    """Verify 音声を生成 button is disabled"""
+    page = page_with_server
+
+    # ボタンテキストのデバッグ出力
+    logger.info("Looking for button with text: '音声を生成'")
+    buttons_info = page.evaluate(
+        """
+        () => {
+            const buttons = Array.from(document.querySelectorAll('button'));
+            return buttons.map(b => ({
+                text: b.textContent,
+                disabled: b.disabled,
+                interactive: b.hasAttribute('interactive') ? b.getAttribute('interactive') : 'not set'
+            }));
+        }
+        """
+    )
+    logger.info(f"Available buttons: {buttons_info}")
+
+    try:
+        disabled = page.evaluate(
+            """
+            (buttonText) => {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const targetButton = buttons.find(
+                    b => b.textContent && b.textContent.includes(buttonText)
+                );
+
+                if (targetButton) {
+                    // interactive属性が存在しない場合もあるのでdisabledも確認
+                    return targetButton.disabled === true || targetButton.interactive === false;
+                }
+                return null;
+            }
+            """,
+            "音声を生成",
+        )
+
+        if disabled is None:
+            pytest.fail("Button '音声を生成' not found.")
+
+        assert disabled, "Button '音声を生成' should be disabled but is enabled."
+        logger.info("Verified '音声を生成' button is disabled")
+    except Exception as e:
+        pytest.fail(f"Failed to verify button state: {e}")
+
+
+@then('the "音声を生成" button should be enabled')
+def verify_audio_button_enabled(page_with_server: Page):
+    """Verify 音声を生成 button is enabled"""
+    page = page_with_server
+
+    # ボタンテキストのデバッグ出力
+    logger.info("Looking for button with text: '音声を生成'")
+    buttons_info = page.evaluate(
+        """
+        () => {
+            const buttons = Array.from(document.querySelectorAll('button'));
+            return buttons.map(b => ({
+                text: b.textContent,
+                disabled: b.disabled,
+                interactive: b.hasAttribute('interactive') ? b.getAttribute('interactive') : 'not set'
+            }));
+        }
+        """
+    )
+    logger.info(f"Available buttons: {buttons_info}")
+
+    try:
+        enabled = page.evaluate(
+            """
+            (buttonText) => {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const targetButton = buttons.find(
+                    b => b.textContent && b.textContent.includes(buttonText)
+                );
+
+                if (targetButton) {
+                    // interactive属性が存在しない場合もあるのでdisabledも確認
+                    return targetButton.disabled === false || targetButton.interactive === true;
+                }
+                return null;
+            }
+            """,
+            "音声を生成",
+        )
+
+        if enabled is None:
+            pytest.fail("Button '音声を生成' not found.")
+
+        assert enabled, "Button '音声を生成' should be enabled but is disabled."
+        logger.info("Verified '音声を生成' button is enabled")
+    except Exception as e:
+        pytest.fail(f"Failed to verify button state: {e}")
+
+
 @then('the "トークを生成" button should be disabled')
 def verify_talk_generate_button_disabled(page_with_server: Page):
     """Verify トークを生成 button is disabled"""

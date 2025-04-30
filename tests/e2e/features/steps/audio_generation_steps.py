@@ -20,6 +20,46 @@ def click_generate_audio_button(page_with_server: Page):
     """Click generate audio button"""
     page = page_with_server
 
+    # 事前に利用規約のチェックボックスが有効になっているか確認
+    checkbox_checked = page.evaluate(
+        """
+        () => {
+            const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+            const termsCheckbox = checkboxes.find(
+                c => c.nextElementSibling &&
+                c.nextElementSibling.textContent &&
+                (c.nextElementSibling.textContent.includes('利用規約') ||
+                 c.nextElementSibling.textContent.includes('terms'))
+            );
+
+            // チェックボックスが見つからなかった場合は、音声生成ボタンが有効かどうかを確認する
+            if (!termsCheckbox) {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const audioButton = buttons.find(
+                    b => b.textContent &&
+                    ((b.textContent.includes('音声') && b.textContent.includes('生成')) ||
+                     (b.textContent.includes('Audio') && b.textContent.includes('Generate')))
+                );
+                return audioButton && !audioButton.disabled;
+            }
+
+            // チェックボックスが見つかったが、チェックされていない場合はチェックする
+            if (!termsCheckbox.checked) {
+                termsCheckbox.checked = true;
+                termsCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+                return true;
+            }
+
+            return termsCheckbox.checked;
+        }
+        """
+    )
+
+    if not checkbox_checked:
+        logger.warning(
+            "Terms checkbox was not checked or not found - attempting to click audio button anyway"
+        )
+
     try:
         # 音声生成ボタンを探す
         generate_button = None

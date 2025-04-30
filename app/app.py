@@ -357,15 +357,13 @@ class PaperPodcastApp:
                                 show_label=False,
                             )
 
-                    # VOICEVOX利用規約チェックボックスを追加
+                    # VOICEVOX利用規約チェックボックスをここに移動
                     terms_checkbox = gr.Checkbox(
                         label="VOICEVOX 音源利用規約に同意する",
                         value=False,
-                        info="トークを生成するには[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。",
+                        info="音声を生成するには[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。",
                     )
-                    process_btn = gr.Button(
-                        "トークを生成", variant="primary", interactive=False
-                    )
+                    process_btn = gr.Button("トークを生成", variant="primary")
                     podcast_text = gr.Textbox(
                         label="生成されたトーク",
                         placeholder="テキストを処理してトークを生成してください...",
@@ -376,7 +374,10 @@ class PaperPodcastApp:
                 # Audio generation section
                 with gr.Column():
                     gr.Markdown("## トーク音声")
-                    generate_btn = gr.Button("音声を生成", variant="primary")
+
+                    generate_btn = gr.Button(
+                        "音声を生成", variant="primary", interactive=False
+                    )
                     audio_output = gr.Audio(
                         type="filepath",
                         format="wav",
@@ -422,11 +423,11 @@ class PaperPodcastApp:
                 outputs=[prompt_template_status, system_log_display],
             )
 
-            # VOICEVOX Terms checkbox
+            # VOICEVOX Terms checkbox - 音声生成ボタンに対してイベントハンドラを更新
             terms_checkbox.change(
-                fn=self.update_button_state,
+                fn=self.update_audio_button_state,
                 inputs=[terms_checkbox],
-                outputs=[process_btn],
+                outputs=[generate_btn],
             )
 
             process_btn.click(
@@ -559,6 +560,19 @@ class PaperPodcastApp:
             gr.Button: 更新されたボタン
         """
         button = gr.Button(value="トークを生成", variant="primary", interactive=checked)
+        return button
+
+    def update_audio_button_state(self, checked: bool) -> gr.Button:
+        """
+        VOICEVOX利用規約チェックボックスの状態に基づいて音声生成ボタンの有効/無効を切り替えます。
+
+        Args:
+            checked (bool): チェックボックスの状態
+
+        Returns:
+            gr.Button: 更新されたボタン
+        """
+        button = gr.Button(value="音声を生成", variant="primary", interactive=checked)
         return button
 
 
