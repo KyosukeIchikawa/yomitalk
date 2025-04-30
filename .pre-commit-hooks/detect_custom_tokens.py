@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Pre-commit hook to detect and prevent potential API keys, tokens,
 and sensitive data from being committed.
@@ -65,7 +67,7 @@ def is_excluded_path(file_path: str) -> bool:
         # 自身のテストファイル
         "tests/unit/test_detect_custom_tokens.py",
         # このスクリプト自体
-        "detect_custom_tokens.py",
+        ".pre-commit-hooks/detect_custom_tokens.py",
         # テスト関連ファイル
         "tests/unit/test_file_uploader.py",
         "tests/e2e/features/steps/common_steps.py",
