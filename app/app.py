@@ -6,7 +6,7 @@ Builds the Paper Podcast Generator application using Gradio.
 import os
 import uuid
 from pathlib import Path
-from typing import Tuple
+from typing import List, Tuple
 
 import gradio as gr
 
@@ -289,7 +289,7 @@ class PaperPodcastApp:
             with gr.Row():
                 # OpenAI API settings at the top
                 with gr.Column():
-                    gr.Markdown("## OpenAI APIキー")
+                    gr.Markdown("## OpenAI API設定")
                     with gr.Row():
                         api_key_input = gr.Textbox(
                             placeholder="sk-...",
@@ -304,6 +304,15 @@ class PaperPodcastApp:
                             show_label=False,
                             scale=3,
                         )
+
+                    with gr.Row():
+                        model_dropdown = gr.Dropdown(
+                            choices=self.get_available_models(),
+                            value=self.get_current_model(),
+                            label="モデル",
+                            scale=3,
+                        )
+
                     api_key_btn = gr.Button("保存", variant="primary")
 
             with gr.Row():
@@ -384,6 +393,13 @@ class PaperPodcastApp:
                 fn=self.set_api_key,
                 inputs=[api_key_input],
                 outputs=[api_key_status, system_log_display],
+            )
+
+            # Model selection
+            model_dropdown.change(
+                fn=self.set_model_name,
+                inputs=[model_dropdown],
+                outputs=[system_log_display],
             )
 
             # Prompt template
@@ -478,6 +494,39 @@ class PaperPodcastApp:
             if self.text_processor.openai_model.api_key
             else "APIキーをセットしてください"
         )
+
+    def set_model_name(self, model_name: str) -> str:
+        """
+        OpenAIモデル名を設定します。
+
+        Args:
+            model_name (str): 使用するモデル名
+
+        Returns:
+            str: システムログ
+        """
+        success = self.text_processor.openai_model.set_model_name(model_name)
+        result = "✅ モデルが正常に設定されました" if success else "❌ モデル設定に失敗しました"
+        self.update_log(f"OpenAI モデル: {result} ({model_name})")
+        return self.system_log
+
+    def get_available_models(self) -> List[str]:
+        """
+        利用可能なOpenAIモデルのリストを取得します。
+
+        Returns:
+            List[str]: 利用可能なモデル名のリスト
+        """
+        return self.text_processor.openai_model.get_available_models()
+
+    def get_current_model(self) -> str:
+        """
+        現在設定されているOpenAIモデル名を取得します。
+
+        Returns:
+            str: 現在のモデル名
+        """
+        return self.text_processor.openai_model.model_name
 
 
 # Create and launch application instance

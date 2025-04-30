@@ -20,6 +20,13 @@ Feature: Generate podcast from research paper PDF
     And the user clicks the save button
     Then the API key is saved
 
+  Scenario: OpenAI model selection
+    Given the user has opened the application
+    When the user opens the OpenAI API settings section
+    And the user selects a different OpenAI model
+    And the user clicks the save button
+    Then the selected model is saved
+
   Scenario: Podcast text generation
     Given text has been extracted from a PDF
     And a valid API key has been configured

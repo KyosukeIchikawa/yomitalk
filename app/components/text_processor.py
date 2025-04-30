@@ -24,18 +24,37 @@ class TextProcessor:
         """
         Set the OpenAI API key.
 
-        Sets the OpenAI API key and returns the setup result.
-
         Args:
             api_key (str): OpenAI API key
 
         Returns:
-            bool: Whether the setup was successful
+            bool: Whether the API key was successfully set
         """
         success = self.openai_model.set_api_key(api_key)
         if success:
             self.use_openai = True
         return success
+
+    def set_model_name(self, model_name: str) -> bool:
+        """
+        Set the OpenAI model name.
+
+        Args:
+            model_name (str): Model name to use
+
+        Returns:
+            bool: Whether the model name was successfully set
+        """
+        return self.openai_model.set_model_name(model_name)
+
+    def get_model_name(self) -> str:
+        """
+        Get the current OpenAI model name.
+
+        Returns:
+            str: Current model name
+        """
+        return self.openai_model.model_name
 
     def set_prompt_template(self, prompt_template: str) -> bool:
         """

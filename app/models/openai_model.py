@@ -4,7 +4,7 @@ Uses OpenAI's LLM to generate podcast-style conversation text from research pape
 """
 
 import os
-from typing import Optional
+from typing import List, Optional
 
 import httpx
 from openai import OpenAI
@@ -19,6 +19,19 @@ class OpenAIModel:
         """Initialize OpenAIModel."""
         # Try to get API key from environment
         self.api_key: Optional[str] = os.environ.get("OPENAI_API_KEY")
+
+        # デフォルトモデル
+        self.model_name: str = "gpt-4.1-mini"
+
+        # 利用可能なモデルのリスト
+        self._available_models = [
+            "gpt-4o-mini",
+            "gpt-4o",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4.1-nano",
+            "o4-mini",
+        ]
 
         # Default prompt template
         self.default_prompt_template = """
@@ -75,6 +88,35 @@ Paper summary:
         os.environ["OPENAI_API_KEY"] = self.api_key
         return True
 
+    def get_available_models(self) -> List[str]:
+        """
+        Get available OpenAI models.
+
+        Returns:
+            List[str]: List of available model names
+        """
+        return self._available_models
+
+    def set_model_name(self, model_name: str) -> bool:
+        """
+        Set the OpenAI model name.
+
+        Args:
+            model_name (str): Model name to use
+
+        Returns:
+            bool: Whether the model name was successfully set
+        """
+        if not model_name or model_name.strip() == "":
+            return False
+
+        model_name = model_name.strip()
+        if model_name not in self._available_models:
+            return False
+
+        self.model_name = model_name
+        return True
+
     def set_prompt_template(self, prompt_template: str) -> bool:
         """
         Set a custom prompt template for podcast generation.
@@ -115,7 +157,7 @@ Paper summary:
             return "API key error: OpenAI API key is not set."
 
         try:
-            logger.info("Making OpenAI API request with model: gpt-4o-mini")
+            logger.info(f"Making OpenAI API request with model: {self.model_name}")
 
             # Create client with default http client to avoid proxies issue
             http_client = httpx.Client()
@@ -123,7 +165,7 @@ Paper summary:
 
             # API request
             response = client.chat.completions.create(
-                model="gpt-4o-mini",  # or 'gpt-3.5-turbo'
+                model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 max_tokens=1500,

@@ -20,6 +20,8 @@ class TestOpenAIModel(unittest.TestCase):
         self.assertIsNone(self.model.api_key)
         self.assertIsNotNone(self.model.default_prompt_template)
         self.assertIsNone(self.model.custom_prompt_template)
+        # モデル選択初期値をテスト
+        self.assertEqual(self.model.model_name, "gpt-4.1-mini")  # デフォルト値を確認
 
     @patch("app.models.openai_model.OpenAI")
     def test_generate_text_success(self, mock_openai):
@@ -50,6 +52,9 @@ class TestOpenAIModel(unittest.TestCase):
         # Check the results
         self.assertEqual(response, "Generated text from OpenAI")
         mock_client.chat.completions.create.assert_called_once()
+        # 選択されたモデルが使用されていることを確認
+        call_args = mock_client.chat.completions.create.call_args
+        self.assertEqual(call_args[1]["model"], "gpt-4.1-mini")  # デフォルト値が使用されている
 
     @patch("app.models.openai_model.OpenAI")
     def test_generate_text_with_no_api_key(self, mock_openai):
@@ -99,6 +104,87 @@ class TestOpenAIModel(unittest.TestCase):
         result = self.model.set_api_key("   ")
         self.assertFalse(result)
         self.assertEqual(self.model.api_key, original_key)
+
+    def test_set_model_name(self):
+        """Test setting the model name."""
+        # デフォルト値を確認
+        self.assertEqual(self.model.model_name, "gpt-4.1-mini")
+
+        # 有効なモデル名に変更
+        result = self.model.set_model_name("gpt-4o")
+        self.assertTrue(result)
+        self.assertEqual(self.model.model_name, "gpt-4o")
+
+        # 別の有効なモデル名に変更
+        result = self.model.set_model_name("gpt-4.1")
+        self.assertTrue(result)
+        self.assertEqual(self.model.model_name, "gpt-4.1")
+
+        # 無効なモデル名でテスト
+        result = self.model.set_model_name("invalid-model")
+        self.assertFalse(result)
+        self.assertEqual(self.model.model_name, "gpt-4.1")  # 変更されていないこと
+
+        # 空の値でテスト
+        result = self.model.set_model_name("")
+        self.assertFalse(result)
+        self.assertEqual(self.model.model_name, "gpt-4.1")  # 変更されていないこと
+
+    def test_get_available_models(self):
+        """Test getting available models."""
+        models = self.model.get_available_models()
+
+        # 指定の全モデルが含まれていることを確認
+        expected_models = [
+            "gpt-4o-mini",
+            "gpt-4o",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4.1-nano",
+            "o4-mini",
+        ]
+
+        for expected_model in expected_models:
+            self.assertIn(expected_model, models)
+
+    @patch("app.models.openai_model.OpenAI")
+    def test_generate_text_with_custom_model(self, mock_openai):
+        """Test generating text with a custom model."""
+        # モックの設定
+        mock_completion = MagicMock()
+        mock_message = type(
+            "obj",
+            (object,),
+            {
+                "message": type(
+                    "msg",
+                    (object,),
+                    {"content": "Generated text from OpenAI with custom model"},
+                )()
+            },
+        )()
+        mock_completion.choices = [mock_message]
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = mock_completion
+        mock_openai.return_value = mock_client
+
+        # APIキーを設定
+        self.model.api_key = "fake-key"
+
+        # カスタムモデルを設定
+        self.model.set_model_name("gpt-4.1")
+
+        # テスト対象のメソッドを呼び出す
+        prompt = "Generate with custom model"
+        response = self.model.generate_text(prompt)
+
+        # 結果を確認
+        self.assertEqual(response, "Generated text from OpenAI with custom model")
+        mock_client.chat.completions.create.assert_called_once()
+
+        # 選択したモデルが使用されていることを確認
+        call_args = mock_client.chat.completions.create.call_args
+        self.assertEqual(call_args[1]["model"], "gpt-4.1")
 
     def test_set_prompt_template(self):
         """Test setting a custom prompt template."""
