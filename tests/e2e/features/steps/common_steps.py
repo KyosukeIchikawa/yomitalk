@@ -29,6 +29,46 @@ if not os.path.exists(TEST_PDF_PATH):
         # どちらにもない場合はエラーログ出力
         logger.warning(f"警告: サンプルPDFが見つかりません。パス: {TEST_PDF_PATH}")
 
+# テスト用テキストファイルのパス
+TEST_TEXT_PATH = os.path.join(
+    os.path.dirname(__file__), "../../../../tests/data/sample_text.txt"
+)
+
+# テスト用テキストファイルが存在しない場合は作成する
+if not os.path.exists(TEST_TEXT_PATH):
+    try:
+        # テスト用ディレクトリがない場合は作成
+        os.makedirs(os.path.dirname(TEST_TEXT_PATH), exist_ok=True)
+
+        # サンプルテキストファイルを作成
+        with open(TEST_TEXT_PATH, "w", encoding="utf-8") as f:
+            f.write(
+                """# YomiTalk サンプルテキスト
+
+このテキストファイルは、YomiTalkのテキストファイル読み込み機能をテストするためのサンプルです。
+
+## 機能概要
+
+YomiTalkは以下の機能を備えています:
+
+1. PDFファイルからのテキスト抽出
+2. テキストファイル（.txt, .md）からの読み込み
+3. OpenAI APIを使用した会話形式テキスト生成
+4. VOICEVOX Coreを使用した音声合成
+
+このサンプルテキストが正常に読み込まれると、上記のテキストが抽出され、トークが生成されます。
+その後、音声合成がされるとずんだもんと四国めたんの声でポッドキャスト音声が作成されます。
+
+テストが正常に完了することを願っています！
+"""
+            )
+
+        logger.info(f"サンプルテキストファイルを作成しました: {TEST_TEXT_PATH}")
+    except Exception as e:
+        logger.error(f"サンプルテキストファイルの作成に失敗しました: {e}")
+        # 作成に失敗した場合はPDFファイルと同じパスを使用
+        TEST_TEXT_PATH = TEST_PDF_PATH
+
 
 # テスト用のヘルパー関数
 def voicevox_core_exists():

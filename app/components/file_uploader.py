@@ -1,50 +1,43 @@
-"""Module providing PDF text extraction functionality.
+"""Module providing file text extraction functionality.
 
-Provides PDF extraction functionality for the Paper Podcast Generator application.
-
-DEPRECATED: This module has been replaced by file_uploader.py. Please use FileUploader class instead,
-which supports both PDF and text files.
+Provides text extraction functionality for the Paper Podcast Generator application.
 """
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 import pdfplumber
 from pypdf import PdfReader
 
 from app.utils.logger import logger
 
-# PyMuPDFはSWIG関連の警告を引き起こすため、完全に削除します
-# fitz (PyMuPDF) は任意の依存関係であり、PDFパーサーとしてPyPDFとpdfplumberで十分です
 
-
-class PDFUploader:
-    """Class for uploading PDF files and extracting text.
-
-    DEPRECATED: Use FileUploader from file_uploader.py instead.
-    """
+class FileUploader:
+    """Class for uploading files and extracting text."""
 
     def __init__(self) -> None:
-        """Initialize PDFUploader."""
-        logger.warning(
-            "PDFUploader is deprecated. Please use FileUploader from file_uploader.py instead."
-        )
+        """Initialize FileUploader."""
         self.temp_dir = Path("data/temp")
         self.temp_dir.mkdir(parents=True, exist_ok=True)
+        self.supported_text_extensions = [".txt", ".md", ".text"]
+        self.supported_pdf_extensions = [".pdf"]
+        self.supported_extensions = (
+            self.supported_text_extensions + self.supported_pdf_extensions
+        )
 
     def extract_text(self, file: Optional[Any]) -> str:
         """
-        Extract text from a PDF file.
+        Extract text from a file.
 
         Args:
-            file: Uploaded PDF file object
+            file: Uploaded file object
 
         Returns:
             str: Extracted text
         """
         if file is None:
-            return "Please upload a PDF file."
+            return "Please upload a file."
 
         try:
             # Save temporary file
@@ -58,28 +51,27 @@ class PDFUploader:
 
     def extract_text_from_path(self, file_path: str) -> str:
         """
-        Extract text from a PDF file.
+        Extract text from a file based on its extension.
 
         Args:
-            file_path (str): Path to the PDF file
+            file_path (str): Path to the file
 
         Returns:
             str: Extracted text or error message
         """
         if not file_path or not os.path.exists(file_path):
-            return "PDF file not found."
+            return "File not found."
 
-        try:
-            # First attempt using PyPDF
-            return self._extract_with_pypdf(file_path)
-        except Exception as e1:
-            logger.error(f"PyPDF extraction failed: {e1}")
-            try:
-                # Second attempt using pdfplumber
-                return self._extract_with_pdfplumber(file_path)
-            except Exception as e2:
-                logger.error(f"pdfplumber extraction failed: {e2}")
-                return f"PDF parsing failed: {str(e2)}"
+        file_ext = os.path.splitext(file_path)[1].lower()
+
+        # Check if this is a text file
+        if file_ext in self.supported_text_extensions:
+            return self._extract_from_text_file(file_path)
+        # Check if this is a PDF file
+        elif file_ext in self.supported_pdf_extensions:
+            return self._extract_from_pdf(file_path)
+        else:
+            return f"Unsupported file type: {file_ext}. Supported types: {', '.join(self.supported_extensions)}"
 
     def _save_uploaded_file(self, file: Any) -> str:
         """
@@ -117,6 +109,55 @@ class PDFUploader:
             raise ValueError(f"Failed to save file: {e}")
 
         return temp_path
+
+    def _extract_from_text_file(self, file_path: str) -> str:
+        """
+        Extract text from a text file.
+
+        Args:
+            file_path (str): Path to the text file
+
+        Returns:
+            str: Extracted text
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            return content
+        except UnicodeDecodeError:
+            # UTF-8で開けない場合はSJIS等の日本語エンコーディングを試す
+            try:
+                with open(file_path, "r", encoding="shift_jis") as f:
+                    content = f.read()
+                return content
+            except Exception as e:
+                logger.error(f"Text file reading error: {e}")
+                return f"Text file reading failed: {str(e)}"
+        except Exception as e:
+            logger.error(f"Text file reading error: {e}")
+            return f"Text file reading failed: {str(e)}"
+
+    def _extract_from_pdf(self, file_path: str) -> str:
+        """
+        Extract text from a PDF file.
+
+        Args:
+            file_path (str): Path to the PDF file
+
+        Returns:
+            str: Extracted text
+        """
+        try:
+            # First attempt using PyPDF
+            return self._extract_with_pypdf(file_path)
+        except Exception as e1:
+            logger.error(f"PyPDF extraction failed: {e1}")
+            try:
+                # Second attempt using pdfplumber
+                return self._extract_with_pdfplumber(file_path)
+            except Exception as e2:
+                logger.error(f"pdfplumber extraction failed: {e2}")
+                return f"PDF parsing failed: {str(e2)}"
 
     def _extract_with_pypdf(self, file_path: str) -> str:
         """
@@ -156,3 +197,12 @@ class PDFUploader:
                     extracted_text += f"--- Page {i+1} ---\n{page_text}\n\n"
 
         return extracted_text
+
+    def get_supported_extensions(self) -> List[str]:
+        """
+        Get list of supported file extensions.
+
+        Returns:
+            List[str]: List of supported file extensions
+        """
+        return self.supported_extensions

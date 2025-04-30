@@ -85,7 +85,7 @@ class AudioGenerator:
                 runtime_path = str(
                     self.VOICEVOX_LIB_PATH / "libvoicevox_onnxruntime.so.1.17.3"
                 )
-                
+
                 # Proper initialization of ONNX runtime
                 if os.path.exists(runtime_path):
                     logger.info(f"Loading ONNX runtime from: {runtime_path}")
@@ -109,7 +109,7 @@ class AudioGenerator:
                                 logger.debug(f"Loaded voice model: {model_file}")
                         except Exception as e:
                             logger.error(f"Failed to load model {model_file}: {e}")
-                
+
                 if model_count > 0:
                     logger.info(f"Successfully loaded {model_count} voice models")
                     self.core_initialized = True
@@ -117,7 +117,7 @@ class AudioGenerator:
                 else:
                     logger.error("No voice models could be loaded")
                     self.core_initialized = False
-                    
+
             except Exception as e:
                 logger.error(f"Failed to initialize VOICEVOX Core: {e}")
                 self.core_initialized = False

@@ -11,7 +11,7 @@ from typing import List, Tuple
 import gradio as gr
 
 from app.components.audio_generator import VOICEVOX_CORE_AVAILABLE, AudioGenerator
-from app.components.pdf_uploader import PDFUploader
+from app.components.file_uploader import FileUploader
 from app.components.text_processor import TextProcessor
 from app.utils.logger import logger
 
@@ -33,9 +33,9 @@ class PaperPodcastApp:
     def __init__(self):
         """Initialize the PaperPodcastApp.
 
-        Creates instances of PDFUploader, TextProcessor, and AudioGenerator.
+        Creates instances of FileUploader, TextProcessor, and AudioGenerator.
         """
-        self.pdf_uploader = PDFUploader()
+        self.file_uploader = FileUploader()
         self.text_processor = TextProcessor()
         self.audio_generator = AudioGenerator()
 
@@ -121,7 +121,7 @@ class PaperPodcastApp:
                 filename = Path(file_obj.name).name
             else:
                 # Generate temporary name using UUID if no name is available
-                filename = f"uploaded_{uuid.uuid4().hex}.pdf"
+                filename = f"uploaded_{uuid.uuid4().hex}.txt"
 
             # Create temporary file path
             temp_path = temp_dir / filename
@@ -141,9 +141,9 @@ class PaperPodcastApp:
             logger.error(f"File processing error: {e}")
             return None
 
-    def extract_pdf_text(self, file_obj) -> Tuple[str, str]:
+    def extract_file_text(self, file_obj) -> Tuple[str, str]:
         """
-        Extract text from PDF.
+        Extract text from a file.
 
         Args:
             file_obj: Uploaded file object
@@ -152,18 +152,18 @@ class PaperPodcastApp:
             tuple: (extracted_text, system_log)
         """
         if file_obj is None:
-            self.update_log("PDFアップロード: ファイルが選択されていません")
-            return "Please upload a PDF file.", self.system_log
+            self.update_log("ファイルアップロード: ファイルが選択されていません")
+            return "Please upload a file.", self.system_log
 
         # Save file locally
         temp_path = self.handle_file_upload(file_obj)
         if not temp_path:
-            self.update_log("PDFアップロード: ファイル処理に失敗しました")
+            self.update_log("ファイルアップロード: ファイル処理に失敗しました")
             return "Failed to process the file.", self.system_log
 
-        # Extract text using PDFUploader
-        text = self.pdf_uploader.extract_text_from_path(temp_path)
-        self.update_log(f"PDFテキスト抽出: 完了 ({len(text)} 文字)")
+        # Extract text using FileUploader
+        text = self.file_uploader.extract_text_from_path(temp_path)
+        self.update_log(f"テキスト抽出: 完了 ({len(text)} 文字)")
         return text, self.system_log
 
     def check_voicevox_core(self):
@@ -203,14 +203,14 @@ class PaperPodcastApp:
         Generate podcast-style text from input text.
 
         Args:
-            text (str): Input text from PDF
+            text (str): Input text from file
 
         Returns:
             tuple: (generated_podcast_text, system_log)
         """
         if not text:
             self.update_log("ポッドキャストテキスト生成: ❌ 入力テキストが空です")
-            return "Please upload a PDF file and extract text first.", self.system_log
+            return "Please upload a file and extract text first.", self.system_log
 
         # Check if API key is set
         if not self.text_processor.openai_model.api_key:
@@ -282,7 +282,7 @@ class PaperPodcastApp:
                 """
                 # YomiTalk
 
-                論文PDFから「ずんだもん」と「四国めたん」によるポッドキャスト音声を生成します。
+                テキストファイルやPDFから「ずんだもん」と「四国めたん」によるポッドキャスト音声を生成します。
                 """
             )
 
@@ -316,13 +316,18 @@ class PaperPodcastApp:
                     api_key_btn = gr.Button("保存", variant="primary")
 
             with gr.Row():
-                # PDF upload and text extraction
+                # File upload and text extraction
                 with gr.Column():
-                    gr.Markdown("## PDF File")
-                    pdf_file = gr.File(
-                        file_types=[".pdf"],
+                    gr.Markdown("## ファイルアップロード")
+
+                    # サポートしているファイル形式の拡張子を取得
+                    supported_extensions = self.file_uploader.get_supported_extensions()
+
+                    # ファイルをアップロードするコンポーネント
+                    file_input = gr.File(
+                        file_types=supported_extensions,
                         type="filepath",
-                        show_label=False,
+                        label=f"サポートしているファイル形式: {', '.join(supported_extensions)}",
                     )
                     extract_btn = gr.Button("テキストを抽出", variant="primary")
 
@@ -331,7 +336,7 @@ class PaperPodcastApp:
                 with gr.Column():
                     gr.Markdown("## 抽出テキスト（トークの元ネタ）")
                     extracted_text = gr.Textbox(
-                        placeholder="PDFを選択してテキストを抽出してください...",
+                        placeholder="ファイルを選択してテキストを抽出してください...",
                         lines=10,
                         show_label=False,
                     )
@@ -383,8 +388,8 @@ class PaperPodcastApp:
 
             # Set up event handlers
             extract_btn.click(
-                fn=self.extract_pdf_text,
-                inputs=[pdf_file],
+                fn=self.extract_file_text,
+                inputs=[file_input],
                 outputs=[extracted_text, system_log_display],
             )
 
