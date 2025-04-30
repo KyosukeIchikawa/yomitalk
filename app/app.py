@@ -357,12 +357,7 @@ class PaperPodcastApp:
                                 show_label=False,
                             )
 
-                    # VOICEVOX利用規約チェックボックスをここに移動
-                    terms_checkbox = gr.Checkbox(
-                        label="VOICEVOX 音源利用規約に同意する",
-                        value=False,
-                        info="音声を生成するには[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。",
-                    )
+                    # トークを生成ボタン
                     process_btn = gr.Button("トークを生成", variant="primary")
                     podcast_text = gr.Textbox(
                         label="生成されたトーク",
@@ -375,6 +370,12 @@ class PaperPodcastApp:
                 with gr.Column():
                     gr.Markdown("## トーク音声")
 
+                    # VOICEVOX利用規約チェックボックスをここに配置
+                    terms_checkbox = gr.Checkbox(
+                        label="VOICEVOX 音源利用規約に同意する",
+                        value=False,
+                        info="音声を生成するには[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。",
+                    )
                     generate_btn = gr.Button(
                         "音声を生成", variant="primary", interactive=False
                     )
