@@ -164,10 +164,6 @@ def check_file(file_path: str) -> bool:
                     "app.component",
                     "app.model",
                     "voicevox_core",
-                    "tests/",
-                    "dict/",
-                    "../",
-                    "./",
                 ]
                 if any(path in str(match_str) for path in common_paths):
                     is_test_data = True
