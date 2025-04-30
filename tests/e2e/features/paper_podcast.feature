@@ -46,6 +46,14 @@ Feature: Generate podcast from research paper PDF
     When the user clicks the text generation button
     Then podcast-style text is generated using the custom prompt
 
+  Scenario: Editing extracted text before generation
+    Given text has been extracted from a PDF
+    And a valid API key has been configured
+    When the user edits the extracted text
+    And the user checks the terms of service checkbox
+    And the user clicks the text generation button
+    Then podcast-style text is generated with the edited content
+
   @requires_voicevox
   Scenario: Audio generation
     Given podcast text has been generated
