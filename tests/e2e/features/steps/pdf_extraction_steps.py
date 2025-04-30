@@ -201,7 +201,7 @@ def edit_extracted_text(page_with_server: Page):
 
         # 抽出テキストのテキストエリアを見つける - 無効なテキストエリアをスキップ
         textarea = None
-        
+
         # まず最も長いテキストを含むtextareaを探す（それが抽出されたテキストの可能性が高い）
         textarea_content = page.evaluate(
             """
@@ -209,44 +209,46 @@ def edit_extracted_text(page_with_server: Page):
                 const textareas = document.querySelectorAll('textarea');
                 let longestText = '';
                 let longestIndex = -1;
-                
+
                 for (let i = 0; i < textareas.length; i++) {
                     // 無効なtextareaはスキップ
                     if (textareas[i].disabled) {
                         continue;
                     }
-                    
+
                     const text = textareas[i].value;
                     if (text && text.length > longestText.length) {
                         longestText = text;
                         longestIndex = i;
                     }
                 }
-                
-                return { 
-                    text: longestText, 
+
+                return {
+                    text: longestText,
                     index: longestIndex,
                     count: textareas.length
                 };
             }
             """
         )
-        
-        logger.info(f"Found {textarea_content['count']} textareas, longest at index {textarea_content['index']}")
-        
-        if textarea_content['index'] < 0:
+
+        logger.info(
+            f"Found {textarea_content['count']} textareas, longest at index {textarea_content['index']}"
+        )
+
+        if textarea_content["index"] < 0:
             pytest.fail("Could not find any enabled textarea with content")
-        
+
         # インデックスに基づいてtextareaを選択
         all_textareas = page.locator("textarea").all()
-        textarea = all_textareas[textarea_content['index']]
-        
+        textarea = all_textareas[textarea_content["index"]]
+
         # テキストを編集 - 冒頭に編集されたことを示すテキストを追加
-        edited_text = "【編集済み】\n" + textarea_content['text']
-        
+        edited_text = "【編集済み】\n" + textarea_content["text"]
+
         # テキストエリアに直接入力
         textarea.fill(edited_text)
-        
+
         # 編集されたことを確認
         updated_text = textarea.input_value()
         assert "【編集済み】" in updated_text, "Text was not edited correctly"
