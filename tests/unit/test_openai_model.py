@@ -43,7 +43,7 @@ class TestOpenAIModel(unittest.TestCase):
         mock_openai.return_value = mock_client
 
         # Set API key
-        self.model.api_key = "fake-key"
+        self.model.api_key = "sk_test_dummy_12345"
 
         # Call the method to test
         prompt = "Generate a podcast script"
@@ -76,7 +76,7 @@ class TestOpenAIModel(unittest.TestCase):
         mock_openai.return_value = mock_client
 
         # Set API key
-        self.model.api_key = "fake-key"
+        self.model.api_key = "sk_test_dummy_12345"
 
         # Call the method and check error handling
         response = self.model.generate_text("Test prompt")
@@ -86,10 +86,10 @@ class TestOpenAIModel(unittest.TestCase):
     def test_set_api_key_valid(self):
         """Test setting a valid API key."""
         with patch.dict(os.environ, {}, clear=True):
-            result = self.model.set_api_key("valid-api-key")
+            result = self.model.set_api_key("sk_test_dummy_12345")
             self.assertTrue(result)
-            self.assertEqual(self.model.api_key, "valid-api-key")
-            self.assertEqual(os.environ.get("OPENAI_API_KEY"), "valid-api-key")
+            self.assertEqual(self.model.api_key, "sk_test_dummy_12345")
+            self.assertEqual(os.environ.get("OPENAI_API_KEY"), "sk_test_dummy_12345")
 
     def test_set_api_key_invalid(self):
         """Test setting an invalid API key."""
@@ -169,7 +169,7 @@ class TestOpenAIModel(unittest.TestCase):
         mock_openai.return_value = mock_client
 
         # APIキーを設定
-        self.model.api_key = "fake-key"
+        self.model.api_key = "sk_test_dummy_12345"
 
         # カスタムモデルを設定
         self.model.set_model_name("gpt-4.1")
@@ -230,7 +230,7 @@ class TestOpenAIModel(unittest.TestCase):
         mock_openai.return_value = mock_client
 
         # Set API key
-        self.model.api_key = "fake-key"
+        self.model.api_key = "sk_test_dummy_12345"
 
         # Set custom prompt
         custom_prompt = "カスタムプロンプト\n{paper_summary}"
@@ -267,7 +267,7 @@ class TestOpenAIModel(unittest.TestCase):
         mock_openai.return_value = mock_client
 
         # Set API key
-        self.model.api_key = "fake-key"
+        self.model.api_key = "sk_test_dummy_12345"
 
         # Call the method to test
         paper_summary = "This is a summary of a research paper."
