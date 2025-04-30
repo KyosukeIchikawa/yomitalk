@@ -104,31 +104,6 @@ def check_file(file_path: str) -> bool:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # テストファイルかどうかを判定
-        is_test_file = "/tmp/" in file_path or "/tests/" in file_path
-        has_test_markers = False
-
-        if is_test_file:
-            # テストのマーカー
-            test_markers = ["test", "dummy", "example", "sample"]
-            has_test_markers = any(
-                marker.lower() in content.lower() for marker in test_markers
-            )
-
-            # テスト用のダミートークンがある場合は必ずトークンとして検出
-            dummy_token_markers = [
-                "dummy_token",
-                "dummy_api_key",
-                "dummy_secret",
-                "dummy_jwt",
-                "dummy_key",
-            ]
-            if has_test_markers and any(
-                marker.lower() in content.lower() for marker in dummy_token_markers
-            ):
-                logger.error(f"Found potential token in {file_path}")
-                return True
-
         for i, pattern in enumerate(patterns):
             matches = pattern.findall(content)
             if matches:
@@ -137,43 +112,27 @@ def check_file(file_path: str) -> bool:
                 if isinstance(match_str, tuple) and len(match_str) > 0:
                     match_str = match_str[0]
 
-                # テストファイルのパターン検出
-                is_test_data = False
-                if is_test_file and has_test_markers:
-                    # テストファイルの場合は誤検出を減らす
-                    is_test_data = True
-
                 # ハイフンまたはアンダースコアが連続するパターン (区切り線)
                 if re.search(r"[-_]{10,}", str(match_str)):
-                    is_test_data = True
-
-                # ライブラリパスとバージョン番号
-                if "libvoicevox_onnxruntime.so" in str(match_str):
-                    is_test_data = True
-
-                # 特定のパターンのトークン（テスト用）
-                if "123456789" in str(match_str) and file_path.endswith(
-                    "paper_podcast_steps.py"
-                ):
-                    is_test_data = True
+                    continue
 
                 # ダミートークンやテスト用トークンとわかるものは除外する
                 if "dummy" in str(match_str).lower():
-                    is_test_data = True
+                    continue
 
                 # パス、インポート、名前空間などのパターンを除外
                 common_paths = [
                     "app.component",
                     "app.model",
+                    "test_generate_podcast_conversation_with_custom_prompt",
                     "voicevox_core",
                 ]
                 if any(path in str(match_str) for path in common_paths):
-                    is_test_data = True
+                    continue
 
-                if not is_test_data:
-                    logger.error(f"Found potential token in {file_path}")
-                    logger.error(f"Pattern #{i+1} matched: {str(match_str)[:10]}...")
-                    return True
+                logger.error(f"Found potential token in {file_path}")
+                logger.error(f"Pattern #{i+1} matched: {str(match_str)}")
+                return True
 
         return False
     except UnicodeDecodeError:
