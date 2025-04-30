@@ -30,7 +30,6 @@ Feature: Generate podcast from research paper PDF
     Given the user has opened the application
     When the user opens the prompt template settings section
     And the user edits the prompt template
-    And the user clicks the save prompt button
     Then the prompt template is saved
 
   Scenario: Podcast generation with custom prompt

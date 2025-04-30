@@ -339,10 +339,9 @@ class PaperPodcastApp:
                             )
                             prompt_template_status = gr.Textbox(
                                 interactive=False,
-                                placeholder="テンプレートを編集して保存してください",
+                                placeholder="変更すると自動保存されます",
                                 show_label=False,
                             )
-                            prompt_template_btn = gr.Button("保存", variant="primary")
 
                     process_btn = gr.Button("トークを生成", variant="primary")
                     podcast_text = gr.Textbox(
@@ -388,7 +387,7 @@ class PaperPodcastApp:
             )
 
             # Prompt template
-            prompt_template_btn.click(
+            prompt_template.change(
                 fn=self.set_prompt_template,
                 inputs=[prompt_template],
                 outputs=[prompt_template_status, system_log_display],

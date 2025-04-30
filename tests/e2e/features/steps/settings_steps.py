@@ -325,6 +325,10 @@ def edit_prompt_template(page_with_server: Page):
                             const event = new Event('input', { bubbles: true });
                             textareas[i].dispatchEvent(event);
 
+                            // changeイベントを発火して自動保存をトリガー
+                            const changeEvent = new Event('change', { bubbles: true });
+                            textareas[i].dispatchEvent(changeEvent);
+
                             console.log("Set prompt template via JS");
                             return true;
                         }
@@ -348,6 +352,10 @@ def edit_prompt_template(page_with_server: Page):
                             const event = new Event('input', { bubbles: true });
                             textareas[i].dispatchEvent(event);
 
+                            // changeイベントを発火して自動保存をトリガー
+                            const changeEvent = new Event('change', { bubbles: true });
+                            textareas[i].dispatchEvent(changeEvent);
+
                             console.log("Modified disabled textarea via JS");
                             return true;
                         }
@@ -366,7 +374,25 @@ def edit_prompt_template(page_with_server: Page):
         current_template = template_editor.input_value()
         custom_prompt = current_template + "\n\n# カスタムプロンプトのテストです!"
         template_editor.fill(custom_prompt)
-        logger.info("Prompt template edited normally")
+
+        # changeイベントを発火して自動保存をトリガー
+        page.evaluate(
+            """
+            () => {
+                const textareas = document.querySelectorAll('textarea');
+                for (let i = 0; i < textareas.length; i++) {
+                    if (!textareas[i].disabled && textareas[i].offsetParent !== null) {
+                        const event = new Event('change', { bubbles: true });
+                        textareas[i].dispatchEvent(event);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            """
+        )
+
+        logger.info("Prompt template edited normally and auto-saved")
 
     except Exception as e:
         # エラーメッセージを出して、テストを続行
@@ -454,11 +480,11 @@ def custom_prompt_template_saved(page_with_server: Page):
     # プロンプト設定を開く
     open_prompt_settings(page_with_server)
 
-    # プロンプトを編集
+    # プロンプトを編集（自動保存される）
     edit_prompt_template(page_with_server)
 
-    # 保存ボタンをクリック
-    click_save_prompt_button(page_with_server)
+    # 自動保存機能があるため、保存ボタンのクリックは不要
+    # click_save_prompt_button(page_with_server)
 
     # 保存確認
     verify_prompt_template_saved(page_with_server)
