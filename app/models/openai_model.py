@@ -9,6 +9,8 @@ from typing import Optional
 import httpx
 from openai import OpenAI
 
+from app.utils.logger import logger
+
 
 class OpenAIModel:
     """Class that generates conversational text using the OpenAI API."""
@@ -113,7 +115,7 @@ Paper summary:
             return "API key error: OpenAI API key is not set."
 
         try:
-            print("Making OpenAI API request with model: gpt-4o-mini")
+            logger.info("Making OpenAI API request with model: gpt-4o-mini")
 
             # Create client with default http client to avoid proxies issue
             http_client = httpx.Client()
@@ -131,14 +133,14 @@ Paper summary:
             generated_text = str(response.choices[0].message.content)
 
             # Debug output
-            print(f"Generated text sample: {generated_text[:200]}...")
+            logger.info(f"Generated text sample: {generated_text[:200]}...")
 
             return generated_text
 
         except ImportError:
             return "Error: Install the openai library with: pip install openai"
         except Exception as e:
-            print(f"Error during OpenAI API request: {e}")
+            logger.error(f"Error during OpenAI API request: {e}")
             return f"Error generating text: {e}"
 
     def generate_podcast_conversation(self, paper_summary: str) -> str:
@@ -160,7 +162,7 @@ Paper summary:
         # Create prompt for podcast conversation using the template
         prompt = prompt_template.format(paper_summary=paper_summary)
 
-        print("Sending podcast generation prompt to OpenAI")
+        logger.info("Sending podcast generation prompt to OpenAI")
 
         # Use the general text generation method
         result = self.generate_text(prompt)
@@ -176,15 +178,15 @@ Paper summary:
                 or line.startswith("ずんだもん：")
                 or line.startswith("四国めたん：")
             ]
-            print(f"Generated {len(speaker_lines)} conversation lines")
+            logger.info(f"Generated {len(speaker_lines)} conversation lines")
             if speaker_lines:
-                print(f"First few lines: {speaker_lines[:3]}")
+                logger.debug(f"First few lines: {speaker_lines[:3]}")
             else:
-                print("Warning: No lines with correct speaker format found")
-                print(f"First few output lines: {lines[:3]}")
+                logger.warning("No lines with correct speaker format found")
+                logger.warning(f"First few output lines: {lines[:3]}")
                 # Try to reformat the result if format is incorrect
                 if "ずんだもん" in result and "四国めたん" in result:
-                    print("Attempting to fix formatting...")
+                    logger.info("Attempting to fix formatting...")
                     import re
 
                     # Add colons after character names if missing
@@ -205,11 +207,8 @@ Paper summary:
                         or line.startswith("ずんだもん：")
                         or line.startswith("四国めたん：")
                     ]
+                    logger.debug(f"First few fixed lines: {fixed_speaker_lines[:3]}")
                     if fixed_speaker_lines:
-                        print(
-                            f"Fixed formatting. Now have {len(fixed_speaker_lines)} proper lines"
-                        )
-                        print(f"First few fixed lines: {fixed_speaker_lines[:3]}")
                         result = fixed_result
 
         return result

@@ -17,6 +17,13 @@ repos:
         language: python
         types: [text]
         stages: [pre-commit]
+    -   id: detect-print-statements
+        name: detect print statements
+        description: Detect print statements in Python files
+        entry: .pre-commit-hooks/detect_print_statements.py
+        language: python
+        types: [python]
+        stages: [pre-commit]
 
 -   repo: https://github.com/pycqa/isort
     rev: 5.13.2

@@ -93,10 +93,17 @@ class TestConversationParser:
                 "ずんだもん: わくわくするのだ！\n"
             )
 
-            # Patch _create_final_audio_file to return a predictable path
+            # 音声ファイル生成のパッチを追加
             with mock.patch.object(
                 audio_gen, "_create_final_audio_file"
-            ) as mock_create:
+            ) as mock_create, mock.patch(
+                "os.path.exists", return_value=True
+            ), mock.patch(
+                "builtins.open", mock.mock_open()
+            ), mock.patch(
+                "os.makedirs", return_value=None
+            ):
+                # 音声生成成功を模擬
                 mock_output_path = os.path.join(temp_dir, "final_output.wav")
                 mock_create.return_value = mock_output_path
 
@@ -104,7 +111,9 @@ class TestConversationParser:
                 result = audio_gen.generate_character_conversation(conversation)
 
                 # Verify results
+                assert result is not None
                 assert result == mock_output_path
+                assert mock_create.called
 
                 # Check that synthesizer was called for each line
                 assert mock_instance.tts.call_count == 3

@@ -13,6 +13,7 @@ import gradio as gr
 from app.components.audio_generator import VOICEVOX_CORE_AVAILABLE, AudioGenerator
 from app.components.pdf_uploader import PDFUploader
 from app.components.text_processor import TextProcessor
+from app.utils.logger import logger
 
 # Check for temporary file directories
 os.makedirs("data/temp", exist_ok=True)
@@ -137,7 +138,7 @@ class PaperPodcastApp:
             return str(temp_path)
 
         except Exception as e:
-            print(f"File processing error: {e}")
+            logger.error(f"File processing error: {e}")
             return None
 
     def extract_pdf_text(self, file_obj) -> Tuple[str, str]:
@@ -199,58 +200,70 @@ class PaperPodcastApp:
 
     def generate_podcast_text(self, text: str):
         """
-        Generate podcast text from the extracted paper text.
+        Generate podcast-style text from input text.
 
         Args:
-            text (str): Extracted paper text
+            text (str): Input text from PDF
 
         Returns:
-            tuple: (podcast_text, updated_system_log)
+            tuple: (generated_podcast_text, system_log)
         """
-        if not text or text.strip() == "":
-            self.update_log("テキスト生成: テキストが入力されていません")
-            return "Please extract text from a PDF first.", self.system_log
+        if not text:
+            self.update_log("ポッドキャストテキスト生成: ❌ 入力テキストが空です")
+            return "Please upload a PDF file and extract text first.", self.system_log
 
-        podcast_text = self.text_processor.process_text(text)
-        self.update_log("トークテキスト生成: 完了")
+        # Check if API key is set
+        if not self.text_processor.openai_model.api_key:
+            self.update_log("ポッドキャストテキスト生成: ❌ OpenAI APIキーが設定されていません")
+            return (
+                "OpenAI API key is not set. Please configure it in the Settings tab.",
+                self.system_log,
+            )
 
-        return podcast_text, self.system_log
+        try:
+            # Generate podcast text
+            podcast_text = self.text_processor.process_text(text)
+            self.update_log("ポッドキャストテキスト生成: ✅ 完了")
+            logger.info(f"Podcast text sample: {text[:200]}...")
+            return podcast_text, self.system_log
+        except Exception as e:
+            error_msg = f"ポッドキャストテキスト生成: ❌ エラー - {str(e)}"
+            self.update_log(error_msg)
+            logger.error(f"Podcast text generation error: {str(e)}")
+            return f"Error: {str(e)}", self.system_log
 
     def generate_podcast_audio(self, text: str):
         """
-        Generate audio for the podcast text using both Zundamon and Shikoku Metan voices.
+        Generate audio from podcast text.
 
         Args:
-            text (str): Podcast text in conversation format
+            text (str): Generated podcast text
 
         Returns:
-            tuple: (audio_path, updated_system_log)
+            tuple: (audio_path or None, system_log)
         """
-        if not text or text.strip() == "":
-            self.update_log("音声生成: テキストが入力されていません")
+        if not text:
+            self.update_log("音声生成: ❌ テキストが空です")
+            return None, self.system_log
+
+        # Check if VOICEVOX Core is available
+        if not self.voicevox_core_available:
+            self.update_log("音声生成: ❌ VOICEVOX Coreが利用できません")
             return None, self.system_log
 
         try:
-            # For debugging: print the first few lines of text
-            print(f"Podcast text sample: {text[:200]}...")
-
-            # Process podcast text for character-specific audio generation
+            # Generate audio from text
             audio_path = self.audio_generator.generate_character_conversation(text)
-
             if audio_path:
-                self.update_log("音声生成: ずんだもんと四国めたんの会話を生成しました")
+                self.update_log("音声生成: ✅ 完了")
                 return audio_path, self.system_log
             else:
-                self.update_log("音声生成: 失敗しました")
-                print("Audio generation failed: No audio path returned")
+                logger.error("Audio generation failed: No audio path returned")
+                self.update_log("音声生成: ❌ 音声生成に失敗しました")
                 return None, self.system_log
-
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()
-            self.update_log(f"音声生成エラー: {str(e)}")
-            print(f"Audio generation exception: {str(e)}")
+            logger.error(f"Audio generation exception: {str(e)}")
+            self.update_log(f"音声生成: ❌ エラー - {str(e)}")
             return None, self.system_log
 
     def ui(self) -> gr.Blocks:

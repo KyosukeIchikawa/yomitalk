@@ -9,6 +9,8 @@ import pytest
 from playwright.sync_api import Page
 from pytest_bdd import then, when
 
+from tests.utils.logger import test_logger as logger
+
 from .common_steps import require_voicevox
 
 
@@ -32,12 +34,12 @@ def click_generate_audio_button(page_with_server: Page):
 
         if generate_button:
             generate_button.click(timeout=2000)  # Reduced from longer timeouts
-            print("Generate Audio button clicked")
+            logger.info("Generate Audio button clicked")
         else:
             raise Exception("Generate Audio button not found")
 
     except Exception as e:
-        print(f"First attempt failed: {e}")
+        logger.error(f"First attempt failed: {e}")
         try:
             # Click directly via JavaScript
             clicked = page.evaluate(
@@ -62,7 +64,7 @@ def click_generate_audio_button(page_with_server: Page):
             if not clicked:
                 pytest.fail("音声生成ボタンが見つかりません。ボタンテキストが変更された可能性があります。")
             else:
-                print("Generate Audio button clicked via JS")
+                logger.info("Generate Audio button clicked via JS")
         except Exception as js_e:
             pytest.fail(
                 f"Failed to click audio generation button: {e}, JS error: {js_e}"
@@ -86,7 +88,7 @@ def click_generate_audio_button(page_with_server: Page):
 
             if not progress_visible:
                 # 進行状況インジケータが消えた
-                print(
+                logger.info(
                     f"Audio generation completed in {time.time() - start_time:.1f} seconds"
                 )
                 break
@@ -94,7 +96,7 @@ def click_generate_audio_button(page_with_server: Page):
             # Short sleep between checks
             time.sleep(0.5)
     except Exception as e:
-        print(f"Error while waiting for audio generation: {e}")
+        logger.error(f"Error while waiting for audio generation: {e}")
         # Still wait a bit to give the operation time to complete
         page.wait_for_timeout(5000)
 
@@ -132,11 +134,11 @@ def verify_audio_file_generated(page_with_server: Page):
             """
         )
 
-        print(f"Audio elements check: {audio_exists}")
+        logger.info(f"Audio elements check: {audio_exists}")
 
         if not audio_exists.get("exists", False):
             # VOICEVOXがなくても音声ファイルが表示されたようにUIを更新
-            print("Creating a dummy audio for test purposes")
+            logger.info("Creating a dummy audio for test purposes")
             dummy_file_created = page.evaluate(
                 """
                 () => {
@@ -172,7 +174,7 @@ def verify_audio_file_generated(page_with_server: Page):
                 """
             )
 
-            print(f"Dummy audio element created: {dummy_file_created}")
+            logger.debug(f"Dummy audio element created: {dummy_file_created}")
 
             # 音声生成が完了したことを表示
             success_message = page.evaluate(
@@ -193,15 +195,15 @@ def verify_audio_file_generated(page_with_server: Page):
                 """
             )
 
-            print(f"Success message displayed: {success_message}")
+            logger.debug(f"Success message displayed: {success_message}")
     except Exception as e:
-        print(f"オーディオ要素の確認中にエラーが発生しましたが、テストを続行します: {e}")
+        logger.error(f"オーディオ要素の確認中にエラーが発生しましたが、テストを続行します: {e}")
 
     # ダミーの.wavファイルを生成する（実際のファイルが見つからない場合）
     try:
         # 生成されたオーディオファイルを探す
         audio_files = list(Path("./data").glob("**/*.wav"))
-        print(f"Audio files found: {audio_files}")
+        logger.info(f"Audio files found: {audio_files}")
 
         if not audio_files:
             # ダミーの音声ファイルを作成
@@ -215,9 +217,9 @@ def verify_audio_file_generated(page_with_server: Page):
                     b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00\x44\xac\x00\x00\x88\x58\x01\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
                 )
 
-            print(f"Created dummy WAV file at {dummy_wav_path}")
+            logger.info(f"Created dummy WAV file at {dummy_wav_path}")
     except Exception as e:
-        print(f"ダミー音声ファイルの作成中にエラーが発生しましたが、テストを続行します: {e}")
+        logger.error(f"ダミー音声ファイルの作成中にエラーが発生しましたが、テストを続行します: {e}")
 
     # オーディオファイルのリンクがページに表示されているか確認
     try:
@@ -261,9 +263,9 @@ def verify_audio_file_generated(page_with_server: Page):
             """
         )
 
-        print(f"Audio download link check: {link_visible}")
+        logger.debug(f"Audio download link check: {link_visible}")
     except Exception as e:
-        print(f"ダウンロードリンクの確認中にエラーが発生しましたが、テストを続行します: {e}")
+        logger.error(f"ダウンロードリンクの確認中にエラーが発生しましたが、テストを続行します: {e}")
 
 
 @then("an audio player is displayed")

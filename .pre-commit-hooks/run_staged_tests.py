@@ -2,11 +2,18 @@
 """
 Pre-commit hook that runs unit tests related to staged Python files.
 """
+import logging
 import os
 import subprocess
 import sys
 import time
 from typing import List, Set
+
+# ロギング設定
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("run_staged_tests")
 
 
 def get_staged_python_files() -> List[str]:
@@ -24,7 +31,7 @@ def get_staged_python_files() -> List[str]:
         # Filter only Python files and remove empty strings
         return [f for f in staged_files if f.endswith(".py") and f]
     except subprocess.CalledProcessError:
-        print("Error: Failed to get staged files")
+        logger.error("Failed to get staged files")
         return []
 
 
@@ -80,7 +87,7 @@ def run_pytest(test_files: Set[str]) -> bool:
         bool: True if all tests pass, False otherwise
     """
     if not test_files:
-        print("No test files to run")
+        logger.info("No test files to run")
         return True
 
     # Try to use pytest from virtual environment
@@ -93,7 +100,7 @@ def run_pytest(test_files: Set[str]) -> bool:
     else:
         cmd = f"python -m pytest {' '.join(test_files)} -v --timeout=30"
 
-    print(f"Running: {cmd}")
+    logger.info(f"Running: {cmd}")
 
     try:
         # サブプロセスにタイムアウトを設定
@@ -105,7 +112,7 @@ def run_pytest(test_files: Set[str]) -> bool:
 
         while process.poll() is None:
             if time.time() - start_time > timeout:
-                print(f"Test execution timed out after {timeout} seconds")
+                logger.warning(f"Test execution timed out after {timeout} seconds")
                 process.terminate()
                 # 強制終了のために少し待つ
                 time.sleep(2)
@@ -116,7 +123,7 @@ def run_pytest(test_files: Set[str]) -> bool:
 
         return True  # 常に成功とする
     except Exception as e:
-        print(f"Error running tests: {e}")
+        logger.error(f"Error running tests: {e}")
         return True  # エラーでも成功とする
 
 
@@ -138,28 +145,28 @@ def main() -> int:
             break
 
     if skip_test:
-        print("Skipping tests for pre-commit configuration files only")
+        logger.info("Skipping tests for pre-commit configuration files only")
         return 0
 
     if not staged_files:
-        print("No Python files staged for commit")
+        logger.info("No Python files staged for commit")
         return 0
 
-    print(f"Staged Python files: {', '.join(staged_files)}")
+    logger.info(f"Staged Python files: {', '.join(staged_files)}")
 
     test_files = get_test_files_to_run(staged_files)
 
     if not test_files:
-        print("No tests to run (problematic tests were excluded)")
+        logger.info("No tests to run (problematic tests were excluded)")
         return 0
 
-    print(f"Tests to run: {', '.join(test_files)}")
+    logger.info(f"Tests to run: {', '.join(test_files)}")
 
     if run_pytest(test_files):
-        print("All tests passed!")
+        logger.info("All tests passed!")
         return 0
     else:
-        print("Tests failed. Please fix the issues before committing.")
+        logger.error("Tests failed. Please fix the issues before committing.")
         return 1
 
 

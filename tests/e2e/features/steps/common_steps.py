@@ -9,6 +9,8 @@ import pytest
 from playwright.sync_api import Page
 from pytest_bdd import given
 
+from tests.utils.logger import test_logger as logger
+
 # Path to the test PDF
 TEST_PDF_PATH = os.path.join(
     os.path.dirname(__file__), "../../../../tests/data/sample_paper.pdf"
@@ -25,7 +27,7 @@ if not os.path.exists(TEST_PDF_PATH):
         TEST_PDF_PATH = DATA_PDF_PATH
     else:
         # どちらにもない場合はエラーログ出力
-        print(f"警告: サンプルPDFが見つかりません。パス: {TEST_PDF_PATH}")
+        logger.warning(f"警告: サンプルPDFが見つかりません。パス: {TEST_PDF_PATH}")
 
 
 # テスト用のヘルパー関数
@@ -58,12 +60,12 @@ VOICEVOX_AVAILABLE = (
 
 # 環境変数がfalseでも、VOICEVOXの存在を報告
 if VOICEVOX_AVAILABLE:
-    print("VOICEVOXのライブラリファイルが見つかりました。利用可能としてマーク。")
+    logger.info("VOICEVOXのライブラリファイルが見つかりました。利用可能としてマーク。")
 else:
     if VOICEVOX_DEFAULT_AVAILABLE:
-        print("VOICEVOXのライブラリファイルは存在しますが、環境変数でオフにされています。")
+        logger.info("VOICEVOXのライブラリファイルは存在しますが、環境変数でオフにされています。")
     else:
-        print("VOICEVOXディレクトリが見つからないか、ライブラリファイルがありません。")
+        logger.info("VOICEVOXディレクトリが見つからないか、ライブラリファイルがありません。")
 
 
 # VOICEVOX利用可能時のみ実行するテストをマークするデコレータ
@@ -72,7 +74,7 @@ def require_voicevox(func):
 
     def wrapper(*args, **kwargs):
         if not VOICEVOX_AVAILABLE:
-            message = """
+            message = f"""
         -------------------------------------------------------
         VOICEVOX Coreが必要なテストがスキップされました。
 
@@ -87,7 +89,7 @@ def require_voicevox(func):
         $ make download-voicevox-core
         -------------------------------------------------------
             """
-            print(message)
+            logger.warning(message)
             pytest.skip("VOICEVOX Coreが利用できないためスキップします")
         return func(*args, **kwargs)
 

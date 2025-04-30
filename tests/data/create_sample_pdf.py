@@ -1,13 +1,17 @@
-"""Module to create sample PDF files for testing."""
+"""
+Script to create a sample PDF for testing the PDF extraction feature.
+"""
 
 import os
 
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
+from tests.utils.logger import test_logger as logger
+
 
 def create_sample_pdf(output_path="sample_paper.pdf"):
-    """Create a sample PDF file for testing."""
+    """Create a sample academic paper PDF for testing"""
     # Ensure the output directory exists
     output_dir = os.path.dirname(output_path)
     if output_dir and not os.path.exists(output_dir):
@@ -274,4 +278,4 @@ if __name__ == "__main__":
     output_path = os.path.join(current_dir, "sample_paper.pdf")
 
     created_path = create_sample_pdf(output_path)
-    print(f"Sample PDF created: {created_path}")
+    logger.info(f"Sample PDF created: {created_path}")

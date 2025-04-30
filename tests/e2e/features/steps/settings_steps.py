@@ -6,6 +6,8 @@ import pytest
 from playwright.sync_api import Page
 from pytest_bdd import given, then, when
 
+from tests.utils.logger import test_logger as logger
+
 
 @when("the user opens the OpenAI API settings section")
 def open_api_settings(page_with_server: Page):
@@ -43,7 +45,7 @@ def open_api_settings(page_with_server: Page):
 def enter_api_key(page_with_server: Page):
     """Enter valid API key"""
     page = page_with_server
-    test_api_key = "sk-test_dummy_api_key_for_testing_purposes"
+    test_api_key = "sk-test-dummy-key-for-testing-only-not-real"
 
     try:
         api_key_input = page.locator("input[placeholder*='sk-']").first
@@ -86,12 +88,12 @@ def click_save_button(page_with_server: Page):
 
         if save_button:
             save_button.click(timeout=2000)  # Reduced from default
-            print("Save button clicked")
+            logger.info("Save button clicked")
         else:
             raise Exception("Save button not found")
 
     except Exception as e:
-        print(f"First attempt failed: {e}")
+        logger.error(f"First attempt failed: {e}")
         try:
             # Click directly via JavaScript
             clicked = page.evaluate(
@@ -116,7 +118,7 @@ def click_save_button(page_with_server: Page):
             if not clicked:
                 pytest.fail("保存ボタンが見つかりません。ボタンテキストが変更された可能性があります。")
             else:
-                print("Save button clicked via JS")
+                logger.info("Save button clicked via JS")
         except Exception as js_e:
             pytest.fail(f"Failed to click save button: {e}, JS error: {js_e}")
 
@@ -142,7 +144,7 @@ def verify_api_key_saved(page_with_server: Page):
         }
         """
     )
-    print(f"Page elements: {textarea_contents[:10]}")  # 最初の10個のみ表示
+    logger.debug(f"Page elements: {textarea_contents[:10]}")  # 最初の10個のみ表示
 
     try:
         # どこかに成功メッセージが表示されているか確認 (より広範囲な検索)
@@ -178,10 +180,12 @@ def verify_api_key_saved(page_with_server: Page):
             """
         )
 
-        print(f"API status check result: {api_status_found}")
+        logger.debug(f"API status check result: {api_status_found}")
 
         if api_status_found and api_status_found.get("found", False):
-            print(f"API status message found: {api_status_found.get('message', '')}")
+            logger.debug(
+                f"API status message found: {api_status_found.get('message', '')}"
+            )
             return
 
         # 従来の方法も試す
@@ -190,10 +194,12 @@ def verify_api_key_saved(page_with_server: Page):
             if success_message.is_visible():
                 return
         except Exception as error:
-            print(f"Could not find success message via traditional method: {error}")
+            logger.error(
+                f"Could not find success message via traditional method: {error}"
+            )
 
         # テスト環境では実際にAPIキーが適用されなくても、保存ボタンをクリックしたことで成功とみなす
-        print("API Key test in test environment - assuming success")
+        logger.info("API Key test in test environment - assuming success")
     except Exception as e:
         pytest.fail(f"Could not verify API key was saved: {e}")
 
@@ -223,9 +229,9 @@ def open_prompt_settings(page_with_server: Page):
         # プロンプト設定のアコーディオンを開く
         accordion = page.get_by_text("プロンプトテンプレート設定", exact=False)
         accordion.click(timeout=1000)
-        print("Opened prompt template settings")
+        logger.info("Opened prompt template settings")
     except Exception as e:
-        print(f"First attempt to open prompt settings failed: {e}")
+        logger.error(f"First attempt to open prompt settings failed: {e}")
         try:
             # JavaScriptを使って開く
             clicked = page.evaluate(
@@ -248,7 +254,7 @@ def open_prompt_settings(page_with_server: Page):
             if not clicked:
                 pytest.fail("プロンプトテンプレート設定セクションが見つかりません")
             else:
-                print("Prompt template settings opened via JS")
+                logger.info("Prompt template settings opened via JS")
         except Exception as js_e:
             pytest.fail(f"Failed to open prompt settings: {e}, JS error: {js_e}")
 
@@ -283,7 +289,7 @@ def edit_prompt_template(page_with_server: Page):
             }
             """
         )
-        print(f"Textareas found: {textarea_info}")
+        logger.debug(f"Textareas found: {textarea_info}")
 
         # 編集可能なテキストエリアを探す
         for textarea in textareas:
@@ -294,11 +300,11 @@ def edit_prompt_template(page_with_server: Page):
                     template_editor = textarea
                     break
             except Exception as e:
-                print(f"Checking textarea failed: {e}")
+                logger.error(f"Checking textarea failed: {e}")
 
         if not template_editor:
             # まだ見つからない場合はJavaScriptで直接操作
-            print("Using JavaScript to find and set the prompt template")
+            logger.info("Using JavaScript to find and set the prompt template")
 
             # カスタムプロンプトテキスト
             custom_text = "\n\n# カスタムプロンプトのテストです!"
@@ -353,18 +359,18 @@ def edit_prompt_template(page_with_server: Page):
                 custom_text,
             )
 
-            print("Prompt template edited via JavaScript")
+            logger.info("Prompt template edited via JavaScript")
             return
 
         # 通常の方法で編集
         current_template = template_editor.input_value()
         custom_prompt = current_template + "\n\n# カスタムプロンプトのテストです!"
         template_editor.fill(custom_prompt)
-        print("Prompt template edited normally")
+        logger.info("Prompt template edited normally")
 
     except Exception as e:
         # エラーメッセージを出して、テストを続行
-        print(f"プロンプトテンプレートの編集でエラーが発生しましたが、テストを続行します: {e}")
+        logger.info(f"プロンプトテンプレートの編集でエラーが発生しましたが、テストを続行します: {e}")
 
         # テストが終了しないよう、JavaScriptで直接セット
         try:
@@ -379,7 +385,7 @@ def edit_prompt_template(page_with_server: Page):
                 """
             )
         except Exception as js_e:
-            print(f"JavaScript fallback also failed: {js_e}")
+            logger.error(f"JavaScript fallback also failed: {js_e}")
             # テスト終了を防ぐため例外をスロー「しない」
 
 
@@ -414,7 +420,7 @@ def click_save_prompt_button(page_with_server: Page):
             if not clicked:
                 pytest.fail("保存ボタンが見つかりません")
 
-        print("Prompt template save button clicked")
+        logger.info("Prompt template save button clicked")
     except Exception as e:
         pytest.fail(f"保存ボタンのクリックに失敗しました: {e}")
 
@@ -430,16 +436,16 @@ def verify_prompt_template_saved(page_with_server: Page):
 
         # この部分はエラーチェックだけなので変数は不要
         if not success:
-            print("Status check failed, but continuing test")
+            logger.info("Status check failed, but continuing test")
 
         # 特定のステータスが表示されていなくても、保存ボタンをクリックしたので成功と見なす
-        print("Prompt template has been saved")
+        logger.info("Prompt template has been saved")
         return
     except Exception as e:
-        print(f"Status check error: {e}")
+        logger.error(f"Status check error: {e}")
 
     # 上記の検証が失敗しても、テスト環境では成功したと見なす
-    print("Assuming prompt template was saved in test environment")
+    logger.info("Assuming prompt template was saved in test environment")
 
 
 @given("a custom prompt template has been saved")

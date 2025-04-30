@@ -1,14 +1,19 @@
-"""Module for processing and manipulating PDF files.
+"""Module providing PDF text extraction functionality.
 
-Provides functions for PDF file uploads, text extraction, and temporary file management.
+Provides PDF extraction functionality for the Paper Podcast Generator application.
 """
 
 import os
 from pathlib import Path
 from typing import Any, Optional
 
+# PyMuPDFはSWIG関連の警告を引き起こすため、完全に削除します
+# fitz (PyMuPDF) は任意の依存関係であり、PDFパーサーとしてPyPDFとpdfplumberで十分です
+
 import pdfplumber
-import pypdf
+from pypdf import PdfReader
+
+from app.utils.logger import logger
 
 
 class PDFUploader:
@@ -42,37 +47,30 @@ class PDFUploader:
         except Exception as e:
             return f"An error occurred: {e}"
 
-    def extract_text_from_path(self, pdf_path: str) -> str:
+    def extract_text_from_path(self, file_path: str) -> str:
         """
-        Extract text from a PDF file at the specified path.
+        Extract text from a PDF file.
 
         Args:
-            pdf_path (str): Path to the PDF file
+            file_path (str): Path to the PDF file
 
         Returns:
-            str: Extracted text
+            str: Extracted text or error message
         """
-        if not pdf_path or not os.path.exists(pdf_path):
+        if not file_path or not os.path.exists(file_path):
             return "PDF file not found."
 
         try:
-            # Extract text using both pypdf and pdfplumber
-            extracted_text = self._extract_with_pypdf(pdf_path)
-
-            # If pypdf fails, try pdfplumber
-            if not extracted_text:
-                extracted_text = self._extract_with_pdfplumber(pdf_path)
-
-            # Return extracted text
-            if not extracted_text.strip():
-                return (
-                    "Unable to extract text. Please check if the PDF has text layers."
-                )
-
-            return extracted_text
-
-        except Exception as e:
-            return f"An error occurred during text extraction: {e}"
+            # First attempt using PyPDF
+            return self._extract_with_pypdf(file_path)
+        except Exception as e1:
+            logger.error(f"PyPDF extraction failed: {e1}")
+            try:
+                # Second attempt using pdfplumber
+                return self._extract_with_pdfplumber(file_path)
+            except Exception as e2:
+                logger.error(f"pdfplumber extraction failed: {e2}")
+                return f"PDF parsing failed: {str(e2)}"
 
     def _save_uploaded_file(self, file: Any) -> str:
         """
@@ -111,44 +109,41 @@ class PDFUploader:
 
         return temp_path
 
-    def _extract_with_pypdf(self, pdf_path: str) -> str:
+    def _extract_with_pypdf(self, file_path: str) -> str:
         """
-        Extract text from a PDF using pypdf.
+        Extract text from a PDF file using PyPDF.
 
         Args:
-            pdf_path (str): Path to the PDF file
+            file_path (str): Path to the PDF file
 
         Returns:
-            str: Extracted text, empty string if failed
+            str: Extracted text
         """
         extracted_text = ""
-        try:
-            with open(pdf_path, "rb") as f:
-                pdf_reader = pypdf.PdfReader(f)
-                for page_num, page in enumerate(pdf_reader.pages):
-                    page_text = page.extract_text()
-                    extracted_text += f"--- Page {page_num + 1} ---\n{page_text}\n\n"
-            return extracted_text
-        except Exception as e:
-            print(f"pypdf extraction error: {e}")
-            return ""
+        with open(file_path, "rb") as f:
+            reader = PdfReader(f)
+            for i, page in enumerate(reader.pages):
+                page_text = page.extract_text()
+                if page_text:
+                    extracted_text += f"--- Page {i+1} ---\n{page_text}\n\n"
 
-    def _extract_with_pdfplumber(self, pdf_path: str) -> str:
+        return extracted_text
+
+    def _extract_with_pdfplumber(self, file_path: str) -> str:
         """
-        Extract text from a PDF using pdfplumber.
+        Extract text from a PDF file using pdfplumber.
 
         Args:
-            pdf_path (str): Path to the PDF file
+            file_path (str): Path to the PDF file
 
         Returns:
-            str: Extracted text, empty string if failed
+            str: Extracted text
         """
         extracted_text = ""
-        try:
-            with pdfplumber.open(pdf_path) as pdf:
-                for page_num, page in enumerate(pdf.pages):
-                    page_text = page.extract_text() or ""
-                    extracted_text += f"--- Page {page_num + 1} ---\n{page_text}\n\n"
-            return extracted_text
-        except Exception as e:
-            return f"PDF parsing failed: {e}"
+        with pdfplumber.open(file_path) as pdf:
+            for i, page in enumerate(pdf.pages):
+                page_text = page.extract_text()
+                if page_text:
+                    extracted_text += f"--- Page {i+1} ---\n{page_text}\n\n"
+
+        return extracted_text

@@ -8,6 +8,8 @@ import pytest
 from playwright.sync_api import Page
 from pytest_bdd import given, then, when
 
+from tests.utils.logger import test_logger as logger
+
 
 @when("the user clicks the text generation button")
 def click_generate_text_button(page_with_server: Page):
@@ -27,12 +29,12 @@ def click_generate_text_button(page_with_server: Page):
 
         if generate_button:
             generate_button.click(timeout=2000)  # Reduced timeout
-            print("Generate Text button clicked")
+            logger.info("Generate Text button clicked")
         else:
             raise Exception("Generate Text button not found")
 
     except Exception as e:
-        print(f"First attempt failed: {e}")
+        logger.error(f"First attempt failed: {e}")
         try:
             # Click directly via JavaScript
             clicked = page.evaluate(
@@ -57,7 +59,7 @@ def click_generate_text_button(page_with_server: Page):
             if not clicked:
                 pytest.fail("テキスト生成ボタンが見つかりません。ボタンテキストが変更された可能性があります。")
             else:
-                print("Generate Text button clicked via JS")
+                logger.info("Generate Text button clicked via JS")
         except Exception as js_e:
             pytest.fail(
                 f"Failed to click text generation button: {e}, JS error: {js_e}"
@@ -82,7 +84,7 @@ def click_generate_text_button(page_with_server: Page):
 
             if not progress_visible:
                 # 進行状況インジケータが消えた
-                print(
+                logger.info(
                     f"Text generation completed in {time.time() - start_time:.1f} seconds"
                 )
                 break
@@ -90,7 +92,7 @@ def click_generate_text_button(page_with_server: Page):
             # Short sleep between checks
             time.sleep(0.5)
     except Exception as e:
-        print(f"Error while waiting for text generation: {e}")
+        logger.error(f"Error while waiting for text generation: {e}")
         # Still wait a bit to give the operation time to complete
         page.wait_for_timeout(3000)
 
@@ -152,7 +154,7 @@ def verify_podcast_text_generated(page_with_server: Page):
             """
         )
 
-        print(f"Available textareas: {textarea_contents}")
+        logger.debug(f"Available textareas: {textarea_contents}")
 
         # 生成されたトークテキストを含むtextareaを探す
         for textarea in textarea_contents:
@@ -172,7 +174,7 @@ def verify_podcast_text_generated(page_with_server: Page):
 
     # テスト環境でAPIキーがなく、テキストが生成されなかった場合はダミーテキストを設定
     if not generated_text:
-        print("テスト用にダミーのトークテキストを生成します")
+        logger.info("テスト用にダミーのトークテキストを生成します")
         # ダミーテキストをUI側に設定
         generated_text = page.evaluate(
             """
@@ -278,4 +280,4 @@ def verify_custom_prompt_text_generated(page_with_server: Page):
     assert generated_text, "No podcast text was generated"
 
     # テストデバッグ用にカスタムプロンプトの内容を検証する代わりに成功とみなす
-    print("Custom prompt text generation verified in test environment")
+    logger.info("Custom prompt text generation verified in test environment")

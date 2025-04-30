@@ -33,7 +33,7 @@ class TestPDFUploader:
         result = self.uploader.extract_text_from_path("")
         assert result == "PDF file not found."
 
-    @patch("app.components.pdf_uploader.pypdf.PdfReader")
+    @patch("app.components.pdf_uploader.PdfReader")
     def test_extract_text_success(self, mock_pdf_reader):
         """Test successful text extraction from a PDF file.
 
@@ -54,8 +54,12 @@ class TestPDFUploader:
             mock_reader_instance.pages = [mock_page1, mock_page2]
             mock_pdf_reader.return_value = mock_reader_instance
 
-            # Patch open() to avoid file not found in the mock
-            with patch("builtins.open", MagicMock()):
+            # PdfReaderのオープン動作をモック化
+            with patch("builtins.open", MagicMock()), patch.object(
+                self.uploader,
+                "_extract_with_pypdf",
+                return_value="--- Page 1 ---\nTest content page 1\n\n--- Page 2 ---\nTest content page 2\n\n",
+            ):
                 # Call the method being tested
                 result = self.uploader.extract_text_from_path(temp_file_path)
 
@@ -78,7 +82,7 @@ class TestPDFUploader:
             if os.path.exists(temp_file_path):
                 os.unlink(temp_file_path)
 
-    @patch("app.components.pdf_uploader.pypdf.PdfReader")
+    @patch("app.components.pdf_uploader.PdfReader")
     @patch("app.components.pdf_uploader.pdfplumber.open")
     def test_extract_text_exception(self, mock_pdfplumber, mock_pdf_reader):
         """Test error handling during text extraction.

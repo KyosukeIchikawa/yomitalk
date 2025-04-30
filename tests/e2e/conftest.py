@@ -14,6 +14,8 @@ from urllib.error import URLError
 import pytest
 from playwright.sync_api import sync_playwright
 
+from tests.utils.logger import test_logger as logger
+
 
 def pytest_configure(config):
     """タグを登録する"""
@@ -86,12 +88,12 @@ def setup_voicevox_core():
         内容を確認後、同意する場合は「y」を入力してインストールを続行してください。
         -------------------------------------------------------
         """
-        print(message)
+        logger.warning(message)
 
         # テストをスキップするのではなく、テストを実行可能にするため
         # VOICEVOXが必要なテストだけを明示的にスキップ
     else:
-        print("VOICEVOX Coreはすでにインストールされています。")
+        logger.info("VOICEVOX Coreはすでにインストールされています。")
 
     yield
 
@@ -148,7 +150,7 @@ def server_port():
         _worker_servers[worker_id] = {}
     _worker_servers[worker_id]["port"] = port
 
-    print(f"Worker {worker_id} using port {port} for server")
+    logger.info(f"Worker {worker_id} using port {port} for server")
     return port
 
 
@@ -167,16 +169,18 @@ def server_process(server_port):
         process = _worker_servers[worker_id]["process"]
         # プロセスがまだ実行中かチェック
         if process.poll() is None:
-            print(f"Worker {worker_id} reusing existing server on port {server_port}")
+            logger.info(
+                f"Worker {worker_id} reusing existing server on port {server_port}"
+            )
             yield process
             return
         else:
-            print(
+            logger.warning(
                 f"Worker {worker_id} previous server process exited with code {process.returncode}"
             )
             _worker_servers[worker_id]["process"] = None
 
-    print(f"Worker {worker_id} starting server on port {server_port}")
+    logger.info(f"Worker {worker_id} starting server on port {server_port}")
 
     # Change to the project root directory
     os.chdir(os.path.join(os.path.dirname(__file__), "../.."))
@@ -193,9 +197,9 @@ def server_process(server_port):
     os.environ["VOICEVOX_AVAILABLE"] = str(has_so or has_dll or has_dylib).lower()
 
     if not (has_so or has_dll or has_dylib):
-        print("VOICEVOX Coreがインストールされていません。音声生成テストのみスキップします。")
+        logger.warning("VOICEVOX Coreがインストールされていません。音声生成テストのみスキップします。")
     else:
-        print("VOICEVOX Coreライブラリが見つかりました。適切な環境変数を設定します。")
+        logger.info("VOICEVOX Coreライブラリが見つかりました。適切な環境変数を設定します。")
 
         # Set environment variables for VOICEVOX Core
         os.environ["VOICEVOX_CORE_PATH"] = str(
@@ -213,7 +217,7 @@ def server_process(server_port):
         subprocess.run(["pkill", "-f", f"PORT={server_port}"], check=False)
         time.sleep(1)  # Give it time to die
     except Exception as e:
-        print(f"Failed to kill existing process: {e}")
+        logger.warning(f"Failed to kill existing process: {e}")
 
     # Use environment variable to pass test mode flag
     env = os.environ.copy()
@@ -222,7 +226,7 @@ def server_process(server_port):
     env["WORKER_ID"] = worker_id  # ワーカーIDを環境変数として渡す
 
     # Start the server process with appropriate environment
-    print(f"Worker {worker_id} starting server on port {server_port}")
+    logger.info(f"Worker {worker_id} starting server on port {server_port}")
     process = subprocess.Popen(
         [f"{os.environ.get('VENV_PATH', './venv')}/bin/python", "main.py"],
         stdout=subprocess.PIPE,
@@ -236,7 +240,9 @@ def server_process(server_port):
     _worker_servers[worker_id]["process"] = process
     _worker_servers[worker_id]["port"] = server_port
 
-    print(f"Worker {worker_id} waiting for server to start on port {server_port}...")
+    logger.info(
+        f"Worker {worker_id} waiting for server to start on port {server_port}..."
+    )
 
     # Wait for the server to start and be ready
     max_retries = 60  # Increase max retries
@@ -249,7 +255,7 @@ def server_process(server_port):
             response = conn.getresponse()
             conn.close()
             if response.status < 400:
-                print(
+                logger.info(
                     f"Worker {worker_id} server is ready on port {server_port} after {i+1} attempts"
                 )
                 break
@@ -265,11 +271,15 @@ def server_process(server_port):
                 # Check if process is still running
                 if process.poll() is not None:
                     stdout, stderr = process.communicate()
-                    print(
+                    logger.warning(
                         f"Worker {worker_id} server process exited with code {process.returncode}"
                     )
-                    print(f"Server stdout: {stdout.decode('utf-8', errors='ignore')}")
-                    print(f"Server stderr: {stderr.decode('utf-8', errors='ignore')}")
+                    logger.warning(
+                        f"Server stdout: {stdout.decode('utf-8', errors='ignore')}"
+                    )
+                    logger.warning(
+                        f"Server stderr: {stderr.decode('utf-8', errors='ignore')}"
+                    )
                     pytest.fail(
                         f"Worker {worker_id} server process died before becoming available"
                     )
@@ -279,8 +289,12 @@ def server_process(server_port):
                 # Last attempt failed
                 if process.poll() is not None:
                     stdout, stderr = process.communicate()
-                    print(f"Server stdout: {stdout.decode('utf-8', errors='ignore')}")
-                    print(f"Server stderr: {stderr.decode('utf-8', errors='ignore')}")
+                    logger.warning(
+                        f"Server stdout: {stdout.decode('utf-8', errors='ignore')}"
+                    )
+                    logger.warning(
+                        f"Server stderr: {stderr.decode('utf-8', errors='ignore')}"
+                    )
                 pytest.fail(
                     f"Worker {worker_id} failed to connect to the server on port {server_port} after multiple attempts"
                 )
@@ -310,7 +324,7 @@ def page_with_server(browser, server_process, server_port):
     context.set_default_navigation_timeout(5000)  # Reduced from 10000
 
     # コンソールログをキャプチャする
-    context.on("console", lambda msg: print(f"BROWSER CONSOLE: {msg.text}"))
+    context.on("console", lambda msg: logger.info(f"BROWSER CONSOLE: {msg.text}"))
 
     page = context.new_page()
 
@@ -320,7 +334,7 @@ def page_with_server(browser, server_process, server_port):
             f"http://localhost:{server_port}", timeout=5000
         )  # Use the dynamic port
     except Exception as e:
-        print(f"Failed to navigate to server: {e}")
+        logger.warning(f"Failed to navigate to server: {e}")
         # Try one more time
         time.sleep(2)
         page.goto(f"http://localhost:{server_port}", timeout=10000)
@@ -345,23 +359,25 @@ def cleanup_server_process():
     """
     # テスト終了時に実行
     yield
-    print("Terminating all server processes...")
+    logger.info("Terminating all server processes...")
 
     # すべてのワーカーのサーバープロセスを終了
     for worker_id, worker_data in _worker_servers.items():
         if "process" in worker_data and worker_data["process"] is not None:
             process = worker_data["process"]
             if process.poll() is None:  # プロセスがまだ実行中
-                print(f"Terminating server process for worker {worker_id}")
+                logger.info(f"Terminating server process for worker {worker_id}")
                 try:
                     process.terminate()
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
-                    print(
+                    logger.warning(
                         f"Server for worker {worker_id} did not terminate gracefully, force killing..."
                     )
                     process.kill()
                 except Exception as e:
-                    print(f"Error while terminating server for worker {worker_id}: {e}")
+                    logger.warning(
+                        f"Error while terminating server for worker {worker_id}: {e}"
+                    )
 
-    print("Server process cleanup complete")
+    logger.info("Server process cleanup complete")
