@@ -19,11 +19,11 @@ class TestPromptManager(unittest.TestCase):
         """Test getting default prompt template."""
         template = self.prompt_manager.get_current_prompt_template()
         self.assertIsNotNone(template)
-        self.assertIn("${paper_summary}", template)
+        self.assertIn("${paper_text}", template)
 
     def test_set_custom_prompt_template(self):
         """Test setting custom prompt template."""
-        custom_template = "カスタムテンプレート ${paper_summary}"
+        custom_template = "カスタムテンプレート ${paper_text}"
         result = self.prompt_manager.set_prompt_template(custom_template)
 
         self.assertTrue(result)
@@ -39,11 +39,11 @@ class TestPromptManager(unittest.TestCase):
         self.assertIsNone(self.prompt_manager.custom_template)
 
     def test_generate_podcast_conversation(self):
-        """Test generating podcast conversation from paper summary."""
-        paper_summary = "これはテスト用の論文要約です。"
-        prompt = self.prompt_manager.generate_podcast_conversation(paper_summary)
+        """Test generating podcast conversation from paper text."""
+        paper_text = "これはテスト用の論文テキストです。"
+        prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
 
-        self.assertIn(paper_summary, prompt)
+        self.assertIn(paper_text, prompt)
 
     def test_set_and_get_character_mapping(self):
         """Test setting and getting character mapping."""

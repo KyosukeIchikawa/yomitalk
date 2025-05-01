@@ -38,7 +38,7 @@ class PromptManager:
         """
         template_str = """
 Please generate a Japanese conversation-style podcast text between "Character1" and "Character2"
-based on the following paper summary.
+based on the following paper text.
 
 Character roles:
 - Character1: A beginner in the paper's field with basic knowledge but sometimes makes common mistakes.
@@ -68,8 +68,8 @@ Guidelines for content:
 5. Keep the conversation natural, friendly and entertaining
 6. Make sure the podcast has a clear beginning, middle, and conclusion
 
-Paper summary:
-${paper_summary}
+Paper text:
+${paper_text}
 """
         template = PromptTemplate(name="default_podcast", template=template_str)
         return template
@@ -162,25 +162,25 @@ ${paper_summary}
             result = result.replace(f"{abstract}：", f"{real}：")  # 全角コロンも対応
         return result
 
-    def generate_podcast_conversation(self, paper_summary: str) -> str:
+    def generate_podcast_conversation(self, paper_text: str) -> str:
         """
-        論文要約からポッドキャスト形式の会話テキストを生成します。
+        論文テキストからポッドキャスト形式の会話テキストを生成します。
 
         Args:
-            paper_summary (str): 論文要約テキスト
+            paper_text (str): 論文テキスト（全文または一部）
 
         Returns:
             str: 会話形式のポッドキャストテキスト
         """
-        if not paper_summary.strip():
-            return "Error: No paper summary provided."
+        if not paper_text.strip():
+            return "Error: No paper text provided."
 
         # Get current template (custom or default)
         current_template: PromptTemplate = self.custom_template or self.default_template
 
         try:
             # テンプレートに値を適用して最終的なプロンプトを生成
-            prompt: str = current_template.to_string(paper_summary=paper_summary)
+            prompt: str = current_template.to_string(paper_text=paper_text)
             return prompt
         except Exception as e:
             logger.error(f"Error rendering prompt: {e}")
