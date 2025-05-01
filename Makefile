@@ -4,7 +4,7 @@
 # Variables and Configuration
 #--------------------------------------------------------------
 # Python related
-PYTHON = python3
+PYTHON = python
 VENV_DIR = venv
 VENV_PYTHON = $(VENV_DIR)/bin/python
 VENV_PIP = $(VENV_DIR)/bin/pip
