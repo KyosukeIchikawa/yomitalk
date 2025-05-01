@@ -394,6 +394,13 @@ class AudioGenerator:
             lines = podcast_text.strip().split("\n")
             conversation_parts = []
 
+            # すべてのキャラクターをチェック
+            character_patterns = {
+                "ずんだもん": ["ずんだもん:", "ずんだもん："],
+                "四国めたん": ["四国めたん:", "四国めたん："],
+                "九州そら": ["九州そら:", "九州そら："],
+            }
+
             # Process each line of the text
             logger.info(f"Processing {len(lines)} lines of text")
             for line in lines:
@@ -401,22 +408,21 @@ class AudioGenerator:
                 if not line:
                     continue
 
-                # Process different speakers
-                if line.startswith("ずんだもん:") or line.startswith("ずんだもん："):
-                    text = (
-                        line.replace("ずんだもん:", "", 1).replace("ずんだもん：", "", 1).strip()
-                    )
-                    if text:
-                        logger.debug(f"Found Zundamon line: {text[:30]}...")
-                        conversation_parts.append(("ずんだもん", text))
-                elif line.startswith("四国めたん:") or line.startswith("四国めたん："):
-                    text = (
-                        line.replace("四国めたん:", "", 1).replace("四国めたん：", "", 1).strip()
-                    )
-                    if text:
-                        logger.debug(f"Found Shikoku Metan line: {text[:30]}...")
-                        conversation_parts.append(("四国めたん", text))
-                else:
+                # すべてのキャラクターパターンをチェック
+                found_character = False
+                for character, patterns in character_patterns.items():
+                    for pattern in patterns:
+                        if line.startswith(pattern):
+                            text = line.replace(pattern, "", 1).strip()
+                            if text:
+                                logger.debug(f"Found {character} line: {text[:30]}...")
+                                conversation_parts.append((character, text))
+                                found_character = True
+                                break
+                    if found_character:
+                        break
+
+                if not found_character:
                     logger.warning(f"Unrecognized line format: {line[:50]}...")
 
             logger.info(f"Identified {len(conversation_parts)} conversation parts")
@@ -554,29 +560,29 @@ class AudioGenerator:
         """
         import re
 
+        # サポートされる全てのキャラクター名
+        character_names = ["ずんだもん", "四国めたん", "九州そら"]
+
         # Fix missing colon after speaker names
-        text = re.sub(r"(ずんだもん)(\s+)(?=[^\s:])", r"ずんだもん:\2", text)
-        text = re.sub(r"(四国めたん)(\s+)(?=[^\s:])", r"四国めたん:\2", text)
+        for name in character_names:
+            text = re.sub(f"({name})(\\s+)(?=[^\\s:])", f"{name}:\\2", text)
 
         # Try to identify speaker blocks in continuous text
         lines = text.split("\n")
         fixed_lines = []
 
         for line in lines:
-            # Check for multiple speakers in one line
-            if "。ずんだもん" in line:
-                parts = line.split("。ずんだもん")
-                if parts[0]:
-                    fixed_lines.append(f"{parts[0]}。")
-                if len(parts) > 1:
-                    fixed_lines.append(f"ずんだもん{parts[1]}")
-            elif "。四国めたん" in line:
-                parts = line.split("。四国めたん")
-                if parts[0]:
-                    fixed_lines.append(f"{parts[0]}。")
-                if len(parts) > 1:
-                    fixed_lines.append(f"四国めたん{parts[1]}")
-            else:
-                fixed_lines.append(line)
+            # 複数のキャラクターが一行に存在するかチェック
+            fixed_line = line
+            for name in character_names:
+                if f"。{name}" in fixed_line:
+                    parts = fixed_line.split(f"。{name}")
+                    if len(parts) > 1:
+                        if parts[0].strip():
+                            fixed_lines.append(f"{parts[0].strip()}。")
+                        fixed_line = f"{name}{parts[1]}"
 
+            fixed_lines.append(fixed_line)
+
+        # Join the fixed lines
         return "\n".join(fixed_lines)

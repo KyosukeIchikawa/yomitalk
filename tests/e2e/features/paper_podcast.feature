@@ -46,6 +46,22 @@ Feature: Generate podcast from research paper PDF
     When the user clicks the text generation button
     Then podcast-style text is generated using the custom prompt
 
+  Scenario: Character selection configuration
+    Given text has been extracted from a PDF
+    And a valid API key has been configured
+    When the user opens the character settings section
+    And the user selects 九州そら for Character1
+    And the user selects ずんだもん for Character2
+    And the user clicks the character settings save button
+    Then the character settings are saved
+
+  Scenario: Podcast generation with custom characters
+    Given text has been extracted from a PDF
+    And a valid API key has been configured
+    And the user sets character settings
+    When the user clicks the text generation button
+    Then podcast-style text is generated with the selected characters
+
   Scenario: Editing extracted text before generation
     Given text has been extracted from a PDF
     And a valid API key has been configured

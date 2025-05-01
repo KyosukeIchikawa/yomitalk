@@ -35,33 +35,33 @@ class OpenAIModel:
 
         # Default prompt template
         self.default_prompt_template = """
-Please generate a Japanese conversation-style podcast text between "ずんだもん" (Zundamon) and "四国めたん" (Shikoku Metan)
+Please generate a Japanese conversation-style podcast text between "Character1" and "Character2"
 based on the following paper summary.
 
 Character roles:
-- ずんだもん: A beginner in the paper's field with basic knowledge but sometimes makes common mistakes.
+- Character1: A beginner in the paper's field with basic knowledge but sometimes makes common mistakes.
   Asks curious and sometimes naive questions. Slightly ditzy but eager to learn.
-- 四国めたん: An expert on the paper's subject who explains concepts clearly and corrects Zundamon's misunderstandings.
+- Character2: An expert on the paper's subject who explains concepts clearly and corrects Character1's misunderstandings.
   Makes complex topics understandable through metaphors and examples.
 
 Format (STRICTLY FOLLOW THIS FORMAT):
-ずんだもん: [Zundamon's speech in Japanese]
-四国めたん: [Shikoku Metan's speech in Japanese]
-ずんだもん: [Zundamon's next line]
-四国めたん: [Shikoku Metan's next line]
+Character1: [Character1's speech in Japanese]
+Character2: [Character2's speech in Japanese]
+Character1: [Character1's next line]
+Character2: [Character2's next line]
 ...
 
 IMPORTANT FORMATTING RULES:
-1. ALWAYS start each new speaker's line with their name followed by a colon ("ずんだもん:" or "四国めたん:").
+1. ALWAYS start each new speaker's line with their name followed by a colon ("Character1:" or "Character2:").
 2. ALWAYS put each speaker's line on a new line.
 3. NEVER combine multiple speakers' lines into a single line.
-4. ALWAYS use the exact names "ずんだもん" and "四国めたん" (not variations or translations).
+4. ALWAYS use the exact names "Character1" and "Character2" (not variations or translations).
 5. NEVER add any other text, headings, or explanations outside the conversation format.
 
 Guidelines for content:
 1. Create an engaging, fun podcast that explains the paper to beginners while also providing value to experts
 2. Include examples and metaphors to help listeners understand difficult concepts
-3. Have Zundamon make some common beginner mistakes that Shikoku Metan corrects politely
+3. Have Character1 make some common beginner mistakes that Character2 corrects politely
 4. Cover the paper's key findings, methodology, and implications
 5. Keep the conversation natural, friendly and entertaining
 6. Make sure the podcast has a clear beginning, middle, and conclusion
@@ -70,6 +70,9 @@ Paper summary:
 {paper_summary}
 """
         self.custom_prompt_template: Optional[str] = None
+
+        # キャラクター設定
+        self.character_mapping = {"Character1": "ずんだもん", "Character2": "四国めたん"}
 
     def set_api_key(self, api_key: str) -> bool:
         """
@@ -185,6 +188,61 @@ Paper summary:
             logger.error(f"Error during OpenAI API request: {e}")
             return f"Error generating text: {e}"
 
+    def set_character_mapping(self, character1: str, character2: str) -> bool:
+        """
+        キャラクターマッピングを設定します。
+
+        Args:
+            character1 (str): Character1に割り当てるキャラクターの名前
+            character2 (str): Character2に割り当てるキャラクターの名前
+
+        Returns:
+            bool: 設定が成功したかどうか
+        """
+        # 有効なキャラクター名のリスト
+        valid_characters = ["ずんだもん", "四国めたん", "九州そら"]
+
+        if character1 not in valid_characters or character2 not in valid_characters:
+            return False
+
+        self.character_mapping["Character1"] = character1
+        self.character_mapping["Character2"] = character2
+        return True
+
+    def get_character_mapping(self) -> dict:
+        """
+        現在のキャラクターマッピングを取得します。
+
+        Returns:
+            dict: 現在のキャラクターマッピング
+        """
+        return self.character_mapping
+
+    def get_valid_characters(self) -> list:
+        """
+        有効なキャラクターのリストを取得します。
+
+        Returns:
+            list: 有効なキャラクター名のリスト
+        """
+        return ["ずんだもん", "四国めたん", "九州そら"]
+
+    def convert_abstract_to_real_characters(self, text: str) -> str:
+        """
+        抽象的なキャラクター名（Character1, Character2）を実際のキャラクター名に変換します。
+
+        Args:
+            text (str): 変換するテキスト
+
+        Returns:
+            str: 変換後のテキスト
+        """
+        result = text
+        for abstract, real in self.character_mapping.items():
+            result = result.replace(f"{abstract}:", f"{real}:")
+            result = result.replace(f"{abstract}：", f"{real}：")  # 全角コロンも対応
+        return result
+
     def generate_podcast_conversation(self, paper_summary: str) -> str:
         """
         Generate podcast-style conversation text from a paper summary.
@@ -209,16 +267,20 @@ Paper summary:
         # Use the general text generation method
         result = self.generate_text(prompt)
 
+        # 抽象キャラクター名を実際のキャラクター名に変換
+        if not result.startswith("Error"):
+            result = self.convert_abstract_to_real_characters(result)
+
         # Debug: Log conversation lines
         if not result.startswith("Error"):
             lines = result.split("\n")
             speaker_lines = [
                 line
                 for line in lines
-                if line.startswith("ずんだもん:")
-                or line.startswith("四国めたん:")
-                or line.startswith("ずんだもん：")
-                or line.startswith("四国めたん：")
+                if line.startswith(f"{self.character_mapping['Character1']}:")
+                or line.startswith(f"{self.character_mapping['Character2']}:")
+                or line.startswith(f"{self.character_mapping['Character1']}：")
+                or line.startswith(f"{self.character_mapping['Character2']}：")
             ]
             logger.info(f"Generated {len(speaker_lines)} conversation lines")
             if speaker_lines:
@@ -227,16 +289,20 @@ Paper summary:
                 logger.warning("No lines with correct speaker format found")
                 logger.warning(f"First few output lines: {lines[:3]}")
                 # Try to reformat the result if format is incorrect
-                if "ずんだもん" in result and "四国めたん" in result:
+                real_char1 = self.character_mapping["Character1"]
+                real_char2 = self.character_mapping["Character2"]
+                if real_char1 in result and real_char2 in result:
                     logger.info("Attempting to fix formatting...")
                     import re
 
                     # Add colons after character names if missing
                     fixed_result = re.sub(
-                        r"(^|\n)(ずんだもん)(\s+)(?=[^\s:])", r"\1\2:\3", result
+                        f"(^|\\n)({real_char1})(\\s+)(?=[^\\s:])", r"\1\2:\3", result
                     )
                     fixed_result = re.sub(
-                        r"(^|\n)(四国めたん)(\s+)(?=[^\s:])", r"\1\2:\3", fixed_result
+                        f"(^|\\n)({real_char2})(\\s+)(?=[^\\s:])",
+                        r"\1\2:\3",
+                        fixed_result,
                     )
 
                     # Check if fix worked
@@ -244,10 +310,10 @@ Paper summary:
                     fixed_speaker_lines = [
                         line
                         for line in fixed_lines
-                        if line.startswith("ずんだもん:")
-                        or line.startswith("四国めたん:")
-                        or line.startswith("ずんだもん：")
-                        or line.startswith("四国めたん：")
+                        if line.startswith(f"{real_char1}:")
+                        or line.startswith(f"{real_char2}:")
+                        or line.startswith(f"{real_char1}：")
+                        or line.startswith(f"{real_char2}：")
                     ]
                     logger.debug(f"First few fixed lines: {fixed_speaker_lines[:3]}")
                     if fixed_speaker_lines:

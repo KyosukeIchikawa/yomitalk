@@ -54,6 +54,11 @@ class PaperPodcastApp:
             f"OpenAI API: {api_key_status}\nVOICEVOXステータス: {self.check_voicevox_core()}"
         )
 
+        # 利用可能なキャラクター
+        self.available_characters = (
+            self.text_processor.openai_model.get_valid_characters()
+        )
+
     def set_api_key(self, api_key: str) -> Tuple[str, str]:
         """
         Set the OpenAI API key and returns a result message based on the outcome.
@@ -341,6 +346,27 @@ class PaperPodcastApp:
                         show_label=False,
                     )
 
+                    # キャラクター設定
+                    with gr.Accordion(label="キャラクター設定", open=False):
+                        gr.Markdown("### キャラクター設定")
+                        with gr.Row():
+                            character1_dropdown = gr.Dropdown(
+                                choices=self.get_available_characters(),
+                                value="ずんだもん",
+                                label="キャラクター1（初心者役）",
+                            )
+                            character2_dropdown = gr.Dropdown(
+                                choices=self.get_available_characters(),
+                                value="四国めたん",
+                                label="キャラクター2（専門家役）",
+                            )
+                        character_status = gr.Textbox(
+                            interactive=False,
+                            placeholder="キャラクターを選択してください",
+                            show_label=False,
+                        )
+                        character_btn = gr.Button("キャラクターを設定", variant="primary")
+
                     # Prompt template settings accordion
                     with gr.Accordion(label="プロンプトテンプレート設定", open=False):
                         with gr.Column():
@@ -422,6 +448,13 @@ class PaperPodcastApp:
                 fn=self.set_prompt_template,
                 inputs=[prompt_template],
                 outputs=[prompt_template_status, system_log_display],
+            )
+
+            # キャラクター設定
+            character_btn.click(
+                fn=self.set_character_mapping,
+                inputs=[character1_dropdown, character2_dropdown],
+                outputs=[character_status, system_log_display],
             )
 
             # VOICEVOX Terms checkbox - 音声生成ボタンに対してイベントハンドラを更新
@@ -575,6 +608,44 @@ class PaperPodcastApp:
         """
         button = gr.Button(value="音声を生成", variant="primary", interactive=checked)
         return button
+
+    def set_character_mapping(
+        self, character1: str, character2: str
+    ) -> Tuple[str, str]:
+        """
+        キャラクターマッピングを設定する。
+
+        Args:
+            character1 (str): Character1に割り当てるキャラクター名
+            character2 (str): Character2に割り当てるキャラクター名
+
+        Returns:
+            tuple: (status_message, system_log)
+        """
+        success = self.text_processor.openai_model.set_character_mapping(
+            character1, character2
+        )
+        result = "✅ キャラクター設定が完了しました" if success else "❌ キャラクター設定に失敗しました"
+        self.update_log(f"キャラクター設定: {result}")
+        return result, self.system_log
+
+    def get_character_mapping(self) -> dict:
+        """
+        現在のキャラクターマッピングを取得する。
+
+        Returns:
+            dict: 現在のキャラクターマッピング
+        """
+        return self.text_processor.openai_model.get_character_mapping()
+
+    def get_available_characters(self) -> List[str]:
+        """
+        利用可能なキャラクターのリストを取得する。
+
+        Returns:
+            List[str]: 利用可能なキャラクター名のリスト
+        """
+        return self.available_characters
 
 
 # Create and launch application instance
