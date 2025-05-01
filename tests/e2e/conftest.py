@@ -340,7 +340,7 @@ def page_with_server(browser, server_process, server_port):
         page.goto(f"http://localhost:{server_port}", timeout=10000)
 
     # Wait for the page to fully load - with reduced timeout
-    page.wait_for_load_state("networkidle", timeout=3000)  # Reduced from 5000
+    page.wait_for_load_state("networkidle", timeout=5000)  # Changed from 3000
 
     # Always wait for the Gradio UI to be visible
     page.wait_for_selector("button", timeout=5000)

@@ -9,6 +9,7 @@ from typing import List, Optional
 import httpx
 from openai import OpenAI
 
+from app.prompt_manager import PromptManager
 from app.utils.logger import logger
 
 
@@ -33,46 +34,8 @@ class OpenAIModel:
             "o4-mini",
         ]
 
-        # Default prompt template
-        self.default_prompt_template = """
-Please generate a Japanese conversation-style podcast text between "Character1" and "Character2"
-based on the following paper summary.
-
-Character roles:
-- Character1: A beginner in the paper's field with basic knowledge but sometimes makes common mistakes.
-  Asks curious and sometimes naive questions. Slightly ditzy but eager to learn.
-- Character2: An expert on the paper's subject who explains concepts clearly and corrects Character1's misunderstandings.
-  Makes complex topics understandable through metaphors and examples.
-
-Format (STRICTLY FOLLOW THIS FORMAT):
-Character1: [Character1's speech in Japanese]
-Character2: [Character2's speech in Japanese]
-Character1: [Character1's next line]
-Character2: [Character2's next line]
-...
-
-IMPORTANT FORMATTING RULES:
-1. ALWAYS start each new speaker's line with their name followed by a colon ("Character1:" or "Character2:").
-2. ALWAYS put each speaker's line on a new line.
-3. NEVER combine multiple speakers' lines into a single line.
-4. ALWAYS use the exact names "Character1" and "Character2" (not variations or translations).
-5. NEVER add any other text, headings, or explanations outside the conversation format.
-
-Guidelines for content:
-1. Create an engaging, fun podcast that explains the paper to beginners while also providing value to experts
-2. Include examples and metaphors to help listeners understand difficult concepts
-3. Have Character1 make some common beginner mistakes that Character2 corrects politely
-4. Cover the paper's key findings, methodology, and implications
-5. Keep the conversation natural, friendly and entertaining
-6. Make sure the podcast has a clear beginning, middle, and conclusion
-
-Paper summary:
-{paper_summary}
-"""
-        self.custom_prompt_template: Optional[str] = None
-
-        # キャラクター設定
-        self.character_mapping = {"Character1": "ずんだもん", "Character2": "四国めたん"}
+        # プロンプトマネージャーを初期化
+        self.prompt_manager = PromptManager()
 
     def set_api_key(self, api_key: str) -> bool:
         """
@@ -130,12 +93,7 @@ Paper summary:
         Returns:
             bool: Whether the template was successfully set
         """
-        if not prompt_template or prompt_template.strip() == "":
-            self.custom_prompt_template = None
-            return False
-
-        self.custom_prompt_template = prompt_template.strip()
-        return True
+        return self.prompt_manager.set_prompt_template(prompt_template)
 
     def get_current_prompt_template(self) -> str:
         """
@@ -144,7 +102,7 @@ Paper summary:
         Returns:
             str: The current prompt template (custom if set, otherwise default)
         """
-        return self.custom_prompt_template or self.default_prompt_template
+        return self.prompt_manager.get_current_prompt_template()
 
     def generate_text(self, prompt: str) -> str:
         """
@@ -199,15 +157,7 @@ Paper summary:
         Returns:
             bool: 設定が成功したかどうか
         """
-        # 有効なキャラクター名のリスト
-        valid_characters = ["ずんだもん", "四国めたん", "九州そら"]
-
-        if character1 not in valid_characters or character2 not in valid_characters:
-            return False
-
-        self.character_mapping["Character1"] = character1
-        self.character_mapping["Character2"] = character2
-        return True
+        return self.prompt_manager.set_character_mapping(character1, character2)
 
     def get_character_mapping(self) -> dict:
         """
@@ -216,7 +166,7 @@ Paper summary:
         Returns:
             dict: 現在のキャラクターマッピング
         """
-        return self.character_mapping
+        return self.prompt_manager.get_character_mapping()
 
     def get_valid_characters(self) -> list:
         """
@@ -225,7 +175,7 @@ Paper summary:
         Returns:
             list: 有効なキャラクター名のリスト
         """
-        return ["ずんだもん", "四国めたん", "九州そら"]
+        return self.prompt_manager.get_valid_characters()
 
     def convert_abstract_to_real_characters(self, text: str) -> str:
         """
@@ -237,11 +187,7 @@ Paper summary:
         Returns:
             str: 変換後のテキスト
         """
-        result = text
-        for abstract, real in self.character_mapping.items():
-            result = result.replace(f"{abstract}:", f"{real}:")
-            result = result.replace(f"{abstract}：", f"{real}：")  # 全角コロンも対応
-        return result
+        return self.prompt_manager.convert_abstract_to_real_characters(text)
 
     def generate_podcast_conversation(self, paper_summary: str) -> str:
         """
@@ -256,11 +202,8 @@ Paper summary:
         if not paper_summary.strip():
             return "Error: No paper summary provided."
 
-        # Get current prompt template (custom or default)
-        prompt_template = self.get_current_prompt_template()
-
-        # Create prompt for podcast conversation using the template
-        prompt = prompt_template.format(paper_summary=paper_summary)
+        # プロンプトマネージャーを使用してプロンプトを生成
+        prompt = self.prompt_manager.generate_podcast_conversation(paper_summary)
 
         logger.info("Sending podcast generation prompt to OpenAI")
 
@@ -277,10 +220,18 @@ Paper summary:
             speaker_lines = [
                 line
                 for line in lines
-                if line.startswith(f"{self.character_mapping['Character1']}:")
-                or line.startswith(f"{self.character_mapping['Character2']}:")
-                or line.startswith(f"{self.character_mapping['Character1']}：")
-                or line.startswith(f"{self.character_mapping['Character2']}：")
+                if line.startswith(
+                    f"{self.prompt_manager.character_mapping['Character1']}:"
+                )
+                or line.startswith(
+                    f"{self.prompt_manager.character_mapping['Character2']}:"
+                )
+                or line.startswith(
+                    f"{self.prompt_manager.character_mapping['Character1']}："
+                )
+                or line.startswith(
+                    f"{self.prompt_manager.character_mapping['Character2']}："
+                )
             ]
             logger.info(f"Generated {len(speaker_lines)} conversation lines")
             if speaker_lines:
@@ -289,8 +240,8 @@ Paper summary:
                 logger.warning("No lines with correct speaker format found")
                 logger.warning(f"First few output lines: {lines[:3]}")
                 # Try to reformat the result if format is incorrect
-                real_char1 = self.character_mapping["Character1"]
-                real_char2 = self.character_mapping["Character2"]
+                real_char1 = self.prompt_manager.character_mapping["Character1"]
+                real_char2 = self.prompt_manager.character_mapping["Character2"]
                 if real_char1 in result and real_char2 in result:
                     logger.info("Attempting to fix formatting...")
                     import re

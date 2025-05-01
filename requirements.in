@@ -15,6 +15,7 @@ pdfplumber
 pip-tools
 playwright
 pre-commit
+prompt-template>=1.2.0
 pydantic
 pypdf>=3.15.1
 pytest
