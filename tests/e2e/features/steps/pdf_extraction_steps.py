@@ -43,7 +43,12 @@ def get_test_file_path():
             # テキストファイルも見つからない場合は警告
             logger.warning("No test files found. Creating a temporary sample file.")
             # 一時的なテキストファイルを作成
-            temp_file = os.path.join(os.path.dirname(__file__), "temp_sample.txt")
+            temp_dir = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "../../../../data/temp")
+            )
+            # tempディレクトリが存在しない場合は作成
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_file = os.path.join(temp_dir, "temp_sample.txt")
             with open(temp_file, "w") as f:
                 f.write("これはテスト用のサンプルテキストです。\n" * 10)
             test_file_path = temp_file
