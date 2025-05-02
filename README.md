@@ -62,6 +62,35 @@ python main.py
    - 音声キャラクターを選択し、「Generate Audio」ボタンをクリックして音声を生成します
    - 生成された音声はダウンロード可能です
 
+## プロジェクト構造
+
+```
+yomitalk/
+├── app/                   - アプリケーションのコード
+│   ├── templates/         - アプリケーションのテンプレート
+│   │   └── prompts/       - 会話テンプレート（Jinja2形式）
+│   ├── components/        - UIコンポーネント
+│   ├── models/            - データモデル
+│   ├── utils/             - ユーティリティ関数
+│   └── app.py             - メインアプリケーション
+├── tests/                 - テストコード
+│   ├── unit/              - ユニットテスト
+│   ├── e2e/               - エンドツーエンドテスト
+│   └── test_templates/    - テスト用テンプレート
+├── docs/                  - ドキュメント
+├── scripts/               - 管理用スクリプト
+└── data/                  - サンプルデータ
+```
+
+### テンプレート管理
+
+会話テンプレートは Jinja2 形式で、以下のディレクトリに保存されています：
+
+- `app/templates/prompts/` - アプリケーションの会話テンプレート
+- `tests/test_templates/prompts/` - テスト用テンプレート
+
+テンプレートについての詳細は [docs/templates.md](docs/templates.md) を参照してください。
+
 ## テスト
 
 次のコマンドでテストを実行できます：
@@ -79,6 +108,7 @@ make test-e2e
 ## 開発
 
 - pre-commitフックが自動的にlintチェックを実行します
+- テンプレートを追加する場合は `app/templates/prompts/` ディレクトリに配置してください
 
 ## ライセンス
 

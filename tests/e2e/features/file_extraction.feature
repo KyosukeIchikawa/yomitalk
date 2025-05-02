@@ -1,33 +1,42 @@
-Feature: ファイルからテキストを抽出する
-  ユーザーとしては、様々な形式のファイル（PDFやテキストファイル）から
-  テキストを抽出し、ポッドキャスト形式の音声を生成したい
+# language: en
+Feature: Template Management for Podcast Generation
+  Users can select and customize templates
+  to control the format of the generated podcast
 
-  @file_extraction
-  Scenario: PDFファイルからテキストを抽出する
-    Given Gradioアプリが起動している
-    When the user uploads a PDF file
-    And the user clicks the extract text button
-    Then the extracted text is displayed
+  Background:
+    Given the user has opened the application
 
-  @file_extraction
-  Scenario: テキストファイルからテキストを抽出する
-    Given Gradioアプリが起動している
-    When the user uploads a text file
-    And the user clicks the extract text button
-    Then the extracted text is displayed
+  Scenario: Select a template
+    Given the user has opened the application
+    When the user opens the template settings
+    And the user selects the "technical.j2" template
+    And the user saves the template settings
+    Then the selected template is applied
 
-  @file_extraction
-  Scenario: 抽出したテキストからポッドキャストテキストを生成する
-    Given Gradioアプリが起動している
-    And OpenAI APIキーが設定されている
-    And text has been extracted from a file
-    When the user clicks the generate podcast button
-    Then the podcast text is generated
+  Scenario: Customize a template
+    Given the user has opened the application
+    When the user opens the template settings
+    And the user enters a custom template
+    And the user saves the template settings
+    Then the custom template is applied
 
-  @file_extraction @audio
-  Scenario: 生成されたポッドキャストテキストから音声を生成する
-    Given Gradioアプリが起動している
-    And VOICEVOXが設定されている
-    And podcast text has been generated
-    When the user clicks the generate audio button
-    Then the audio is generated
+  Scenario: Podcast generation with custom template
+    Given text has been extracted from a PDF
+    And a valid API key has been configured
+    And a custom template has been applied
+    When the user clicks the text generation button
+    Then podcast-style text is generated using the custom template
+
+  Scenario: Reset template to default
+    Given the user has opened the application
+    When the user opens the template settings
+    And the user has a custom template
+    And the user clicks the reset template button
+    Then the default template is restored
+
+  Scenario: Template validation
+    Given the user has opened the application
+    When the user opens the template settings
+    And the user enters an invalid template
+    And the user tries to save the template settings
+    Then an error message about invalid template is displayed
