@@ -44,7 +44,7 @@ class PromptManager:
         self.character_mapping = {"Character1": "四国めたん", "Character2": "ずんだもん"}
 
         # 有効なキャラクターのリスト
-        self.valid_characters = ["ずんだもん", "四国めたん", "九州そら"]
+        self.valid_characters = ["ずんだもん", "四国めたん", "九州そら", "中国うさぎ", "中部つるぎ"]
 
         # キャラクターの口調パターン
         self.character_speech_patterns = {
@@ -62,6 +62,16 @@ class PromptManager:
                 "first_person": "うち",
                 "sentence_end": ["ばい", "と", "とよ"],
                 "characteristic": "九州弁で語尾に「ばい」「と」「とよ」などを使う。一人称は「うち」。博多弁の特徴を持った話し方。",
+            },
+            "中国うさぎ": {
+                "first_person": "わし",
+                "sentence_end": ["じゃ", "のう", "よ"],
+                "characteristic": "広島弁で話し、語尾に「じゃ」「のう」などをつける。一人称は「わし」。のんびりとした口調。",
+            },
+            "中部つるぎ": {
+                "first_person": "おら",
+                "sentence_end": ["だがや", "だら", "だに"],
+                "characteristic": "中部地方の方言で話し、語尾に「だがや」「だら」などをつける。一人称は「おら」。元気で明るい口調。",
             },
         }
 
