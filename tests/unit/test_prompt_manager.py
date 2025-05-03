@@ -101,8 +101,8 @@ class TestPromptManager(unittest.TestCase):
 
         self.assertIn(paper_text, prompt)
         # キャラクター名が変数に置き換えられているか確認
-        self.assertIn("ずんだもん", prompt)
         self.assertIn("四国めたん", prompt)
+        self.assertIn("ずんだもん", prompt)
 
         # カスタムテンプレートを設定した場合
         custom_template = (
@@ -112,23 +112,23 @@ class TestPromptManager(unittest.TestCase):
 
         custom_prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
         self.assertIn("Custom:", custom_prompt)
-        self.assertIn("ずんだもん", custom_prompt)
+        self.assertIn("四国めたん", custom_prompt)
         self.assertIn(paper_text, custom_prompt)
 
     def test_set_and_get_character_mapping(self):
         """Test setting and getting character mapping."""
         # デフォルトのマッピングを確認
         default_mapping = self.prompt_manager.get_character_mapping()
-        self.assertEqual("ずんだもん", default_mapping["Character1"])
-        self.assertEqual("四国めたん", default_mapping["Character2"])
+        self.assertEqual("四国めたん", default_mapping["Character1"])
+        self.assertEqual("ずんだもん", default_mapping["Character2"])
 
         # マッピングを変更
-        result = self.prompt_manager.set_character_mapping("四国めたん", "九州そら")
+        result = self.prompt_manager.set_character_mapping("ずんだもん", "九州そら")
         self.assertTrue(result)
 
         # 変更後のマッピングを確認
         updated_mapping = self.prompt_manager.get_character_mapping()
-        self.assertEqual("四国めたん", updated_mapping["Character1"])
+        self.assertEqual("ずんだもん", updated_mapping["Character1"])
         self.assertEqual("九州そら", updated_mapping["Character2"])
 
     def test_set_invalid_character_mapping(self):
@@ -139,7 +139,7 @@ class TestPromptManager(unittest.TestCase):
 
         # マッピングが変更されていないことを確認
         mapping = self.prompt_manager.get_character_mapping()
-        self.assertEqual("ずんだもん", mapping["Character1"])
+        self.assertEqual("四国めたん", mapping["Character1"])
 
     def test_get_valid_characters(self):
         """Test getting list of valid characters."""
@@ -153,7 +153,7 @@ class TestPromptManager(unittest.TestCase):
         text = "Character1: こんにちは\nCharacter2: はじめまして"
         converted = self.prompt_manager.convert_abstract_to_real_characters(text)
 
-        self.assertEqual("ずんだもん: こんにちは\n四国めたん: はじめまして", converted)
+        self.assertEqual("四国めたん: こんにちは\nずんだもん: はじめまして", converted)
 
         # 全角コロンの変換もテスト
         text_with_fullwidth = "Character1： こんにちは\nCharacter2： はじめまして"
@@ -161,7 +161,7 @@ class TestPromptManager(unittest.TestCase):
             text_with_fullwidth
         )
 
-        self.assertEqual("ずんだもん： こんにちは\n四国めたん： はじめまして", converted_fullwidth)
+        self.assertEqual("四国めたん： こんにちは\nずんだもん： はじめまして", converted_fullwidth)
 
 
 if __name__ == "__main__":

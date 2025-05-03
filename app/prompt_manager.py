@@ -41,7 +41,7 @@ class PromptManager:
         self.use_custom_template = False
 
         # キャラクターマッピング
-        self.character_mapping = {"Character1": "ずんだもん", "Character2": "四国めたん"}
+        self.character_mapping = {"Character1": "四国めたん", "Character2": "ずんだもん"}
 
         # 有効なキャラクターのリスト
         self.valid_characters = ["ずんだもん", "四国めたん", "九州そら"]

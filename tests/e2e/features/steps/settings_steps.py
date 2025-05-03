@@ -655,10 +655,10 @@ def select_character1_specific(page_with_server: Page):
     return select_character1(page_with_server, character_name)
 
 
-@when("the user selects ずんだもん for Character2")
+@when("the user selects 四国めたん for Character2")
 def select_character2_specific(page_with_server: Page):
     """特定のシナリオ用のCharacter2選択関数 (Gherkin構文対応)"""
-    character_name = "ずんだもん"
+    character_name = "四国めたん"
     return select_character2(page_with_server, character_name)
 
 

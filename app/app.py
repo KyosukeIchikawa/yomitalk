@@ -352,13 +352,13 @@ class PaperPodcastApp:
                         with gr.Row():
                             character1_dropdown = gr.Dropdown(
                                 choices=self.get_available_characters(),
-                                value="ずんだもん",
-                                label="キャラクター1（初心者役）",
+                                value="四国めたん",
+                                label="キャラクター1（専門家役）",
                             )
                             character2_dropdown = gr.Dropdown(
                                 choices=self.get_available_characters(),
-                                value="四国めたん",
-                                label="キャラクター2（専門家役）",
+                                value="ずんだもん",
+                                label="キャラクター2（初学者役）",
                             )
                         character_status = gr.Textbox(
                             interactive=False,
