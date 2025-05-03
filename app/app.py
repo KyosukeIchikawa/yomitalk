@@ -260,8 +260,11 @@ class PaperPodcastApp:
             # Generate audio from text
             audio_path = self.audio_generator.generate_character_conversation(text)
             if audio_path:
-                self.update_log("音声生成: ✅ 完了")
-                return audio_path, self.system_log
+                # 絶対パスを取得
+                abs_path = str(Path(audio_path).absolute())
+                self.update_log(f"音声生成: ✅ 完了 ({abs_path})")
+                logger.info(f"Generated audio file: {abs_path}")
+                return abs_path, self.system_log
             else:
                 logger.error("Audio generation failed: No audio path returned")
                 self.update_log("音声生成: ❌ 音声生成に失敗しました")
@@ -411,8 +414,14 @@ class PaperPodcastApp:
                         interactive=False,
                         show_download_button=True,
                         show_label=False,
+                        elem_id="audio_output",
                     )
-                    download_btn = gr.Button("音声をダウンロード", elem_id="download_audio_btn")
+                    download_btn = gr.Button(
+                        "音声が生成されていません",
+                        elem_id="download_audio_btn",
+                        interactive=False,
+                        variant="secondary",
+                    )
 
             # システムログ表示エリア（VOICEVOXステータスを含む）
             system_log_display = gr.Textbox(
@@ -470,18 +479,38 @@ class PaperPodcastApp:
                 outputs=[podcast_text, system_log_display],
             )
 
+            # 音声生成ボタンのイベントハンドラ
             generate_btn.click(
                 fn=self.generate_podcast_audio,
                 inputs=[podcast_text],
                 outputs=[audio_output, system_log_display],
+            ).then(
+                # Gradio 5.xでは、Button.updateではなくUpdateクラスを使用
+                fn=lambda x: gr.update(
+                    interactive=bool(x),
+                    value="音声をダウンロード" if bool(x) else "音声が生成されていません",
+                    variant="primary" if bool(x) else "secondary",
+                ),
+                inputs=[audio_output],
+                outputs=[download_btn],
             )
 
-            # ダウンロードボタンの実装を改善
-            # Gradio 4.xのダウンロード機能を使用
+            # audio_outputが変更された時もダウンロードボタンの状態を更新
+            audio_output.change(
+                fn=lambda x: gr.update(
+                    interactive=bool(x),
+                    value="音声をダウンロード" if bool(x) else "音声が生成されていません",
+                    variant="primary" if bool(x) else "secondary",
+                ),
+                inputs=[audio_output],
+                outputs=[download_btn],
+            )
+
+            # ダウンロードボタンの実装
             download_btn.click(
                 fn=lambda x: (
-                    x if x else None,
-                    self.update_log("音声ファイル: ダウンロードしました")
+                    x,
+                    self.update_log("音声ファイル: ダウンロード処理中")
                     if x
                     else self.update_log("音声ファイル: ダウンロードできません"),
                 ),
@@ -499,36 +528,64 @@ class PaperPodcastApp:
                     }
 
                     try {
-                        // グローバル変数にダウンロード情報を保存（テスト用）
-                        window.lastDownloadedFile = audio_path;
+                        console.log("ダウンロード処理を開始します:", audio_path);
+
+                        // 異なる形式への対応
+                        let url;
+                        let filename;
+
+                        // audio_pathの型によって処理を分岐
+                        if (typeof audio_path === 'string') {
+                            url = audio_path;
+                            filename = audio_path.split('/').pop();
+                        } else if (typeof audio_path === 'object') {
+                            // オブジェクトの形式を調査
+                            console.log("オーディオオブジェクト:", audio_path);
+
+                            if (audio_path.url) {
+                                url = audio_path.url;
+                                filename = audio_path.name || url.split('/').pop();
+                            } else if (audio_path.data) {
+                                url = audio_path.data;
+                                filename = audio_path.name || "audio.wav";
+                            } else if (audio_path.value) {
+                                url = audio_path.value;
+                                filename = url.split('/').pop();
+                            } else {
+                                // プロパティを列挙して調査
+                                for (const key in audio_path) {
+                                    console.log(`プロパティ ${key}:`, audio_path[key]);
+                                }
+                                throw new Error("認識できない音声ファイル形式です");
+                            }
+                        } else {
+                            throw new Error("不明な音声ファイル形式です: " + typeof audio_path);
+                        }
+
+                        console.log("ダウンロード情報:", { url, filename });
 
                         // ダウンロード処理
-                        const response = await fetch(audio_path);
-                        if (!response.ok) throw new Error(`ダウンロード失敗: ${response.status}`);
+                        if (url) {
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = filename;
+                            a.target = "_blank";
+                            document.body.appendChild(a);
+                            a.click();
 
-                        const blob = await response.blob();
-                        const filename = audio_path.split('/').pop();
+                            // 成功メッセージ
+                            console.log("ダウンロード処理が実行されました:", filename);
 
-                        // ダウンロードリンク作成
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = filename;
-                        a.style.display = "none";
-                        document.body.appendChild(a);
-
-                        // ダウンロード開始
-                        a.click();
-
-                        // クリーンアップ
-                        setTimeout(() => {
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                        }, 100);
-
-                        console.log("ダウンロード完了:", filename);
+                            // クリーンアップ
+                            setTimeout(() => {
+                                document.body.removeChild(a);
+                            }, 100);
+                        } else {
+                            throw new Error("ダウンロードURLが取得できませんでした");
+                        }
                     } catch (error) {
                         console.error("ダウンロードエラー:", error);
+                        alert("ダウンロードに失敗しました: " + error.message);
                     }
                 }
                 """,
