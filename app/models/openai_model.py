@@ -248,26 +248,15 @@ class OpenAIModel:
 
                     # Add colons after character names if missing
                     fixed_result = re.sub(
-                        f"(^|\\n)({real_char1})(\\s+)(?=[^\\s:])", r"\1\2:\3", result
+                        f"({real_char1})\\s+",
+                        "\\1: ",
+                        result,
                     )
                     fixed_result = re.sub(
-                        f"(^|\\n)({real_char2})(\\s+)(?=[^\\s:])",
-                        r"\1\2:\3",
+                        f"({real_char2})\\s+",
+                        "\\1: ",
                         fixed_result,
                     )
-
-                    # Check if fix worked
-                    fixed_lines = fixed_result.split("\n")
-                    fixed_speaker_lines = [
-                        line
-                        for line in fixed_lines
-                        if line.startswith(f"{real_char1}:")
-                        or line.startswith(f"{real_char2}:")
-                        or line.startswith(f"{real_char1}：")
-                        or line.startswith(f"{real_char2}：")
-                    ]
-                    logger.debug(f"First few fixed lines: {fixed_speaker_lines[:3]}")
-                    if fixed_speaker_lines:
-                        result = fixed_result
+                    result = fixed_result
 
         return result
