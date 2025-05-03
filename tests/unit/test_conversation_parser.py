@@ -15,38 +15,6 @@ from app.models.openai_model import OpenAIModel
 class TestConversationParser:
     """Test conversation parser functionality."""
 
-    def test_conversation_parsing_regex(self):
-        """Test that the regex patterns correctly identify speaker lines."""
-        # Import directly from the AudioGenerator implementation
-        import re
-
-        # Test some sample data
-        test_texts = ["ずんだもん: こんにちは！", "四国めたん: こんにちは！"]
-
-        # Debug directly with the actual implementation
-        for text in test_texts:
-            lines = text.split("\n")
-            for line in lines:
-                line = line.strip()
-
-                # Use the actual regex from the implementation
-                zundamon_pattern = re.compile(r"^(ずんだもん|ずんだもん:|ずんだもん：)\s*(.+)$")
-                metan_pattern = re.compile(r"^(四国めたん|四国めたん:|四国めたん：)\s*(.+)$")
-
-                zundamon_match = zundamon_pattern.match(line)
-                metan_match = metan_pattern.match(line)
-
-                # Print for debugging
-                if zundamon_match:
-                    # Just verify that we have matches and can extract the text
-                    assert zundamon_match.group(1) in ["ずんだもん", "ずんだもん:", "ずんだもん："]
-                    assert "こんにちは！" in zundamon_match.group(2)
-
-                if metan_match:
-                    # Just verify that we have matches and can extract the text
-                    assert metan_match.group(1) in ["四国めたん", "四国めたん:", "四国めたん："]
-                    assert "こんにちは！" in metan_match.group(2)
-
     def test_conversation_format_fixing(self):
         """Test the conversation format fixing functionality."""
         audio_gen = AudioGenerator()
