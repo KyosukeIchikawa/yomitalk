@@ -4,10 +4,9 @@ This module provides functionality to manage prompt templates.
 It includes the PromptManager class which handles prompt templates and generation.
 """
 
-import os
 from typing import Dict, List, Optional
 
-from jinja2 import Environment, FileSystemLoader, Template, exceptions
+from prompt_template import PromptTemplate
 
 from app.utils.logger import logger
 
@@ -16,39 +15,14 @@ class PromptManager:
     """プロンプトテンプレートを管理するクラス。
 
     このクラスは、ポッドキャスト生成用のシステムプロンプトとユーザープロンプトを管理します。
-    Jinja2テンプレートエンジンを使用して、テンプレートの管理と変数の置換を行います。
+    prompt-templateライブラリを使用して、テンプレートの管理と変数の置換を行います。
     """
 
-    def __init__(self, custom_templates_dir=None) -> None:
-        """Initialize the PromptManager class.
-
-        Args:
-            custom_templates_dir: Optional custom templates directory path
-        """
-        # テンプレートディレクトリとEnvironmentの設定
-        # プロジェクトルートからの相対パスでテンプレートディレクトリを指定
-        current_dir = os.getcwd()  # 現在の作業ディレクトリ（プロジェクトルート）
-
-        if custom_templates_dir:
-            self.templates_dir = custom_templates_dir
-        else:
-            self.templates_dir = os.path.join(
-                current_dir, "app", "templates", "prompts"
-            )
-
-        logger.info(f"Loading templates from: {self.templates_dir}")
-
-        self.env = Environment(
-            loader=FileSystemLoader(self.templates_dir),
-            trim_blocks=True,
-            lstrip_blocks=True,
-        )
-
-        # 現在使用中のテンプレート名
-        self.current_template_name = "default.j2"
-
-        # カスタムテンプレート文字列（直接指定された場合はこちらを優先）
-        self.custom_template_str: Optional[str] = None
+    def __init__(self) -> None:
+        """Initialize the PromptManager class."""
+        # デフォルトのプロンプトテンプレート
+        self.default_template = self._create_default_template()
+        self.custom_template: Optional[PromptTemplate] = None
 
         # キャラクターマッピング
         self.character_mapping = {"Character1": "ずんだもん", "Character2": "四国めたん"}
@@ -56,54 +30,49 @@ class PromptManager:
         # 有効なキャラクターのリスト
         self.valid_characters = ["ずんだもん", "四国めたん", "九州そら"]
 
-        # 利用可能なテンプレートのリスト
-        self.available_templates = self._get_available_templates()
-
-    def _get_available_templates(self) -> List[str]:
-        """利用可能なテンプレートファイルのリストを取得します。
+    def _create_default_template(self) -> PromptTemplate:
+        """デフォルトのプロンプトテンプレートを作成します。
 
         Returns:
-            List[str]: テンプレートファイル名のリスト
+            PromptTemplate: デフォルトのプロンプトテンプレート
         """
-        try:
-            # 古いテンプレートフォルダの確認（ルートディレクトリのtemplates/prompts）
-            current_dir = os.getcwd()
-            old_templates_dir = os.path.join(current_dir, "templates", "prompts")
-            if os.path.exists(old_templates_dir):
-                logger.warning(
-                    f"古いテンプレートディレクトリが存在しています: {old_templates_dir}\n"
-                    "これは使用されません。app/templates/prompts を使用してください。"
-                )
+        template_str = """
+Please generate a Japanese conversation-style podcast text between "Character1" and "Character2"
+based on the following paper text.
 
-            return [f for f in os.listdir(self.templates_dir) if f.endswith(".j2")]
-        except Exception as e:
-            logger.error(f"Error listing template files: {e}")
-            return ["default.j2"]
+Character roles:
+- Character1: A beginner in the paper's field with basic knowledge but sometimes makes common mistakes.
+  Asks curious and sometimes naive questions. Slightly ditzy but eager to learn.
+- Character2: An expert on the paper's subject who explains concepts clearly and corrects Character1's misunderstandings.
+  Makes complex topics understandable through metaphors and examples.
 
-    def get_available_template_names(self) -> List[str]:
-        """利用可能なテンプレート名のリストを取得します。
+Format (STRICTLY FOLLOW THIS FORMAT):
+Character1: [Character1's speech in Japanese]
+Character2: [Character2's speech in Japanese]
+Character1: [Character1's next line]
+Character2: [Character2's next line]
+...
 
-        Returns:
-            List[str]: テンプレート名のリスト
-        """
-        return self.available_templates
+IMPORTANT FORMATTING RULES:
+1. ALWAYS start each new speaker's line with their name followed by a colon ("Character1:" or "Character2:").
+2. ALWAYS put each speaker's line on a new line.
+3. NEVER combine multiple speakers' lines into a single line.
+4. ALWAYS use the exact names "Character1" and "Character2" (not variations or translations).
+5. NEVER add any other text, headings, or explanations outside the conversation format.
 
-    def set_template_by_name(self, template_name: str) -> bool:
-        """テンプレート名を指定してテンプレートを設定します。
+Guidelines for content:
+1. Create an engaging, fun podcast that explains the paper to beginners while also providing value to experts
+2. Include examples and metaphors to help listeners understand difficult concepts
+3. Have Character1 make some common beginner mistakes that Character2 corrects politely
+4. Cover the paper's key findings, methodology, and implications
+5. Keep the conversation natural, friendly and entertaining
+6. Make sure the podcast has a clear beginning, middle, and conclusion
 
-        Args:
-            template_name (str): テンプレートファイル名
-
-        Returns:
-            bool: 設定が成功したかどうか
-        """
-        if not template_name or template_name not in self.available_templates:
-            logger.error(f"Template '{template_name}' not found")
-            return False
-
-        self.current_template_name = template_name
-        self.custom_template_str = None  # カスタムテンプレート文字列をクリア
-        return True
+Paper text:
+${paper_text}
+"""
+        template = PromptTemplate(name="default_podcast", template=template_str)
+        return template
 
     def set_prompt_template(self, prompt_template: str) -> bool:
         """カスタムプロンプトテンプレートを設定します。
@@ -115,20 +84,15 @@ class PromptManager:
             bool: テンプレートが正常に設定されたかどうか
         """
         if not prompt_template or prompt_template.strip() == "":
-            self.custom_template_str = None
+            self.custom_template = None
             return False
 
         try:
-            # Jinja2テンプレートとして解析できるか確認
-            env = Environment()
-            env.parse(prompt_template.strip())
-
-            # 問題なければテンプレートをセット
-            self.custom_template_str = prompt_template.strip()
+            template = PromptTemplate(
+                name="custom_podcast", template=prompt_template.strip()
+            )
+            self.custom_template = template
             return True
-        except exceptions.TemplateSyntaxError as e:
-            logger.error(f"Jinja2 syntax error in template: {e}")
-            return False
         except Exception as e:
             logger.error(f"Error setting prompt template: {e}")
             return False
@@ -137,25 +101,11 @@ class PromptManager:
         """現在のプロンプトテンプレートを取得します。
 
         Returns:
-            str: 現在のプロンプトテンプレート（カスタムが設定されている場合はカスタム、そうでなければファイルから）
+            str: 現在のプロンプトテンプレート（カスタムが設定されている場合はカスタム、そうでなければデフォルト）
         """
-        if self.custom_template_str:
-            return self.custom_template_str
-
-        try:
-            # テンプレートローダーからテンプレートソースを取得
-            if self.env.loader is None:
-                logger.error("Template loader is not initialized")
-                return ""
-
-            template_source: str = self.env.loader.get_source(
-                self.env, self.current_template_name
-            )[0]
-            return template_source
-        except Exception as e:
-            logger.error(f"Error loading template: {e}")
-            # エラーが発生した場合は空の文字列を返す
-            return ""
+        current_template: PromptTemplate = self.custom_template or self.default_template
+        template_str: str = current_template.template
+        return template_str
 
     def set_character_mapping(self, character1: str, character2: str) -> bool:
         """
@@ -225,22 +175,14 @@ class PromptManager:
         if not paper_text.strip():
             return "Error: No paper text provided."
 
-        try:
-            # カスタムテンプレート文字列があればそれを使用、なければファイルからロード
-            prompt: str
-            if self.custom_template_str:
-                template = Template(self.custom_template_str)
-                prompt = template.render(paper_text=paper_text)
-            else:
-                template = self.env.get_template(self.current_template_name)
-                prompt = template.render(paper_text=paper_text)
+        # Get current template (custom or default)
+        current_template: PromptTemplate = self.custom_template or self.default_template
 
+        try:
+            # テンプレートに値を適用して最終的なプロンプトを生成
+            prompt: str = current_template.to_string(paper_text=paper_text)
             return prompt
-        except exceptions.TemplateSyntaxError as e:
-            logger.error(f"Jinja2 syntax error when rendering template: {e}")
-            error_message = f"Error generating podcast conversation (syntax error): {e}"
-            return error_message
         except Exception as e:
-            logger.error(f"Error rendering template: {e}")
-            error_message = f"Error generating podcast conversation: {e}"
+            logger.error(f"Error rendering prompt: {e}")
+            error_message: str = f"Error generating podcast conversation: {e}"
             return error_message
