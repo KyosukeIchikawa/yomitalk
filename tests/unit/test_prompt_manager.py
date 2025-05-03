@@ -163,6 +163,64 @@ class TestPromptManager(unittest.TestCase):
 
         self.assertEqual("四国めたん： こんにちは\nずんだもん： はじめまして", converted_fullwidth)
 
+    def test_character_speech_patterns(self):
+        """Test character speech patterns."""
+        # キャラクター口調辞書が存在することを確認
+        self.assertIsNotNone(self.prompt_manager.character_speech_patterns)
+
+        # ずんだもんの口調設定を確認
+        zundamon_pattern = self.prompt_manager.character_speech_patterns.get("ずんだもん")
+        self.assertIsNotNone(zundamon_pattern)
+        # assertIsNotNoneで確認したので、zundamon_patternがNoneでない場合のみ続行
+        if zundamon_pattern is not None:
+            self.assertTrue(isinstance(zundamon_pattern, dict))
+            self.assertEqual(zundamon_pattern.get("first_person"), "ぼく")
+            sentence_end = zundamon_pattern.get("sentence_end", [])
+            if sentence_end is not None:
+                self.assertIn("のだ", sentence_end)
+                self.assertIn("なのだ", sentence_end)
+
+        # 四国めたんの口調設定を確認
+        metan_pattern = self.prompt_manager.character_speech_patterns.get("四国めたん")
+        self.assertIsNotNone(metan_pattern)
+        if metan_pattern is not None:
+            self.assertTrue(isinstance(metan_pattern, dict))
+            self.assertEqual(metan_pattern.get("first_person"), "わたし")
+            sentence_end = metan_pattern.get("sentence_end", [])
+            if sentence_end is not None:
+                self.assertIn("わ", sentence_end)
+                self.assertIn("よ", sentence_end)
+
+        # 九州そらの口調設定を確認
+        sora_pattern = self.prompt_manager.character_speech_patterns.get("九州そら")
+        self.assertIsNotNone(sora_pattern)
+        if sora_pattern is not None:
+            self.assertTrue(isinstance(sora_pattern, dict))
+            self.assertEqual(sora_pattern.get("first_person"), "うち")
+            sentence_end = sora_pattern.get("sentence_end", [])
+            if sentence_end is not None:
+                self.assertIn("ばい", sentence_end)
+
+    def test_speech_patterns_in_prompt(self):
+        """Test if speech patterns are included in the generated prompt."""
+        paper_text = "これはテスト用の論文テキストです。"
+
+        # デフォルトキャラクター設定での生成
+        prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
+
+        # 各キャラクターの口調情報が含まれていることを確認
+        self.assertIn("一人称: わたし", prompt)  # 四国めたん
+        self.assertIn("一人称: ぼく", prompt)  # ずんだもん
+        self.assertIn("語尾の特徴", prompt)
+
+        # キャラクター設定を変更して再テスト
+        self.prompt_manager.set_character_mapping("ずんだもん", "九州そら")
+        updated_prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
+
+        # 更新後の口調情報が含まれていることを確認
+        self.assertIn("うち", updated_prompt)  # 九州そら
+        self.assertIn("ばい", updated_prompt)  # 九州そらの語尾
+
 
 if __name__ == "__main__":
     unittest.main()

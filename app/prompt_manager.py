@@ -46,6 +46,25 @@ class PromptManager:
         # 有効なキャラクターのリスト
         self.valid_characters = ["ずんだもん", "四国めたん", "九州そら"]
 
+        # キャラクターの口調パターン
+        self.character_speech_patterns = {
+            "ずんだもん": {
+                "first_person": "ぼく",
+                "sentence_end": ["のだ", "なのだ", "のだよ", "なのだよ"],
+                "characteristic": "語尾に「のだ」「なのだ」をつけ、一人称は「ぼく」。質問するときは「〜なのだ？」調子がいいときは「〜のだよ！」など。",
+            },
+            "四国めたん": {
+                "first_person": "わたし",
+                "sentence_end": ["わ", "よ", "ね"],
+                "characteristic": "丁寧で落ち着いた話し方。語尾に「わ」「よ」「ね」などをつける。一人称は「わたし」。",
+            },
+            "九州そら": {
+                "first_person": "うち",
+                "sentence_end": ["ばい", "と", "とよ"],
+                "characteristic": "九州弁で語尾に「ばい」「と」「とよ」などを使う。一人称は「うち」。博多弁の特徴を持った話し方。",
+            },
+        }
+
     def set_prompt_template(self, prompt_template: str) -> bool:
         """カスタムプロンプトテンプレートを設定します。
 
@@ -173,6 +192,10 @@ class PromptManager:
             character1 = self.character_mapping["Character1"]
             character2 = self.character_mapping["Character2"]
 
+            # キャラクターの口調情報を取得
+            char1_speech_pattern = self.character_speech_patterns.get(character1, {})
+            char2_speech_pattern = self.character_speech_patterns.get(character2, {})
+
             if self.use_custom_template and self.custom_template:
                 # カスタムテンプレートがある場合はメモリから使用
                 template = jinja2.Template(self.custom_template)
@@ -181,7 +204,11 @@ class PromptManager:
                 template = self.jinja_env.get_template(self.default_template_path)
 
             prompt: str = template.render(
-                paper_text=paper_text, character1=character1, character2=character2
+                paper_text=paper_text,
+                character1=character1,
+                character2=character2,
+                char1_speech_pattern=char1_speech_pattern,
+                char2_speech_pattern=char2_speech_pattern,
             )
             return prompt
         except Exception as e:

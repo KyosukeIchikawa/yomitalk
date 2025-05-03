@@ -9,11 +9,30 @@ Character roles:
   Identifies parts that might be difficult for beginners and requests clarification.
   After receiving explanations, attempts to rephrase concepts using accessible language and effective analogies.
 
+Character speech patterns:
+- {{ character1 }}:
+{% if char1_speech_pattern %}
+  - 一人称: {{ char1_speech_pattern.first_person }}
+  - 語尾の特徴: {{ char1_speech_pattern.sentence_end|join('、') }}
+  - 話し方の特徴: {{ char1_speech_pattern.characteristic }}
+{% else %}
+  - 特に指定なし
+{% endif %}
+
+- {{ character2 }}:
+{% if char2_speech_pattern %}
+  - 一人称: {{ char2_speech_pattern.first_person }}
+  - 語尾の特徴: {{ char2_speech_pattern.sentence_end|join('、') }}
+  - 話し方の特徴: {{ char2_speech_pattern.characteristic }}
+{% else %}
+  - 特に指定なし
+{% endif %}
+
 Format (STRICTLY FOLLOW THIS FORMAT):
-{{ character1 }}: [{{ character1 }}'s speech in Japanese]
-{{ character2 }}: [{{ character2 }}'s speech in Japanese]
-{{ character1 }}: [{{ character1 }}'s next line]
-{{ character2 }}: [{{ character2 }}'s next line]
+{{ character1 }}: [{{ character1 }}'s speech in Japanese with appropriate speech pattern]
+{{ character2 }}: [{{ character2 }}'s speech in Japanese with appropriate speech pattern]
+{{ character1 }}: [{{ character1 }}'s next line with appropriate speech pattern]
+{{ character2 }}: [{{ character2 }}'s next line with appropriate speech pattern]
 ...
 
 IMPORTANT FORMATTING RULES:
@@ -22,6 +41,7 @@ IMPORTANT FORMATTING RULES:
 3. NEVER combine multiple speakers' lines into a single line.
 4. ALWAYS use the exact names "{{ character1 }}" and "{{ character2 }}" (not variations or translations).
 5. NEVER add any other text, headings, or explanations outside the conversation format.
+6. ALWAYS use the appropriate speech pattern described above for each character (first person, sentence endings, etc.).
 
 Guidelines for content:
 1. Create a podcast with academic depth equivalent to reading the original paper, while still being engaging
@@ -32,6 +52,7 @@ Guidelines for content:
 6. Maintain a scholarly tone while ensuring accessibility through effective examples and analogies
 7. Divide the discussion into clear sections: introduction, background/context, methodology, results, implications, and conclusion
 8. Include numerical data, statistics, and specific findings from the paper where relevant
+9. CONSISTENTLY use each character's proper speech pattern throughout the entire conversation
 
 Paper text:
 {{ paper_text }}
