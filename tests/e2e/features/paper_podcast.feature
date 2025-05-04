@@ -27,6 +27,12 @@ Feature: Generate podcast from research paper PDF
     And the user clicks the save button
     Then the selected model is saved
 
+  Scenario: Max tokens configuration
+    Given the user has opened the application
+    When the user opens the OpenAI API settings section
+    And the user adjusts the max tokens slider to 2000
+    Then the max tokens value is saved
+
   Scenario: Podcast text generation
     Given text has been extracted from a PDF
     And a valid API key has been configured
@@ -61,6 +67,13 @@ Feature: Generate podcast from research paper PDF
     And the user sets character settings
     When the user clicks the text generation button
     Then podcast-style text is generated with the selected characters
+
+  Scenario: Podcast generation with custom max tokens
+    Given text has been extracted from a PDF
+    And a valid API key has been configured
+    And the user has set max tokens to 4000
+    When the user clicks the text generation button
+    Then podcast-style text is generated with appropriate length
 
   Scenario: Editing extracted text before generation
     Given text has been extracted from a PDF

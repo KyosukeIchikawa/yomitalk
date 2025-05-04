@@ -37,6 +37,9 @@ class OpenAIModel:
         # プロンプトマネージャーを初期化
         self.prompt_manager = PromptManager()
 
+        # デフォルトの最大トークン数
+        self.max_tokens: int = 3000
+
     def set_api_key(self, api_key: str) -> bool:
         """
         Set the OpenAI API key and returns the result.
@@ -53,6 +56,39 @@ class OpenAIModel:
         self.api_key = api_key.strip()
         os.environ["OPENAI_API_KEY"] = self.api_key
         return True
+
+    def set_max_tokens(self, max_tokens: int) -> bool:
+        """
+        最大トークン数を設定します。
+
+        Args:
+            max_tokens (int): 設定する最大トークン数
+
+        Returns:
+            bool: 設定が成功したかどうか
+        """
+        try:
+            max_tokens_int = int(max_tokens)
+            if max_tokens_int < 100:
+                # 最小値は100とする
+                return False
+            if max_tokens_int > 4096:
+                # 最大値は4096とする（モデルにより異なるが、安全圏として）
+                return False
+
+            self.max_tokens = max_tokens_int
+            return True
+        except (ValueError, TypeError):
+            return False
+
+    def get_max_tokens(self) -> int:
+        """
+        現在設定されている最大トークン数を取得します。
+
+        Returns:
+            int: 現在の最大トークン数
+        """
+        return self.max_tokens
 
     def get_available_models(self) -> List[str]:
         """
@@ -129,7 +165,7 @@ class OpenAIModel:
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
-                max_tokens=1500,
+                max_tokens=self.max_tokens,
             )
 
             # Get response content

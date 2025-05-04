@@ -10,6 +10,7 @@ from tests.e2e.features.steps.audio_generation_steps import *  # noqa
 
 # Import steps from all step modules
 from tests.e2e.features.steps.common_steps import *  # noqa
+from tests.e2e.features.steps.max_tokens_steps import *  # noqa
 from tests.e2e.features.steps.pdf_extraction_steps import *  # noqa
 from tests.e2e.features.steps.settings_steps import *  # noqa
 from tests.e2e.features.steps.text_generation_steps import *  # noqa

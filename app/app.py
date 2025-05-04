@@ -321,6 +321,17 @@ class PaperPodcastApp:
                             scale=3,
                         )
 
+                    with gr.Row():
+                        max_tokens_slider = gr.Slider(
+                            minimum=100,
+                            maximum=4096,
+                            value=self.get_max_tokens(),
+                            step=100,
+                            label="最大トークン数",
+                            info="生成される会話の最大長さ（100〜4096）",
+                            scale=3,
+                        )
+
                     api_key_btn = gr.Button("保存", variant="primary")
 
             with gr.Row():
@@ -449,6 +460,13 @@ class PaperPodcastApp:
             model_dropdown.change(
                 fn=self.set_model_name,
                 inputs=[model_dropdown],
+                outputs=[system_log_display],
+            )
+
+            # Max tokens selection
+            max_tokens_slider.change(
+                fn=self.set_max_tokens,
+                inputs=[max_tokens_slider],
                 outputs=[system_log_display],
             )
 
@@ -703,6 +721,30 @@ class PaperPodcastApp:
             List[str]: 利用可能なキャラクター名のリスト
         """
         return self.available_characters
+
+    def set_max_tokens(self, max_tokens: int) -> str:
+        """
+        最大トークン数を設定します。
+
+        Args:
+            max_tokens (int): 設定する最大トークン数
+
+        Returns:
+            str: システムログ
+        """
+        success = self.text_processor.openai_model.set_max_tokens(max_tokens)
+        result = "✅ 最大トークン数が正常に設定されました" if success else "❌ 最大トークン数の設定に失敗しました"
+        self.update_log(f"最大トークン数: {result} ({max_tokens})")
+        return self.system_log
+
+    def get_max_tokens(self) -> int:
+        """
+        現在設定されている最大トークン数を取得します。
+
+        Returns:
+            int: 現在の最大トークン数
+        """
+        return self.text_processor.openai_model.get_max_tokens()
 
 
 # Create and launch application instance
