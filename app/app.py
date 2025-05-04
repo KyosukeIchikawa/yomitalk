@@ -301,44 +301,6 @@ class PaperPodcastApp:
             )
 
             with gr.Row():
-                # OpenAI API settings at the top
-                with gr.Column():
-                    gr.Markdown("## OpenAI API設定")
-                    with gr.Row():
-                        api_key_input = gr.Textbox(
-                            placeholder="sk-...",
-                            type="password",
-                            show_label=False,
-                            scale=3,
-                        )
-                        api_key_status = gr.Textbox(
-                            interactive=False,
-                            placeholder="APIキーをセットしてください",
-                            value=self.get_api_key_status(),
-                            show_label=False,
-                            scale=3,
-                        )
-
-                    with gr.Row():
-                        model_dropdown = gr.Dropdown(
-                            choices=self.get_available_models(),
-                            value=self.get_current_model(),
-                            label="モデル",
-                            scale=3,
-                        )
-
-                    with gr.Row():
-                        max_tokens_slider = gr.Slider(
-                            minimum=100,
-                            maximum=4096,
-                            value=self.get_max_tokens(),
-                            step=100,
-                            label="最大トークン数",
-                            info="生成される会話の最大長さ（100〜4096）",
-                            scale=3,
-                        )
-
-            with gr.Row():
                 # File upload and text extraction
                 with gr.Column():
                     gr.Markdown("## ファイルアップロード")
@@ -400,6 +362,36 @@ class PaperPodcastApp:
                                 placeholder="変更すると自動保存されます",
                                 show_label=False,
                             )
+
+                    # OpenAI API設定
+                    with gr.Row():
+                        with gr.Column(scale=3):
+                            api_key_input = gr.Textbox(
+                                placeholder="sk-...",
+                                type="password",
+                                label="OpenAI APIキー",
+                            )
+                        with gr.Column(scale=2):
+                            model_dropdown = gr.Dropdown(
+                                choices=self.get_available_models(),
+                                value=self.get_current_model(),
+                                label="モデル",
+                            )
+                    with gr.Row():
+                        max_tokens_slider = gr.Slider(
+                            minimum=100,
+                            maximum=4096,
+                            value=self.get_max_tokens(),
+                            step=100,
+                            label="最大トークン数",
+                        )
+                        api_key_status = gr.Textbox(
+                            interactive=False,
+                            placeholder="APIキーをセットしてください",
+                            value=self.get_api_key_status(),
+                            show_label=False,
+                            visible=False,
+                        )
 
                     # トークを生成ボタン
                     process_btn = gr.Button("トークを生成", variant="primary")
