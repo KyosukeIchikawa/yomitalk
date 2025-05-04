@@ -17,14 +17,12 @@ Feature: Generate podcast from research paper PDF
     Given the user has opened the application
     When the user opens the OpenAI API settings section
     And the user enters a valid API key
-    And the user clicks the save button
     Then the API key is saved
 
   Scenario: OpenAI model selection
     Given the user has opened the application
     When the user opens the OpenAI API settings section
     And the user selects a different OpenAI model
-    And the user clicks the save button
     Then the selected model is saved
 
   Scenario: Max tokens configuration
