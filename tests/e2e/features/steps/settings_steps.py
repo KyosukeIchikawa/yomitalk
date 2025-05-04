@@ -830,45 +830,13 @@ def select_character2_no_quotes(page_with_server: Page, character_name: str):
 
 @when("the user clicks the character settings save button")
 def click_character_settings_save_button(page_with_server: Page):
-    """キャラクター設定保存ボタンをクリックする"""
-    page = page_with_server
-
-    try:
-        # キャラクター設定を保存ボタンを探す
-        save_button = page.get_by_text("キャラクターを設定", exact=False)
-        save_button.click(timeout=1000)
-        logger.info("Character settings save button clicked")
-    except Exception as e:
-        logger.error(f"Failed to click character settings save button: {e}")
-        try:
-            # JavaScriptでボタンをクリック
-            clicked = page.evaluate(
-                """
-                () => {
-                    const buttons = Array.from(document.querySelectorAll('button'));
-                    const saveButton = buttons.find(b =>
-                        (b.textContent || '').includes('キャラクターを設定') ||
-                        (b.textContent || '').includes('Set Characters')
-                    );
-                    if (saveButton) {
-                        saveButton.click();
-                        console.log("Character settings save button clicked via JS");
-                        return true;
-                    }
-                    return false;
-                }
-                """
-            )
-            if not clicked:
-                pytest.fail("キャラクター設定保存ボタンが見つかりません")
-            else:
-                logger.info("Character settings save button clicked via JS")
-        except Exception as js_e:
-            pytest.fail(
-                f"Failed to click character settings save button: {e}, JS error: {js_e}"
-            )
-
-    page.wait_for_timeout(500)
+    """Click character settings save button"""
+    # ボタンがUIから削除されたため、このステップはスキップします
+    # 実際のアプリでは、ドロップダウン変更時に自動保存されるようになりました
+    logger.info(
+        "Character settings save button step skipped - auto-save is now implemented"
+    )
+    pass
 
 
 @then("the character settings are saved")
@@ -911,22 +879,13 @@ def verify_character_settings_saved(page_with_server: Page):
 
 @given("the user sets character settings")
 def custom_character_settings_saved(page_with_server: Page):
-    """キャラクター設定を保存する"""
-    # 抽出されたテキストが存在することを確認（ファイルアップロードと抽出後）
-    verify_extracted_text_exists(page_with_server)
-
-    # アコーディオンを開く
-    open_character_settings_accordion(page_with_server)
-
-    # キャラクター選択実行
-    select_character1(page_with_server, "九州そら")
-    select_character2(page_with_server, "ずんだもん")
-
-    # 設定ボタンをクリック
-    save_character_settings(page_with_server)
-
-    # 設定が保存されたことを確認
-    verify_settings_saved(page_with_server)
+    """Set custom character settings"""
+    # 文字通りステップを実行する
+    open_character_settings(page_with_server)
+    select_character1_specific(page_with_server)
+    select_character2_specific(page_with_server)
+    # 自動保存されるため、保存ボタンのクリックは不要
+    verify_character_settings_saved(page_with_server)
 
 
 @when("the user saves character settings with {character1_name} and {character2_name}")
@@ -985,21 +944,11 @@ def open_character_settings_accordion(page_with_server: Page):
 
 
 def save_character_settings(page_with_server: Page):
-    """キャラクター設定を保存"""
-    page = page_with_server
-    try:
-        # 保存ボタンを探して押す
-        save_button = page.locator("text=キャラクターを設定").first
-        save_button.click()
-        logger.info("Character settings save button clicked")
-
-        # 保存処理の完了を待つ
-        page.wait_for_timeout(500)
-
-        return True
-    except Exception as e:
-        logger.error(f"Failed to save character settings: {e}")
-        return False
+    """キャラクター設定を保存する"""
+    # 自動保存されるため、保存ボタンのクリックは不要
+    logger.info("Character settings are automatically saved when dropdowns change")
+    # 少し待機してUIが更新される時間を与える
+    page_with_server.wait_for_timeout(500)
 
 
 def verify_settings_saved(page_with_server: Page):

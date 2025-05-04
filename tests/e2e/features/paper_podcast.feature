@@ -56,7 +56,6 @@ Feature: Generate podcast from research paper PDF
     When the user opens the character settings section
     And the user selects 九州そら for Character1
     And the user selects 四国めたん for Character2
-    And the user clicks the character settings save button
     Then the character settings are saved
 
   Scenario: Podcast generation with custom characters

@@ -347,7 +347,6 @@ class PaperPodcastApp:
                             placeholder="キャラクターを選択してください",
                             show_label=False,
                         )
-                        character_btn = gr.Button("キャラクターを設定", variant="primary")
 
                     # Prompt template settings accordion
                     with gr.Accordion(label="プロンプトテンプレート設定", open=False):
@@ -492,8 +491,14 @@ class PaperPodcastApp:
                 outputs=[prompt_template_status, system_log_display],
             )
 
-            # キャラクター設定
-            character_btn.click(
+            # キャラクター設定 - ドロップダウンが変更されたらすぐに保存
+            character1_dropdown.change(
+                fn=self.set_character_mapping,
+                inputs=[character1_dropdown, character2_dropdown],
+                outputs=[character_status, system_log_display],
+            )
+
+            character2_dropdown.change(
                 fn=self.set_character_mapping,
                 inputs=[character1_dropdown, character2_dropdown],
                 outputs=[character_status, system_log_display],
