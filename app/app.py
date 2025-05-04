@@ -6,7 +6,7 @@ Builds the Paper Podcast Generator application using Gradio.
 import os
 import uuid
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import gradio as gr
 
@@ -296,7 +296,7 @@ class PaperPodcastApp:
                 """
                 # YomiTalk
 
-                テキストファイルやPDFから「ずんだもん」と「四国めたん」によるポッドキャスト音声を生成します。
+                テキストファイルやPDFから"ずんだもん"と"四国めたん"によるポッドキャスト音声を生成します。
                 """
             )
 
@@ -396,7 +396,9 @@ class PaperPodcastApp:
                         )
 
                     # トークを生成ボタン
-                    process_btn = gr.Button("トークを生成", variant="primary")
+                    process_btn = gr.Button(
+                        "トークを生成", variant="secondary", interactive=False
+                    )
                     podcast_text = gr.Textbox(
                         label="生成されたトーク",
                         placeholder="テキストを処理してトークを生成してください...",
@@ -452,6 +454,10 @@ class PaperPodcastApp:
                 fn=self.extract_file_text,
                 inputs=[file_input],
                 outputs=[extracted_text, system_log_display],
+            ).then(
+                fn=self.update_process_button_state,
+                inputs=[extracted_text],
+                outputs=[process_btn],
             )
 
             # API key - ユーザが入力したらすぐに保存
@@ -459,6 +465,10 @@ class PaperPodcastApp:
                 fn=self.set_api_key,
                 inputs=[api_key_input],
                 outputs=[api_key_status, system_log_display],
+            ).then(
+                fn=self.update_process_button_state,
+                inputs=[extracted_text],
+                outputs=[process_btn],
             )
 
             # Model selection
@@ -750,6 +760,34 @@ class PaperPodcastApp:
             int: 現在の最大トークン数
         """
         return self.text_processor.openai_model.get_max_tokens()
+
+    def update_process_button_state(self, extracted_text: str) -> Dict[str, Any]:
+        """
+        抽出されたテキストとAPIキーの状態に基づいて"トークを生成"ボタンの有効/無効を切り替えます。
+
+        Args:
+            extracted_text (str): 抽出されたテキスト
+
+        Returns:
+            Dict[str, Any]: gr.update()の結果
+        """
+        # テキストが有効かつAPIキーが設定されている場合のみボタンを有効化
+        has_text = (
+            extracted_text
+            and extracted_text.strip() != ""
+            and extracted_text
+            not in ["Please upload a file.", "Failed to process the file."]
+        )
+        has_api_key = bool(self.text_processor.openai_model.api_key)
+
+        is_enabled = has_text and has_api_key
+
+        # gr.update()を使用して、Gradioのコンポーネントを更新する
+        # Dict[str, Any]型にキャストして型チェッカーを満足させる
+        result = gr.update(
+            interactive=is_enabled, variant="primary" if is_enabled else "secondary"
+        )
+        return result  # type: ignore
 
 
 # Create and launch application instance
