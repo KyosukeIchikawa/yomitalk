@@ -69,6 +69,12 @@ class PaperPodcastApp:
         Returns:
             tuple: (status_message, system_log)
         """
+        # APIキーが空白や空文字の場合は処理しない
+        if not api_key or api_key.strip() == "":
+            result = "❌ APIキーが空です。有効なAPIキーを入力してください"
+            self.update_log(f"OpenAI API: {result}")
+            return result, self.system_log
+
         success = self.text_processor.set_openai_api_key(api_key)
         result = "✅ APIキーが正常に設定されました" if success else "❌ APIキーの設定に失敗しました"
         self.update_log(f"OpenAI API: {result}")
@@ -332,8 +338,6 @@ class PaperPodcastApp:
                             scale=3,
                         )
 
-                    api_key_btn = gr.Button("保存", variant="primary")
-
             with gr.Row():
                 # File upload and text extraction
                 with gr.Column():
@@ -449,8 +453,8 @@ class PaperPodcastApp:
                 outputs=[extracted_text, system_log_display],
             )
 
-            # API key
-            api_key_btn.click(
+            # API key - ユーザが入力したらすぐに保存
+            api_key_input.change(
                 fn=self.set_api_key,
                 inputs=[api_key_input],
                 outputs=[api_key_status, system_log_display],
