@@ -314,7 +314,9 @@ class PaperPodcastApp:
                         type="filepath",
                         label=f"サポートしているファイル形式: {', '.join(supported_extensions)}",
                     )
-                    extract_btn = gr.Button("テキストを抽出", variant="primary")
+                    extract_btn = gr.Button(
+                        "テキストを抽出", variant="primary", interactive=False
+                    )
 
             with gr.Row():
                 # Text processing
@@ -439,6 +441,13 @@ class PaperPodcastApp:
             )
 
             # Set up event handlers
+            # ファイルがアップロードされたらボタンを有効化
+            file_input.change(
+                fn=lambda x: gr.update(interactive=bool(x)),
+                inputs=[file_input],
+                outputs=[extract_btn],
+            )
+
             extract_btn.click(
                 fn=self.extract_file_text,
                 inputs=[file_input],
