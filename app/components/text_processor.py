@@ -154,3 +154,12 @@ class TextProcessor:
         cleaned_text = " ".join(cleaned_lines)
 
         return cleaned_text
+
+    def get_token_usage(self) -> dict:
+        """
+        最後のAPI呼び出しで使用されたトークン情報を取得します。
+
+        Returns:
+            dict: トークン使用状況を含む辞書
+        """
+        return self.openai_model.get_last_token_usage()

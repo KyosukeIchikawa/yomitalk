@@ -4,7 +4,7 @@ Uses OpenAI's LLM to generate podcast-style conversation text from research pape
 """
 
 import os
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import httpx
 from openai import OpenAI
@@ -39,6 +39,9 @@ class OpenAIModel:
 
         # デフォルトの最大トークン数
         self.max_tokens: int = 3000
+
+        # トークン使用状況の初期化
+        self.last_token_usage: Dict[str, int] = {}
 
     def set_api_key(self, api_key: str) -> bool:
         """
@@ -171,8 +174,16 @@ class OpenAIModel:
             # Get response content
             generated_text = str(response.choices[0].message.content)
 
+            # トークン使用状況の保存
+            self.last_token_usage = {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens,
+            }
+
             # Debug output
             logger.info(f"Generated text sample: {generated_text[:200]}...")
+            logger.info(f"Token usage: {self.last_token_usage}")
 
             return generated_text
 
@@ -181,6 +192,18 @@ class OpenAIModel:
         except Exception as e:
             logger.error(f"Error during OpenAI API request: {e}")
             return f"Error generating text: {e}"
+
+    def get_last_token_usage(self) -> dict:
+        """
+        最後のAPI呼び出しで使用されたトークン情報を取得します。
+
+        Returns:
+            dict: トークン使用状況（prompt_tokens, completion_tokens, total_tokens）
+            またはAPIがまだ呼び出されていない場合は空の辞書
+        """
+        if hasattr(self, "last_token_usage"):
+            return self.last_token_usage
+        return {}
 
     def set_character_mapping(self, character1: str, character2: str) -> bool:
         """

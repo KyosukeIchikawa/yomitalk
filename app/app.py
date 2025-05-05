@@ -3,6 +3,7 @@
 Builds the Paper Podcast Generator application using Gradio.
 """
 
+import math
 import os
 import uuid
 from pathlib import Path
@@ -277,6 +278,13 @@ class PaperPodcastApp:
         try:
             # Generate podcast text
             podcast_text = self.text_processor.process_text(text)
+
+            # トークン使用状況を取得してログに追加
+            token_usage = self.text_processor.get_token_usage()
+            if token_usage:
+                usage_msg = f"トークン使用: 入力 {token_usage.get('prompt_tokens', 0)}、出力 {token_usage.get('completion_tokens', 0)}、合計 {token_usage.get('total_tokens', 0)}"
+                self.update_log(usage_msg)
+
             self.update_log("ポッドキャストテキスト生成: ✅ 完了")
             logger.info(f"Podcast text sample: {text[:200]}...")
             return podcast_text, self.system_log
@@ -437,6 +445,11 @@ class PaperPodcastApp:
                         lines=15,
                     )
 
+                    # トークン使用状況の表示
+                    token_usage_info = gr.HTML(
+                        "<div>トークン使用状況: まだ生成されていません</div>", elem_id="token-usage-info"
+                    )
+
             with gr.Row():
                 # Audio generation section
                 with gr.Column():
@@ -548,6 +561,10 @@ class PaperPodcastApp:
                 fn=self.generate_podcast_text,
                 inputs=[extracted_text],
                 outputs=[podcast_text, system_log_display],
+            ).then(
+                # トークン使用状況をUIに反映
+                fn=self.update_token_usage_display,
+                outputs=[token_usage_info],
             )
 
             # 音声生成ボタンのイベントハンドラ
@@ -867,6 +884,33 @@ class PaperPodcastApp:
         if not hasattr(self, "current_ui_mode"):
             self.current_ui_mode = "標準モード"
         return self.current_ui_mode
+
+    def update_token_usage_display(self) -> str:
+        """
+        トークン使用状況を表示用のHTMLとして返します。
+
+        Returns:
+            str: トークン使用状況のHTML
+        """
+        token_usage = self.text_processor.get_token_usage()
+        if not token_usage:
+            return "<div>トークン使用状況: データがありません</div>"
+
+        prompt_tokens = token_usage.get("prompt_tokens", math.nan)
+        completion_tokens = token_usage.get("completion_tokens", math.nan)
+        total_tokens = token_usage.get("total_tokens", math.nan)
+
+        html = f"""
+        <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-top: 10px;">
+            <h3 style="margin-top: 0; margin-bottom: 8px;">OpenAI API Token Usage</h3>
+            <div style="display: flex; justify-content: space-between;">
+                <div><strong>Input Tokens:</strong> {prompt_tokens}</div>
+                <div><strong>Output Tokens:</strong> {completion_tokens}</div>
+                <div><strong>Total Tokens:</strong> {total_tokens}</div>
+            </div>
+        </div>
+        """
+        return html
 
 
 # Create and launch application instance
