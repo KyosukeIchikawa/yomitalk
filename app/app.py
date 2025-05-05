@@ -381,7 +381,6 @@ class PaperPodcastApp:
 
                     # キャラクター設定
                     with gr.Accordion(label="キャラクター設定", open=False):
-                        gr.Markdown("### キャラクター設定")
                         with gr.Row():
                             character1_dropdown = gr.Dropdown(
                                 choices=self.get_available_characters(),
@@ -393,11 +392,6 @@ class PaperPodcastApp:
                                 value="ずんだもん",
                                 label="キャラクター2（初学者役）",
                             )
-                        character_status = gr.Textbox(
-                            interactive=False,
-                            placeholder="キャラクターを選択してください",
-                            show_label=False,
-                        )
 
                     # Prompt template settings accordion
                     with gr.Accordion(label="プロンプトテンプレート設定", open=False) as _:
@@ -546,13 +540,13 @@ class PaperPodcastApp:
             character1_dropdown.change(
                 fn=self.set_character_mapping,
                 inputs=[character1_dropdown, character2_dropdown],
-                outputs=[character_status, system_log_display],
+                outputs=[system_log_display],
             )
 
             character2_dropdown.change(
                 fn=self.set_character_mapping,
                 inputs=[character1_dropdown, character2_dropdown],
-                outputs=[character_status, system_log_display],
+                outputs=[system_log_display],
             )
 
             # VOICEVOX Terms checkbox - 音声生成ボタンに対してイベントハンドラを更新
