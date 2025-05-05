@@ -403,11 +403,6 @@ class PaperPodcastApp:
                                 value=self.get_prompt_template(),
                                 show_label=False,
                             )
-                            prompt_template_status = gr.Textbox(
-                                interactive=False,
-                                placeholder="変更すると自動保存されます",
-                                show_label=False,
-                            )
 
                     # OpenAI API設定
                     with gr.Row():
@@ -533,7 +528,7 @@ class PaperPodcastApp:
             prompt_template.change(
                 fn=self.set_prompt_template,
                 inputs=[prompt_template],
-                outputs=[prompt_template_status, system_log_display],
+                outputs=[system_log_display],
             )
 
             # キャラクター設定 - ドロップダウンが変更されたらすぐに保存
