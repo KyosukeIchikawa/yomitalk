@@ -77,6 +77,27 @@ class TextProcessor:
         """
         return self.openai_model.get_current_prompt_template()
 
+    def set_podcast_mode(self, mode: str) -> bool:
+        """
+        ポッドキャスト生成モードを設定します。
+
+        Args:
+            mode (str): 'standard' または 'section_by_section'
+
+        Returns:
+            bool: モードが正常に設定されたかどうか
+        """
+        return self.openai_model.set_podcast_mode(mode)
+
+    def get_podcast_mode(self) -> str:
+        """
+        現在のポッドキャスト生成モードを取得します。
+
+        Returns:
+            str: 現在のモード ('standard' または 'section_by_section')
+        """
+        return self.openai_model.get_podcast_mode()
+
     def process_text(self, text: str) -> str:
         """
         Process research paper text and convert it to podcast text.

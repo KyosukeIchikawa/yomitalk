@@ -79,6 +79,27 @@ Feature: Generate podcast from research paper PDF
     And the user clicks the text generation button
     Then podcast-style text is generated with the edited content
 
+  Scenario: Podcast mode selection
+    Given the user has opened the application
+    When the user selects "セクション解説モード" as the podcast mode
+    Then the podcast mode is changed to "セクション解説モード"
+    And the prompt template is updated to section-by-section template
+
+  Scenario: Podcast mode template switching
+    Given the user has opened the application
+    When the user selects "セクション解説モード" as the podcast mode
+    And the user opens the prompt template settings section
+    Then the section-by-section template is displayed
+    When the user selects "標準モード" as the podcast mode
+    Then the standard template is displayed
+
+  Scenario: Section-by-Section podcast generation
+    Given text has been extracted from a PDF
+    And a valid API key has been configured
+    When the user selects "セクション解説モード" as the podcast mode
+    And the user clicks the text generation button
+    Then podcast-style text is generated with section-by-section format
+
   @requires_voicevox
   Scenario: Audio generation
     Given podcast text has been generated

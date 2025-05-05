@@ -59,6 +59,12 @@ class PaperPodcastApp:
             self.text_processor.openai_model.get_valid_characters()
         )
 
+        # ポッドキャスト生成モード
+        self.podcast_modes = ["標準モード", "セクション解説モード"]
+
+        # 現在選択されているUIモード
+        self.current_ui_mode = "標準モード"
+
     def set_api_key(self, api_key: str) -> Tuple[str, str]:
         """
         Set the OpenAI API key and returns a result message based on the outcome.
@@ -97,12 +103,49 @@ class PaperPodcastApp:
 
     def get_prompt_template(self) -> str:
         """
-        Get the current prompt template.
+        現在のプロンプトテンプレートを取得します。
 
         Returns:
-            str: The current prompt template
+            str: 現在のプロンプトテンプレート
         """
         return self.text_processor.get_prompt_template()
+
+    def get_prompt_template_for_mode(self, mode=None) -> str:
+        """
+        指定されたモードに基づいたプロンプトテンプレートを取得します。
+        UIのプロンプトテンプレート表示更新用に使用します。
+
+        Args:
+            mode (str, optional): モード名（"標準モード"または"セクション解説モード"）
+
+        Returns:
+            str: モードに対応するプロンプトテンプレート
+        """
+        # UIでの表示用にハードコードされたテンプレートを返す
+        try:
+            if mode == "セクション解説モード":
+                # セクション解説モード用のテンプレートをハードコード
+                template_path = Path("app/templates/section_by_section.j2")
+                if template_path.exists():
+                    with open(template_path, "r", encoding="utf-8") as f:
+                        return f.read()
+                else:
+                    self.update_log(f"セクション解説モード用テンプレートが見つかりません: {template_path}")
+
+            # 標準モードまたは不明なモードの場合、デフォルトテンプレートを返す
+            template_path = Path("app/templates/paper_to_podcast.j2")
+            if template_path.exists():
+                with open(template_path, "r", encoding="utf-8") as f:
+                    return f.read()
+            else:
+                self.update_log(f"標準モード用テンプレートが見つかりません: {template_path}")
+                return "テンプレートファイルが見つかりません。"
+
+        except Exception as e:
+            error_msg = f"テンプレート読み込みエラー: {str(e)}"
+            self.update_log(error_msg)
+            logger.error(error_msg)
+            return f"エラー: {error_msg}"
 
     def handle_file_upload(self, file_obj):
         """
@@ -328,6 +371,14 @@ class PaperPodcastApp:
                         show_label=False,
                     )
 
+                    # ポッドキャスト生成モード選択
+                    podcast_mode_radio = gr.Radio(
+                        choices=self.get_podcast_modes(),
+                        value=self.get_current_podcast_mode(),
+                        label="生成モード",
+                        info="標準モード: 論文全体を要約したポッドキャスト形式の会話を生成します。\nセクション解説モード: 論文のセクションごとに順を追って解説する会話を生成します。",
+                    )
+
                     # キャラクター設定
                     with gr.Accordion(label="キャラクター設定", open=False):
                         gr.Markdown("### キャラクター設定")
@@ -349,7 +400,7 @@ class PaperPodcastApp:
                         )
 
                     # Prompt template settings accordion
-                    with gr.Accordion(label="プロンプトテンプレート設定", open=False):
+                    with gr.Accordion(label="プロンプトテンプレート設定", open=False) as _:
                         with gr.Column():
                             prompt_template = gr.Textbox(
                                 placeholder="プロンプトテンプレートを入力してください...",
@@ -629,6 +680,18 @@ class PaperPodcastApp:
                 """,
             )
 
+            # ポッドキャストモード選択のイベントハンドラ
+            podcast_mode_radio.change(
+                fn=self.set_podcast_mode,
+                inputs=[podcast_mode_radio],
+                outputs=[system_log_display],
+            ).then(
+                # モード変更後にプロンプトテンプレートを更新
+                fn=self.get_prompt_template_for_mode,
+                inputs=[podcast_mode_radio],  # モード情報を明示的に渡す
+                outputs=[prompt_template],
+            )
+
         return app
 
     # 既存のAPIキー状態を取得するメソッドを追加
@@ -793,6 +856,49 @@ class PaperPodcastApp:
             interactive=is_enabled, variant="primary" if is_enabled else "secondary"
         )
         return result  # type: ignore
+
+    def set_podcast_mode(self, mode: str) -> str:
+        """
+        ポッドキャスト生成モードを設定します。
+        注: 内部のモード切替機能は廃止され、UIでの表示切替のみを行います。
+
+        Args:
+            mode (str): '標準モード' または 'セクション解説モード'
+
+        Returns:
+            str: 結果メッセージとシステムログ
+        """
+        # モードの妥当性チェック
+        if mode not in self.get_podcast_modes():
+            self.update_log(f"ポッドキャストモード: ❌ 不明なモード '{mode}'")
+            return self.system_log
+
+        # 現在のUIで選択されているモードを記録
+        self.current_ui_mode = mode
+
+        # ログ記録
+        self.update_log(f"ポッドキャストモード: ✅ モードを '{mode}' に設定しました")
+        return self.system_log
+
+    def get_podcast_modes(self):
+        """
+        利用可能なポッドキャスト生成モードのリストを取得します。
+
+        Returns:
+            list: 利用可能なモードのリスト
+        """
+        return self.podcast_modes
+
+    def get_current_podcast_mode(self):
+        """
+        現在のポッドキャスト生成モードを取得します。
+
+        Returns:
+            str: 現在のポッドキャストモード
+        """
+        if not hasattr(self, "current_ui_mode"):
+            self.current_ui_mode = "標準モード"
+        return self.current_ui_mode
 
 
 # Create and launch application instance

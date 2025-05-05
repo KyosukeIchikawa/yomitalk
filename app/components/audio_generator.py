@@ -141,9 +141,9 @@ class AudioGenerator:
         # 英単語を検出する正規表現
         word_pattern = re.compile(r"[a-zA-Z][a-zA-Z\'-]*[a-zA-Z]|[a-zA-Z]")
 
-        def replace_word(match):
-            word = match.group(0).lower()
-            katakana = alkana.get_kana(word)
+        def replace_word(match: re.Match) -> str:
+            word: str = match.group(0).lower()
+            katakana: str = alkana.get_kana(word)
             return katakana if katakana else word
 
         # 英単語をカタカナに置換
