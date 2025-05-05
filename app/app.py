@@ -426,13 +426,6 @@ class PaperPodcastApp:
                             step=100,
                             label="最大トークン数",
                         )
-                        api_key_status = gr.Textbox(
-                            interactive=False,
-                            placeholder="APIキーをセットしてください",
-                            value=self.get_api_key_status(),
-                            show_label=False,
-                            visible=False,
-                        )
 
                     # トークを生成ボタン
                     process_btn = gr.Button(
@@ -503,7 +496,7 @@ class PaperPodcastApp:
             api_key_input.change(
                 fn=self.set_api_key,
                 inputs=[api_key_input],
-                outputs=[api_key_status, system_log_display],
+                outputs=[system_log_display],
             ).then(
                 fn=self.update_process_button_state,
                 inputs=[extracted_text],
@@ -682,20 +675,6 @@ class PaperPodcastApp:
             )
 
         return app
-
-    # 既存のAPIキー状態を取得するメソッドを追加
-    def get_api_key_status(self) -> str:
-        """
-        現在のAPIキーの状態を取得します。
-
-        Returns:
-            str: APIキーのステータスメッセージ
-        """
-        return (
-            "✅ APIキーが設定されています"
-            if self.text_processor.openai_model.api_key
-            else "APIキーをセットしてください"
-        )
 
     def set_model_name(self, model_name: str) -> str:
         """
