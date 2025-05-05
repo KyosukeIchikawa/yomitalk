@@ -3,6 +3,9 @@
 Provides advanced PDF text extraction with column detection for the Paper Podcast Generator application.
 """
 
+import argparse
+import os
+import sys
 from typing import Dict, List
 
 import fitz  # PyMuPDF
@@ -23,37 +26,8 @@ class PDFExtractor:
         Returns:
             str: Extracted text
         """
-        try:
-            # 2段組抽出を使用
-            return self._extract_with_column_detection(file_path)
-        except Exception as e:
-            logger.error(f"PyMuPDF extraction with column detection failed: {e}")
-            try:
-                # 標準の抽出をフォールバックとして使用
-                return self._extract_with_pymupdf(file_path)
-            except Exception as e2:
-                logger.error(f"Standard PyMuPDF extraction failed: {e2}")
-                return f"PDF parsing failed: {str(e2)}"
-
-    def _extract_with_pymupdf(self, file_path: str) -> str:
-        """
-        Extract text from a PDF file using standard PyMuPDF method.
-
-        Args:
-            file_path (str): Path to the PDF file
-
-        Returns:
-            str: Extracted text
-        """
-        extracted_text = ""
-        doc = fitz.open(file_path)
-
-        for i, page in enumerate(doc):
-            page_text = page.get_text()
-            if page_text:
-                extracted_text += f"--- Page {i+1} ---\n{page_text}\n\n"
-
-        return extracted_text
+        # 2段組対応の抽出方法
+        return self._extract_with_column_detection(file_path)
 
     def _extract_with_column_detection(self, file_path: str) -> str:
         """
@@ -110,75 +84,31 @@ class PDFExtractor:
                 left_column_blocks.sort(key=lambda b: b["y0"])
                 right_column_blocks.sort(key=lambda b: b["y0"])
 
-                # 特殊なブロックタイプを識別（図のキャプションなど）
-                self._identify_special_blocks(left_column_blocks)
-                self._identify_special_blocks(right_column_blocks)
-
                 # 列ごとにテキストを結合（縦方向に離れているブロック間に改行を追加）
                 left_text = self._join_blocks_with_spacing(left_column_blocks)
                 right_text = self._join_blocks_with_spacing(right_column_blocks)
 
                 # 両方の列が存在する場合は2段組として処理
                 if left_text and right_text:
-                    page_text = f"--- Page {page_num + 1} ---\n"
-                    page_text += f"[Left Column]\n{left_text}\n\n"
-                    page_text += f"[Right Column]\n{right_text}\n"
+                    page_text = f"## Page {page_num + 1}\n"
+                    page_text += f"### Left Column\n{left_text}\n\n"
+                    page_text += f"### Right Column\n{right_text}\n"
                 else:
                     # 片方の列しかない場合は通常のPDFとして処理
                     combined_text = left_text or right_text
-                    page_text = f"--- Page {page_num + 1} ---\n{combined_text}\n"
+                    page_text = f"## Page {page_num + 1}\n{combined_text}\n"
             else:
                 # テキストブロックがない場合
-                page_text = (
-                    f"--- Page {page_num + 1} ---\n[No text found on this page]\n"
-                )
+                page_text = f"## Page {page_num + 1}\n[No text found on this page]\n"
 
             all_text.append(page_text)
 
         # すべてのテキストを結合
         return "\n".join(all_text)
 
-    def _identify_special_blocks(self, blocks: List[Dict]) -> None:
-        """
-        特殊なブロック（図のキャプションや表のタイトルなど）を識別し、マークする
-
-        Args:
-            blocks (List[Dict]): テキストブロックのリスト
-        """
-        # 図や表のキャプションを識別
-        for block in blocks:
-            text = block["text"]
-            # 図のキャプションの識別
-            if (
-                text.startswith("Fig.")
-                or text.startswith("Figure ")
-                or "hypothetical plans" in text
-            ):
-                block["is_figure_caption"] = True
-            # 表のキャプションの識別
-            elif text.startswith("Table "):
-                block["is_table_caption"] = True
-            # セクションタイトルの識別
-            elif any(
-                section in text
-                for section in [
-                    "INTRODUCTION",
-                    "RELATED WORK",
-                    "METHOD",
-                    "RESULTS",
-                    "CONCLUSION",
-                ]
-            ):
-                block["is_section_title"] = True
-            else:
-                # 特殊なブロックではない
-                block["is_figure_caption"] = False
-                block["is_table_caption"] = False
-                block["is_section_title"] = False
-
     def _process_block_with_lines(self, block: Dict) -> Dict:
         """
-        テキストブロックを処理し、セクションタイトルと本文の分離などの特別処理を行う
+        テキストブロックを処理し、スタイル変更に基づいて改行を適切に挿入
 
         Args:
             block (Dict): PDFのテキストブロック
@@ -215,13 +145,14 @@ class PDFExtractor:
                     or color != prev_color  # 色の変更
                 )
 
-                # スタイル変更があり、これがタイトルと本文の境界と思われる場合
+                # スタイル変更があり、行の先頭にあるスパンの場合
                 if style_changed and span_idx == 0 and line_idx > 0:
-                    # 前のスタイルが大きいサイズまたは太字で、現在が通常テキスト
+                    # スタイル変化に基づいて改行を挿入
+                    # 太字から普通、または大きいサイズから小さいサイズへの変化はタイトルから本文への移行の可能性
                     if prev_size > size or (
                         prev_flags is not None and (prev_flags & 4) != 0
-                    ):  # 4は太字フラグ
-                        processed_text += "\n"  # タイトルと本文の間に改行を挿入
+                    ):
+                        processed_text += "\n"
 
                 # テキストを追加
                 line_text += span["text"]
@@ -235,91 +166,84 @@ class PDFExtractor:
             # 行テキストを追加
             processed_text += line_text
 
-        # セクションタイトルと本文の特別な処理
-        # 特定のパターンを検出して改行を挿入
-        for section_title in [
-            "INTRODUCTION",
-            "RELATED WORK",
-            "METHOD",
-            "RESULTS",
-            "CONCLUSION",
-            "DISCUSSION",
-        ]:
-            # セクションタイトルの直後に本文が続く場合、間に改行を挿入
-            if section_title in processed_text and not processed_text.endswith(
-                section_title
-            ):
-                pos = processed_text.find(section_title) + len(section_title)
-                if pos < len(processed_text) and processed_text[pos] not in ["\n", " "]:
-                    processed_text = processed_text[:pos] + "\n" + processed_text[pos:]
-
-        # 図のキャプションの処理
-        if processed_text.startswith("Fig.") or "hypothetical plans" in processed_text:
-            # キャプションの後に改行を確保
-            if not processed_text.endswith("\n"):
-                processed_text += "\n"
-
+        # 空間的特性を記録
         return {
             "text": processed_text,
             "bbox": block["bbox"],
             "x0": x0,  # 左端のx座標（カラム判定用）
             "y0": y0,  # 上端のy座標（縦方向ソート用）
             "y1": y1,  # 下端のy座標（改行判定用）
+            "height": y1 - y0,  # ブロックの高さ
+            "width": x1 - x0,  # ブロックの幅
         }
 
     def _join_blocks_with_spacing(self, blocks: List[Dict]) -> str:
         """
-        テキストブロックを結合し、縦方向に離れたブロック間に適切な改行を挿入する
+        テキストブロックを改行を挿入つつ結合する
 
         Args:
             blocks (List[Dict]): テキストブロックのリスト
 
         Returns:
-            str: 適切な改行を含む結合テキスト
+            str: 改行を含む結合テキスト
         """
         if not blocks:
             return ""
 
-        # 垂直方向の間隔閾値（通常は前ブロック高さの1.5倍以上離れていれば追加の改行を挿入）
-        VERTICAL_GAP_FACTOR = 1.5
-        # 図のキャプション後の閾値は低めに設定（わずかな間隔でも改行を挿入）
-        FIGURE_CAPTION_GAP_FACTOR = 0.3
+        # 常にブロック間に2つ分の改行を挿入
+        return "\n\n".join(block["text"] for block in blocks)
 
-        result = []
-        prev_block = None
 
-        for i, block in enumerate(blocks):
-            if prev_block:
-                # 前のブロックが図のキャプションかどうかを確認
-                is_prev_figure = (
-                    prev_block.get("is_figure_caption", False)
-                    or "Fig." in prev_block["text"]
-                    or "hypothetical plans" in prev_block["text"]
-                )
+def configure_logging():
+    """コンソールにログを出力するシンプルな設定"""
+    import logging
 
-                # 前のブロックとの垂直方向の間隔を計算
-                prev_bottom = prev_block["y1"]
-                current_top = block["y0"]
-                gap = current_top - prev_bottom
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
-                # 前のブロックの高さを計算
-                prev_height = prev_block["y1"] - prev_block["y0"]
 
-                # 使用する間隔閾値を決定
-                gap_factor = (
-                    FIGURE_CAPTION_GAP_FACTOR if is_prev_figure else VERTICAL_GAP_FACTOR
-                )
+def main():
+    """メイン関数: コマンドライン引数からPDFを読み込み、テキスト抽出を実行"""
+    parser = argparse.ArgumentParser(description="PDFからテキストを抽出するツール")
+    parser.add_argument("pdf_path", help="処理するPDFファイルのパス")
+    parser.add_argument("-o", "--output", help="出力テキストファイルのパス（省略時は標準出力）")
+    parser.add_argument("-d", "--debug", action="store_true", help="デバッグモードを有効化")
 
-                # 間隔が閾値以上なら追加の改行を挿入
-                if gap > (prev_height * gap_factor):
-                    # 図のキャプションの後は2行の改行を入れる
-                    if is_prev_figure:
-                        result.append("\n\n")  # 図のキャプション後は2行の空白
-                    else:
-                        result.append("\n")  # 通常のブロック間は1行
+    args = parser.parse_args()
 
-            # テキストを追加
-            result.append(block["text"])
-            prev_block = block
+    # デバッグモードの場合はログレベルを設定
+    if args.debug:
+        configure_logging()
 
-        return "\n".join(result)
+    # PDFファイルの存在確認
+    if not os.path.exists(args.pdf_path):
+        logger.error(f"エラー: '{args.pdf_path}' は存在しません")
+        return 1
+
+    try:
+        # PDFからテキストを抽出
+        extractor = PDFExtractor()
+        extracted_text = extractor.extract_from_pdf(args.pdf_path)
+
+        # 出力先の決定
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(extracted_text)
+            logger.info(f"テキストを '{args.output}' に保存しました")
+        else:
+            logger.info(extracted_text)
+
+        return 0
+    except Exception as e:
+        logger.error(f"エラー: {e}")
+        if args.debug:
+            import traceback
+
+            traceback.print_exc()
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

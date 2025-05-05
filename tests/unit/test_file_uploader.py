@@ -103,10 +103,10 @@ class TestFileUploader:
             with patch.object(
                 self.uploader.pdf_extractor,
                 "extract_from_pdf",
-                return_value="--- Page 1 ---\nPDF content\n\n",
+                return_value="## Page 1 ---\nPDF content\n\n",
             ):
                 result = self.uploader.extract_text_from_path(temp_file_path)
-                assert "--- Page 1 ---" in result
+                assert "## Page 1" in result
                 assert "PDF content" in result
         finally:
             # Clean up

@@ -124,7 +124,7 @@ class TextProcessor:
 
         for line in lines:
             # Remove page numbers and empty lines
-            if line.startswith("--- Page") or line.strip() == "":
+            if line.startswith("## Page") or line.strip() == "":
                 continue
 
             cleaned_lines.append(line)

@@ -15,49 +15,6 @@ class TestPDFExtractor:
         self.extractor = PDFExtractor()
 
     @patch("app.utils.pdf_extractor.fitz.open")
-    def test_extract_from_pdf(self, mock_fitz_open):
-        """Test successful text extraction from a PDF file using PyMuPDF."""
-        # Create a mock file
-        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
-            temp_file_path = temp_file.name
-
-        try:
-            # Set up the mock fitz document
-            mock_page1 = MagicMock()
-            mock_page1.get_text.return_value = "Test content page 1"
-            mock_page2 = MagicMock()
-            mock_page2.get_text.return_value = "Test content page 2"
-
-            mock_doc = MagicMock()
-            mock_doc.__iter__.return_value = iter([mock_page1, mock_page2])
-            mock_doc.__len__.return_value = 2
-            mock_fitz_open.return_value = mock_doc
-
-            # Mock the column detection method to use the standard method instead
-            with patch.object(
-                self.extractor,
-                "_extract_with_column_detection",
-                side_effect=Exception("Simulated column detection failure"),
-            ):
-                # Call the method being tested
-                result = self.extractor.extract_from_pdf(temp_file_path)
-
-                # Verify the results
-                expected_parts = [
-                    "--- Page 1 ---",
-                    "Test content page 1",
-                    "--- Page 2 ---",
-                    "Test content page 2",
-                ]
-                for part in expected_parts:
-                    assert part in result
-
-        finally:
-            # Clean up the temporary file
-            if os.path.exists(temp_file_path):
-                os.unlink(temp_file_path)
-
-    @patch("app.utils.pdf_extractor.fitz.open")
     def test_extract_with_column_detection(self, mock_fitz_open):
         """Test column detection for PDF extraction."""
         # Create a mock file
@@ -103,26 +60,44 @@ class TestPDFExtractor:
             mock_doc.__len__.return_value = 1
             mock_fitz_open.return_value = mock_doc
 
-            # Patch the join_blocks_with_spacing method to verify it's called with the right args
+            # _process_block_with_linesメソッドをモック化
             with patch.object(
                 self.extractor,
-                "_join_blocks_with_spacing",
-                # テストのために単純に結合して返す
-                side_effect=lambda blocks: "\n".join(block["text"] for block in blocks),
-            ) as mock_join:
-                # Call the method being tested
-                result = self.extractor._extract_with_column_detection(temp_file_path)
+                "_process_block_with_lines",
+                side_effect=lambda block: {
+                    "text": block["lines"][0]["spans"][0]["text"],
+                    "bbox": block["bbox"],
+                    "x0": block["bbox"][0],
+                    "y0": block["bbox"][1],
+                    "y1": block["bbox"][3],
+                    "height": block["bbox"][3] - block["bbox"][1],
+                    "width": block["bbox"][2] - block["bbox"][0],
+                },
+            ):
+                # Patch the join_blocks_with_spacing method to verify it's called with the right args
+                with patch.object(
+                    self.extractor,
+                    "_join_blocks_with_spacing",
+                    # テストのために単純に結合して返す
+                    side_effect=lambda blocks: "\n".join(
+                        block["text"] for block in blocks
+                    ),
+                ) as mock_join:
+                    # Call the method being tested
+                    result = self.extractor._extract_with_column_detection(
+                        temp_file_path
+                    )
 
-                # Verify the results
-                assert "[Left Column]" in result
-                assert "Left column text 1" in result
-                assert "Left column text 2" in result
-                assert "[Right Column]" in result
-                assert "Right column text 1" in result
-                assert "Right column text 2" in result
-                assert "Title spanning both columns" in result  # タイトルがどちらかの列に含まれること
-                # _join_blocks_with_spacingが呼ばれたことを確認
-                assert mock_join.call_count == 2
+                    # Verify the results
+                    assert "### Left Column" in result
+                    assert "Left column text 1" in result
+                    assert "Left column text 2" in result
+                    assert "### Right Column" in result
+                    assert "Right column text 1" in result
+                    assert "Right column text 2" in result
+                    assert "Title spanning both columns" in result  # タイトルがどちらかの列に含まれること
+                    # _join_blocks_with_spacingが呼ばれたことを確認
+                    assert mock_join.call_count == 2
 
         finally:
             # Clean up the temporary file
@@ -150,20 +125,42 @@ class TestPDFExtractor:
 
         result = self.extractor._join_blocks_with_spacing(blocks)
 
-        # ブロック間の垂直ギャップが大きいため、追加の改行が挿入されているか確認
-        assert (
-            result == "First block\n\nSecond block"
-            or result == "First block\n\n\nSecond block"
-        )
-        # 改行が少なくとも1つ以上あることを確認
-        assert "\n\n" in result
+        # 常に2つのブロック間に"\n\n"が入ることを確認
+        assert result == "First block\n\nSecond block"
 
 
 def test_init():
     """Test PDFExtractor initialization."""
     extractor = PDFExtractor()
     assert hasattr(extractor, "_extract_with_column_detection")
-    assert hasattr(extractor, "_extract_with_pymupdf")
+    # _extract_with_pymupdfは削除されたので、チェックしない
+
+
+@patch("app.utils.pdf_extractor.fitz.open")
+def test_class_extract_from_pdf(mock_fitz_open):
+    """Test successful text extraction from a PDF file using PyMuPDF."""
+    extractor = PDFExtractor()
+
+    # Create a mock file
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
+        temp_file_path = temp_file.name
+
+    try:
+        # Mock extract_with_column_detection instead of using real implementation
+        with patch.object(
+            extractor,
+            "_extract_with_column_detection",
+            return_value="## Page 1\nTest content\n",
+        ):
+            result = extractor.extract_from_pdf(temp_file_path)
+
+            # Verify the results
+            assert "## Page 1" in result
+            assert "Test content" in result
+    finally:
+        # Clean up the temporary file
+        if os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
 
 
 @patch("fitz.open")
@@ -184,8 +181,8 @@ def test_extract_from_pdf(mock_fitz_open):
 
 
 @patch("fitz.open")
-def test_extract_with_pymupdf(mock_fitz_open):
-    """Test _extract_with_pymupdf method."""
+def test_simple_pdf_extraction(mock_fitz_open):
+    """Test simple PDF extraction with default method."""
     extractor = PDFExtractor()
 
     # Setup mock document with pages
@@ -196,14 +193,22 @@ def test_extract_with_pymupdf(mock_fitz_open):
 
     mock_doc = MagicMock()
     mock_doc.__iter__.return_value = [mock_page1, mock_page2]
+    mock_doc.__len__.return_value = 2
     mock_fitz_open.return_value = mock_doc
 
-    result = extractor._extract_with_pymupdf("file.pdf")
+    # _extract_with_pymupdfが削除されたので、代わりにextract_from_pdfをテスト
+    with patch.object(
+        extractor,
+        "_extract_with_column_detection",
+        side_effect=lambda path: "## Page 1\nPage 1 content\n\n## Page 2\nPage 2 content",
+    ):
+        result = extractor.extract_from_pdf("file.pdf")
 
-    assert "--- Page 1 ---" in result
-    assert "Page 1 content" in result
-    assert "--- Page 2 ---" in result
-    assert "Page 2 content" in result
+        # 期待する出力形式をチェック
+        assert "## Page 1" in result
+        assert "Page 1 content" in result
+        assert "## Page 2" in result
+        assert "Page 2 content" in result
 
 
 @patch("fitz.open")
@@ -260,28 +265,44 @@ def test_extract_with_column_detection_detailed(mock_fitz_open):
     # Set up the mock to return blocks
     mock_page.get_text.return_value = {"blocks": mock_blocks}
 
-    # Test column detection
-    result = extractor._extract_with_column_detection("file.pdf")
+    # _process_block_with_linesメソッドをモック化
+    with patch.object(
+        extractor,
+        "_process_block_with_lines",
+        side_effect=lambda block: {
+            "text": "Left column text"
+            if block["bbox"][0] < 300
+            else "Right column text",
+            "bbox": block["bbox"],
+            "x0": block["bbox"][0],
+            "y0": block["bbox"][1],
+            "y1": block["bbox"][3],
+            "height": block["bbox"][3] - block["bbox"][1],
+            "width": block["bbox"][2] - block["bbox"][0],
+        },
+    ):
+        # Test column detection
+        result = extractor._extract_with_column_detection("file.pdf")
 
-    # Verify the results contain both columns
-    assert "[Left Column]" in result
-    assert "[Right Column]" in result
-    assert "Left column text" in result
-    assert "Right column text" in result
+        # Verify the results contain both columns
+        assert "### Left Column" in result
+        assert "### Right Column" in result
+        assert "Left column text" in result
+        assert "Right column text" in result
 
 
 def test_process_block_with_lines():
     """Test _process_block_with_lines."""
     extractor = PDFExtractor()
 
-    # ブロックを作成（INTRODUCTIONセクションタイトルを含む）
+    # スタイル変更を含むブロックを作成
     block = {
         "bbox": [50, 100, 250, 150],
         "lines": [
             {
                 "spans": [
                     {
-                        "text": "INTRODUCTION",
+                        "text": "Title",
                         "font": "Helvetica-Bold",
                         "size": 14,
                         "flags": 4,
@@ -292,7 +313,7 @@ def test_process_block_with_lines():
             {
                 "spans": [
                     {
-                        "text": "This is the introduction text.",
+                        "text": "Regular text",
                         "font": "Helvetica",
                         "size": 12,
                         "flags": 0,
@@ -305,111 +326,51 @@ def test_process_block_with_lines():
 
     result = extractor._process_block_with_lines(block)
 
-    # タイトルと本文の間に改行が挿入されていることを確認
-    assert "INTRODUCTION\nThis is the introduction text." in result["text"]
+    # ブロックの空間的特性が正しく計算されていることを確認
+    assert "height" in result
+    assert "width" in result
+    assert result["height"] == 50  # y1 - y0 = 150 - 100
+    assert result["width"] == 200  # x1 - x0 = 250 - 50
+
+    # テキストにスタイル変更に基づく改行が含まれていることを確認
+    assert "Title" in result["text"]
+    assert "Regular text" in result["text"]
 
 
-def test_process_block_with_lines_figure_caption():
-    """Test _process_block_with_lines with figure caption."""
+def test_process_block_with_lines_with_style_changes():
+    """Test _process_block_with_lines with style changes."""
     extractor = PDFExtractor()
 
-    # 図のキャプションを含むブロックを作成
+    # スタイル変更を伴うブロックを作成
     block = {
-        "bbox": [50, 300, 250, 330],
+        "bbox": [50, 100, 250, 150],
         "lines": [
             {
                 "spans": [
                     {
-                        "text": "Fig. 1: Example figure",
-                        "font": "Helvetica-Italic",
-                        "size": 10,
-                        "flags": 2,
+                        "text": "Bold text",
+                        "font": "Helvetica-Bold",
+                        "size": 12,
+                        "flags": 4,  # Bold flag
                         "color": 0,
                     }
                 ]
-            }
+            },
+            {
+                "spans": [
+                    {
+                        "text": "Regular text",
+                        "font": "Helvetica",
+                        "size": 12,
+                        "flags": 0,  # Regular flag
+                        "color": 0,
+                    }
+                ]
+            },
         ],
     }
 
     result = extractor._process_block_with_lines(block)
 
-    # 図のキャプションの後に改行が挿入されていることを確認
-    assert result["text"].endswith("\n")
-    assert "Fig. 1: Example figure\n" in result["text"]
-
-
-def test_join_blocks_with_spacing_figure_caption():
-    """Test _join_blocks_with_spacing with figure caption."""
-    extractor = PDFExtractor()
-
-    blocks = [
-        {
-            "text": "Fig. 1: Example figure",
-            "bbox": [50, 100, 250, 150],
-            "x0": 50,
-            "y0": 100,
-            "y1": 150,
-            "is_figure_caption": True,
-        },
-        {
-            "text": "Text after figure",
-            "bbox": [50, 170, 250, 200],
-            "x0": 50,
-            "y0": 170,
-            "y1": 200,
-        },
-    ]
-
-    result = extractor._join_blocks_with_spacing(blocks)
-
-    # 図のキャプションの後に追加の改行が挿入されていることを確認
-    assert "\n\n" in result
-    # 正しい順序で結合されていることを確認
-    assert "Fig. 1: Example figure" in result
-    assert "Text after figure" in result
-
-
-def test_identify_special_blocks():
-    """Test _identify_special_blocks."""
-    extractor = PDFExtractor()
-
-    blocks = [
-        {
-            "text": "INTRODUCTION",
-            "bbox": [50, 100, 250, 150],
-            "x0": 50,
-            "y0": 100,
-            "y1": 150,
-        },
-        {
-            "text": "Fig. 1: Example figure",
-            "bbox": [50, 200, 250, 230],
-            "x0": 50,
-            "y0": 200,
-            "y1": 230,
-        },
-        {
-            "text": "Table 1: Data summary",
-            "bbox": [50, 300, 250, 330],
-            "x0": 50,
-            "y0": 300,
-            "y1": 330,
-        },
-        {
-            "text": "Regular text",
-            "bbox": [50, 400, 250, 430],
-            "x0": 50,
-            "y0": 400,
-            "y1": 430,
-        },
-    ]
-
-    extractor._identify_special_blocks(blocks)
-
-    # 特殊ブロックが正しく識別されていることを確認
-    assert blocks[0]["is_section_title"] is True
-    assert blocks[1]["is_figure_caption"] is True
-    assert blocks[2]["is_table_caption"] is True
-    assert blocks[3]["is_section_title"] is False
-    assert blocks[3]["is_figure_caption"] is False
-    assert blocks[3]["is_table_caption"] is False
+    # 太字からレギュラーへのスタイル変更の後に改行が挿入されることを確認
+    assert "Bold text\nRegular text" in result["text"]

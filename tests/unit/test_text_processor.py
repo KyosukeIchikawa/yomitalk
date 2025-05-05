@@ -22,7 +22,7 @@ class TestTextProcessor(unittest.TestCase):
     def test_preprocess_text(self):
         """Test text preprocessing functionality."""
         # Test with page markers and empty lines
-        input_text = "--- Page 1 ---\nLine 1\n\nLine 2\n--- Page 2 ---\nLine 3"
+        input_text = "## Page 1\nLine 1\n\nLine 2\n## Page 2\nLine 3"
         expected = "Line 1 Line 2 Line 3"
         result = self.text_processor._preprocess_text(input_text)
         self.assertEqual(result, expected)
