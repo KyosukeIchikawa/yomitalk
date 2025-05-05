@@ -7,8 +7,7 @@ import argparse
 import os
 import sys
 
-from markitdown import MarkItDown
-from markitdown._document import DocumentConverterResult
+from markitdown import DocumentConverterResult, MarkItDown
 
 from app.utils.logger import logger
 
