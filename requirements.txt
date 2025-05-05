@@ -23,6 +23,10 @@ autoflake==2.3.1
     # via -r requirements.in
 autopep8==2.3.2
     # via -r requirements.in
+beautifulsoup4==4.13.4
+    # via
+    #   markdownify
+    #   markitdown
 black==25.1.0
     # via -r requirements.in
 build==1.2.2.post1
@@ -33,15 +37,21 @@ certifi==2025.4.26
     #   httpx
     #   requests
     #   selenium
+cffi==1.17.1
+    # via cryptography
 cfgv==3.4.0
     # via pre-commit
 chardet==5.2.0
     # via reportlab
-charset-normalizer==3.4.1
-    # via requests
+charset-normalizer==3.4.2
+    # via
+    #   markitdown
+    #   pdfminer-six
+    #   requests
 click==8.1.8
     # via
     #   black
+    #   magika
     #   pip-tools
     #   typer
     #   uvicorn
@@ -49,6 +59,8 @@ colorama==0.4.6
     # via radon
 coloredlogs==15.0.1
     # via onnxruntime
+cryptography==44.0.3
+    # via pdfminer-six
 distlib==0.3.9
     # via virtualenv
 distro==1.9.0
@@ -82,9 +94,9 @@ future==1.0.0
     # via ffmpeg-python
 gherkin-official==29.0.0
     # via pytest-bdd
-gradio==5.27.0
+gradio==5.29.0
     # via -r requirements.in
-gradio-client==1.9.0
+gradio-client==1.10.0
     # via gradio
 greenlet==3.2.1
     # via playwright
@@ -132,12 +144,18 @@ jinja2==3.1.6
     #   torch
 jiter==0.9.0
     # via openai
+magika==0.6.2
+    # via markitdown
 mako==1.3.10
     # via pytest-bdd
 mando==0.7.1
     # via radon
 markdown-it-py==3.0.0
     # via rich
+markdownify==1.1.0
+    # via markitdown
+markitdown[pdf]==0.1.1
+    # via -r requirements.in
 markupsafe==3.0.2
     # via
     #   gradio
@@ -163,6 +181,7 @@ numpy==2.2.5
     # via
     #   -r requirements.in
     #   gradio
+    #   magika
     #   onnxruntime
     #   pandas
     #   transformers
@@ -204,10 +223,12 @@ nvidia-nvjitlink-cu12==12.6.85
 nvidia-nvtx-cu12==12.6.77
     # via torch
 onnxruntime==1.21.1
+    # via
+    #   -r requirements.in
+    #   magika
+openai==1.77.0
     # via -r requirements.in
-openai==1.76.0
-    # via -r requirements.in
-orjson==3.10.16
+orjson==3.10.18
     # via gradio
 outcome==1.3.0.post0
     # via
@@ -236,6 +257,8 @@ parse-type==0.6.4
     # via pytest-bdd
 pathspec==0.12.1
     # via black
+pdfminer-six==20250416
+    # via markitdown
 pillow==11.2.1
     # via
     #   gradio
@@ -248,7 +271,7 @@ platformdirs==4.3.7
     #   pytoolconfig
     #   virtualenv
     #   yapf
-playwright==1.51.0
+playwright==1.52.0
     # via
     #   -r requirements.in
     #   pytest-playwright
@@ -262,17 +285,19 @@ pycodestyle==2.13.0
     # via
     #   autopep8
     #   flake8
-pydantic==2.11.3
+pycparser==2.22
+    # via cffi
+pydantic==2.11.4
     # via
     #   -r requirements.in
     #   fastapi
     #   gradio
     #   openai
-pydantic-core==2.33.1
+pydantic-core==2.33.2
     # via pydantic
 pydub==0.25.1
     # via gradio
-pyee==12.1.1
+pyee==13.0.0
     # via playwright
 pyflakes==3.3.2
     # via
@@ -282,8 +307,6 @@ pygments==2.19.1
     # via
     #   rich
     #   wemake-python-styleguide
-pymupdf==1.25.5
-    # via -r requirements.in
 pyproject-hooks==1.2.0
     # via
     #   build
@@ -310,6 +333,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
     # via
     #   -r requirements.in
+    #   magika
     #   webdriver-manager
 python-multipart==0.0.20
     # via gradio
@@ -338,6 +362,7 @@ requests==2.32.3
     # via
     #   -r requirements.in
     #   huggingface-hub
+    #   markitdown
     #   pytest-base-url
     #   transformers
     #   webdriver-manager
@@ -346,13 +371,13 @@ rich==14.0.0
     # via typer
 rope==1.13.0
     # via -r requirements.in
-ruff==0.11.7
+ruff==0.11.8
     # via gradio
 safehttpx==0.1.6
     # via gradio
 safetensors==0.5.3
     # via transformers
-selenium==4.31.0
+selenium==4.32.0
     # via -r requirements.in
 semantic-version==2.10.0
     # via gradio
@@ -361,6 +386,7 @@ shellingham==1.5.4
 six==1.17.0
     # via
     #   mando
+    #   markdownify
     #   parse-type
     #   python-dateutil
 sniffio==1.3.1
@@ -370,6 +396,8 @@ sniffio==1.3.1
     #   trio
 sortedcontainers==2.4.0
     # via trio
+soupsieve==2.7
+    # via beautifulsoup4
 starlette==0.46.2
     # via
     #   fastapi
@@ -401,13 +429,14 @@ trio-websocket==0.12.2
     # via selenium
 triton==3.3.0
     # via torch
-typer==0.15.2
+typer==0.15.3
     # via gradio
 types-requests==2.32.0.20250328
     # via -r requirements.in
 typing-extensions==4.13.2
     # via
     #   anyio
+    #   beautifulsoup4
     #   fastapi
     #   gradio
     #   gradio-client

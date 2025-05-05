@@ -8,11 +8,11 @@ huggingface_hub>=0.20.2
 httpx>=0.28.0
 isort
 jinja2>=3.0.0
+markitdown[pdf]>=0.1.1
 mypy
 numpy
 onnxruntime>=1.16.0
 openai
-pymupdf>=1.25.0
 pip-tools
 playwright
 pre-commit
