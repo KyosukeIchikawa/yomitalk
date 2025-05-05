@@ -394,36 +394,57 @@ class AudioGenerator:
             lines = podcast_text.strip().split("\n")
             conversation_parts = []
 
-            # すべてのキャラクターをチェック
+            # サポートされるキャラクター名とそのパターン
             character_patterns = {
                 "ずんだもん": ["ずんだもん:", "ずんだもん："],
                 "四国めたん": ["四国めたん:", "四国めたん："],
                 "九州そら": ["九州そら:", "九州そら："],
             }
 
+            # 複数行のセリフを処理するために現在の話者と発言を記録
+            current_speaker = None
+            current_speech = ""
+
             # Process each line of the text
             logger.info(f"Processing {len(lines)} lines of text")
             for line in lines:
                 line = line.strip()
-                if not line:
-                    continue
 
-                # すべてのキャラクターパターンをチェック
-                found_character = False
+                # 新しい話者の行かチェック
+                found_new_speaker = False
                 for character, patterns in character_patterns.items():
                     for pattern in patterns:
                         if line.startswith(pattern):
-                            text = line.replace(pattern, "", 1).strip()
-                            if text:
-                                logger.debug(f"Found {character} line: {text[:30]}...")
-                                conversation_parts.append((character, text))
-                                found_character = True
-                                break
-                    if found_character:
+                            # 前の話者の発言があれば追加
+                            if current_speaker and current_speech:
+                                conversation_parts.append(
+                                    (current_speaker, current_speech)
+                                )
+
+                            # 新しい話者と発言を設定
+                            current_speaker = character
+                            current_speech = line.replace(pattern, "", 1).strip()
+                            found_new_speaker = True
+                            break
+                    if found_new_speaker:
                         break
 
-                if not found_character:
-                    logger.warning(f"Unrecognized line format: {line[:50]}...")
+                # 話者の切り替えがなく、現在の話者が存在する場合、行を現在の発言に追加
+                if not found_new_speaker and current_speaker:
+                    if line:  # 行に内容がある場合
+                        # すでに発言内容があれば改行を追加
+                        if current_speech:
+                            current_speech += "\n" + line
+                        else:
+                            current_speech = line
+                    else:  # 空行の場合
+                        # 空行も保持（改行として追加）
+                        if current_speech:
+                            current_speech += "\n"
+
+            # 最後の話者の発言があれば追加
+            if current_speaker and current_speech:
+                conversation_parts.append((current_speaker, current_speech))
 
             logger.info(f"Identified {len(conversation_parts)} conversation parts")
 
@@ -567,9 +588,64 @@ class AudioGenerator:
         for name in character_names:
             text = re.sub(f"({name})(\\s+)(?=[^\\s:])", f"{name}:\\2", text)
 
-        # Try to identify speaker blocks in continuous text
+        # カスタム名のキャラクターを検出し、標準名にマッピング
         lines = text.split("\n")
         fixed_lines = []
+
+        # カスタム名の話者を検出するための正規表現
+        speaker_pattern = re.compile(r"^([^:：]+)[：:]\s*(.*)")
+        current_speaker = None
+        current_speech = []
+
+        for line in lines:
+            line_stripped = line.strip()
+            match = speaker_pattern.match(line_stripped) if line_stripped else None
+
+            if match:
+                # 新しい話者が検出された
+                # 前の話者のセリフがあれば追加
+                if current_speaker and current_speech:
+                    fixed_lines.append(f"{current_speaker}: {' '.join(current_speech)}")
+                    current_speech = []
+
+                speaker, speech = match.groups()
+                # 既知のキャラクター名に最も近いものを探す
+                best_match = None
+                for name in character_names:
+                    if name in speaker:
+                        best_match = name
+                        break
+
+                # 最適なマッチが見つからない場合、デフォルトをずんだもんにする
+                current_speaker = best_match if best_match else "ずんだもん"
+                if speech.strip():
+                    current_speech.append(speech.strip())
+            else:
+                # 空行や話者が指定されていない行の処理
+                if current_speaker:
+                    if line_stripped:
+                        # 内容のある行は現在の話者の続きとして追加
+                        current_speech.append(line_stripped)
+                    else:
+                        # 空行は段落区切りとして改行を追加
+                        if current_speech:
+                            # 最後の要素が改行を含んでいない場合のみ追加
+                            if not current_speech[-1].endswith("\n"):
+                                current_speech[-1] += "\n"
+                elif line_stripped:
+                    # 話者が一度も検出されていない場合、デフォルトをずんだもんにする
+                    current_speaker = "ずんだもん"
+                    current_speech.append(line_stripped)
+
+        # 最後の話者の発言を追加
+        if current_speaker and current_speech:
+            fixed_lines.append(f"{current_speaker}: {' '.join(current_speech)}")
+
+        fixed_text = "\n".join(fixed_lines)
+
+        # Try to identify speaker blocks in continuous text
+        lines = fixed_text.split("\n")
+        final_lines = []
 
         for line in lines:
             # 複数のキャラクターが一行に存在するかチェック
@@ -579,10 +655,10 @@ class AudioGenerator:
                     parts = fixed_line.split(f"。{name}")
                     if len(parts) > 1:
                         if parts[0].strip():
-                            fixed_lines.append(f"{parts[0].strip()}。")
+                            final_lines.append(f"{parts[0].strip()}。")
                         fixed_line = f"{name}{parts[1]}"
 
-            fixed_lines.append(fixed_line)
+            final_lines.append(fixed_line)
 
         # Join the fixed lines
-        return "\n".join(fixed_lines)
+        return "\n".join(final_lines)
