@@ -53,11 +53,16 @@ Guidelines for content:
 7. Divide the discussion into clear sections: introduction, background/context, methodology, results, implications, and conclusion
 8. Include numerical data, statistics, and specific findings from the paper where relevant
 9. CONSISTENTLY use each character's proper speech pattern throughout the entire conversation
-10. For English terminology and specialized vocabulary handling:
-   - Convert English terms to katakana to ensure proper pronunciation by VOICEVOX
+
+CRITICAL REQUIREMENT FOR VOICEVOX COMPATIBILITY:
+10. ALWAYS convert ALL English terms to katakana - NEVER leave any alphabetical English words in the output:
+   - ALL English terminology MUST be written in katakana (not alphabets)
+   - For technical terms: "Deep Learning" → "ディープラーニング", "Transformer" → "トランスフォーマー"
+   - For paper titles: "Attention Is All You Need" → "アテンション イズ オール ユー ニード"
+   - For author names: "John Smith" → "ジョン スミス"
    - For unfamiliar or complex English terms, include the Japanese meaning after the katakana
    - Example: "ニューラル アーキテクチャ サーチ、つまりニューラルネットワークの構造を自動的に探索する技術"
-   - No explanation needed for common technical terms like "ディープラーニング" or "トランスフォーマー"
+   - VOICEVOX cannot process alphabetical English, so this rule is absolutely essential
 
 Paper text:
 {{ paper_text }}
