@@ -4,10 +4,13 @@ Provides functionality for generating audio from text using VOICEVOX Core.
 """
 
 import os
+import re
 import subprocess
 import uuid
 from pathlib import Path
 from typing import List, Optional
+
+import alkana
 
 from app.utils.logger import logger
 
@@ -125,6 +128,27 @@ class AudioGenerator:
             logger.error(f"Failed to initialize VOICEVOX Core: {e}")
             self.core_initialized = False
 
+    def _convert_english_to_katakana(self, text: str) -> str:
+        """
+        英単語をカタカナに変換します。
+
+        Args:
+            text (str): 変換するテキスト
+
+        Returns:
+            str: 英単語がカタカナに変換されたテキスト
+        """
+        # 英単語を検出する正規表現
+        word_pattern = re.compile(r"[a-zA-Z][a-zA-Z\'-]*[a-zA-Z]|[a-zA-Z]")
+
+        def replace_word(match):
+            word = match.group(0).lower()
+            katakana = alkana.get_kana(word)
+            return katakana if katakana else word
+
+        # 英単語をカタカナに置換
+        return word_pattern.sub(replace_word, text)
+
     def generate_audio(
         self,
         text: str,
@@ -158,6 +182,10 @@ class AudioGenerator:
                 )
                 logger.error(error_message)
                 return None
+
+            # 英語をカタカナに変換
+            text = self._convert_english_to_katakana(text)
+            logger.info("Converted English words to katakana")
 
             # Convert English name to Japanese name
             ja_voice_type = self.voice_name_mapping.get(voice_type, "ずんだもん")
@@ -390,6 +418,10 @@ class AudioGenerator:
             return None
 
         try:
+            # 英語をカタカナに変換
+            podcast_text = self._convert_english_to_katakana(podcast_text)
+            logger.info("Converted English words in podcast text to katakana")
+
             # Split the podcast text into lines
             lines = podcast_text.strip().split("\n")
             conversation_parts = []

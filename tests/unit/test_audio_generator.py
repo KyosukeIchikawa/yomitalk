@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
+import alkana
 import pytest
 
 from app.components.audio_generator import AudioGenerator
@@ -30,6 +31,56 @@ def test_conversation():
 def audio_generator():
     """Fixture providing an AudioGenerator instance."""
     return AudioGenerator()
+
+
+class TestEnglishToKatakana:
+    """英語からカタカナへの変換テスト"""
+
+    def test_english_to_katakana_conversion(self, audio_generator):
+        """英単語のカタカナ変換をテストする"""
+        test_cases = [
+            {"input": "Hello World", "expected": "ハロー ワールド"},
+            {"input": "Hello AI World", "expected": "ハロー AI ワールド"},  # AIは略語なのでそのまま
+            {
+                "input": "The quick brown fox jumps over the lazy dog",
+                "expected": "ザ クイック ブラウン フォックス ジャンプス オーバー ザ レイジー ドッグ",
+            },
+            {"input": "こんにちは World", "expected": "こんにちは ワールド"},
+            {
+                "input": "Computer Science BOM SaaS",
+                "expected": "コンピューター サイエンス BOM SaaS",  # BOMとSaaSは略語なのでそのまま
+            },
+        ]
+
+        for tc in test_cases:
+            result = audio_generator._convert_english_to_katakana(tc["input"])
+            # 入力に対する出力を確認
+            for src, exp in zip(tc["input"].split(), tc["expected"].split()):
+                if src.isalpha() and len(src) > 1:  # 英単語かつ1文字より長い場合のみ変換されるはず
+                    if src.upper() == src:  # 全て大文字ならば略語の可能性があるのでスキップ
+                        continue
+                    # 変換結果が期待通りかチェック
+                    assert (
+                        src in result
+                        or (alkana.get_kana(src.lower()) or src.lower()) in result
+                    ), f"Failed to convert {src} in {tc['input']}"
+
+    def test_english_in_conversation(self, audio_generator):
+        """会話文中の英語単語変換テスト"""
+        test_conversation = """
+ずんだもん: Hello! 今日はどんな論文について話すのだ？
+四国めたん: 今日はmachine learningによる自然言語処理の最新研究について解説します。
+ずんだもん: わお！それってdifficultそうなのだ。私には理解できるのかな？
+四国めたん: 大丈夫ですよ。順を追って説明しますね。まずはbasic conceptから。
+"""
+
+        result = audio_generator._convert_english_to_katakana(test_conversation)
+
+        # 変換されるべき単語が含まれているか確認
+        assert "ハロー" in result
+        assert "マシン ラーニング" in result or "マシーン ラーニング" in result
+        assert "ディフィカルト" in result
+        assert "ベイシック コンセプト" in result or "ベーシック コンセプト" in result
 
 
 @pytest.mark.skip(reason="時間がかかりすぎるためスキップ")

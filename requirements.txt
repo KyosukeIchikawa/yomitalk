@@ -6,6 +6,8 @@
 #
 aiofiles==24.1.0
     # via gradio
+alkana==0.0.3
+    # via -r requirements.in
 annotated-types==0.7.0
     # via pydantic
 anyio==4.9.0
