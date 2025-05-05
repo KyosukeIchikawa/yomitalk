@@ -88,11 +88,11 @@ Guidelines for TTS compatibility and conversation quality:
    - Break long sentences into shorter segments with appropriate pauses
    - KEEP SENTENCES UNDER 30 CHARACTERS wherever possible for natural speech rhythm
    - CREATE RHYTHM VARIATION: use quick pace for familiar content, slow down dramatically for key points
-   - For important points: "ここが、  （間）  とても重要なポイントなんです"
+   - For important points: "ここが、    とても重要なポイントなんです"
    - For complex explanations: speak slowly with more pauses
    - For supplementary info: speak at a slightly faster pace
-   - Add INTENTIONAL PAUSES for emphasis: "この手法の最大の利点は、  （間）  汎用性の高さです"
-   - Add THOUGHTFUL PAUSES: "それについては、  （間）  少し考える必要がありますね"
+   - Add INTENTIONAL PAUSES for emphasis: "この手法の最大の利点は、    汎用性の高さです"
+   - Add THOUGHTFUL PAUSES: "それについては、    少し考える必要がありますね"
    - Use particles like "ね、  "、"よ、  "、"さ、  " at natural break points (note the comma AND double space)
    - ADD NATURAL FILLERS throughout: "えーっと、  "、"あのー、  "、"そうですねー、  "、"まあ、  なんというか、  "
    - Don't overuse fillers - aim for 1-2 fillers per speaking turn
@@ -130,21 +130,42 @@ Guidelines for TTS compatibility and conversation quality:
    - VERIFY before submitting: scan the entire output to ensure NO English letters remain
 
 SECTION-BY-SECTION ANALYSIS APPROACH:
-1. {{ character1 }} should clearly identify the beginning of each section: "次は「手法」のセクションについて説明します"
-2. For each section, {{ character1 }} should:
-   - Briefly state the purpose of the section
-   - Summarize the most important content (don't try to cover everything)
-   - Explain complex concepts and technical terms
-   - Highlight connections with previous sections
-   - Emphasize key findings or methods
-3. {{ character2 }} should ask 2-3 focused questions after each section
-4. The conversation should follow the exact structure of the paper, moving from abstract to conclusion
-5. Dedicate roughly equal time to each section, keeping in mind their relative importance
-6. Keep section explanations concise yet comprehensive (approximately 2-3 turns per section)
-7. After completing a section, clearly transition to the next one
-8. Use explicit section markers in the conversation: "次のセクションは「結果」について説明します"
-9. Keep section explanations concise to avoid reaching token limits
-10. Do NOT include a lengthy conclusion/summary at the end - the paper's conclusion section explanation is sufficient
+1. START WITH PAPER TITLE: {{ character1 }} should begin by introducing the paper title
+   - "今日は「[論文タイトル]」という論文について解説します。"
+   - Briefly mention publication venue/date if available
+
+2. OVERVIEW SECTION:
+   - {{ character1 }} should provide a very brief overview of the paper without going into details
+   - Cover the main problem addressed and general approach only
+   - Keep this section short (1-2 exchanges) as details will be covered in subsequent sections
+   - End with a clear statement about moving to section-by-section analysis
+
+3. SECTION-BY-SECTION APPROACH:
+   - For each section, {{ character1 }} should clearly state the section name/number:
+     "次は「手法」のセクション、論文の第X章について説明します"
+   - Transition clearly between sections: "それでは次のセクションに移りましょう。第X章の「結果」について見ていきます。"
+   - Use visual cues like: "このセクションでは、論文の著者は次の３つのポイントを議論しています。"
+   - Clearly identify subsections if present: "このセクションには３つのサブセクションがあります。まず最初の..."
+
+4. SECTION CONTENT:
+   - For each section, {{ character1 }} should:
+     - Clearly state the purpose/goal of this specific section
+     - Summarize the most important content (don't try to cover everything)
+     - Explain complex concepts and technical terms
+     - Highlight connections with previous sections
+     - Emphasize key findings or methods
+   - {{ character2 }} should ask 2-3 focused questions after each section
+   - The conversation should follow the exact structure of the paper, moving from introduction to conclusion
+   - Dedicate roughly equal time to each section, keeping in mind their relative importance
+   - Keep section explanations concise yet comprehensive (approximately 2-3 turns per section)
+   - Use explicit section markers in the conversation: "以上が「手法」セクションの説明です。次は「結果」のセクションに移ります。"
+   - Keep section explanations concise to avoid reaching token limits
+
+5. CONCLUSION:
+   - After explaining all paper sections, keep conclusion brief as the paper's conclusion section already provides a summary
+   - {{ character1 }} and {{ character2 }} should each share a brief personal impression/takeaway
+   - End with a simple closing remark without rehashing content
+   - Keep this final exchange very concise (just 1-2 lines per speaker)
 
 Paper text:
 {{ paper_text }}
