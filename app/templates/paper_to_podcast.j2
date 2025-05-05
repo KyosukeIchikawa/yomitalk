@@ -3,11 +3,13 @@ based on the following paper text.
 
 Character roles:
 - {{ character1 }}: A true academic expert on the paper's subject who provides in-depth, logically structured explanations at a professional level.
-  Uses precise terminology and cites specific methodologies, findings, and implications from the paper.
-  Maintains academic rigor while being able to translate complex concepts into clear explanations when prompted.
+  Uses precise terminology but ALWAYS supplements with careful explanations and simplified expressions to make concepts accessible to beginners.
+  Proactively breaks down complex terms immediately after using them, using everyday analogies and concrete examples.
+  Maintains academic rigor while ensuring explanations are understandable to non-specialists.
 - {{ character2 }}: An intelligent beginner with foundational knowledge who asks insightful questions about challenging concepts.
-  Identifies parts that might be difficult for beginners and requests clarification.
-  After receiving explanations, attempts to rephrase concepts using accessible language and effective analogies.
+  After receiving explanations, clearly communicates their current level of understanding before asking follow-up questions about remaining unclear points.
+  Specifically identifies which parts of the explanation were helpful and which concepts are still difficult to grasp.
+  Attempts to rephrase concepts using accessible language and effective analogies.
 
 Character speech patterns:
 - {{ character1 }}:
@@ -65,23 +67,51 @@ Guidelines for TTS compatibility and conversation quality:
 3. REALISTIC CONVERSATION DYNAMICS:
    - Add natural reactions: "へぇ！  "、"なるほど！  "、"それは驚きですね！  "、"確かに！  "
    - Include realistic back-and-forth exchanges with interruptions and overlapping thoughts
+   - Add FREQUENT, VARIED BACKCHANNELING like: "うんうん"、"なるほど"、"確かに"、"そうですね"、"ふむふむ"
+   - Mix short and longer backchanneling: "ええ"→"ええ、  そうですね"→"ええ、  確かにそのとおりですね"
+   - Both characters should ASK QUESTIONS to each other: "あなたはどう思いますか？"、"〇〇についてどう考えますか？"
+   - Include OCCASIONAL DIGRESSIONS that feel natural: "それって、  ちょっと話が逸れますが、  〇〇に似てますね"
+   - Return naturally to main topic: "あ、  話を戻すと"、"本題に戻りますが"、"さて、  先ほどの話の続きですが"
+   - {{ character2 }} should explicitly indicate their level of understanding: "ここまでは理解できました。  しかし、  〇〇の部分がまだ明確ではありません"
+   - {{ character2 }} should specifically point to concepts they understood: "〇〇という点は理解できました。  特に△△の例えが分かりやすかったです"
+   - {{ character2 }} should be specific about remaining confusion: "〇〇と△△の違いがまだ理解できていません。  もう少し詳しく説明していただけますか？"
    - Add personality-specific expressions based on character roles
    - Include occasional gentle disagreements or different perspectives
    - Use rhetorical questions to introduce new topics: "では、  なぜこの手法が重要なのでしょうか？  "
    - Add enthusiasm markers like "！" where appropriate for emphasis
    - Include occasional speaking mistakes and self-corrections: "このモデルは2018年...  あ、  すみません、  2019年に発表されました"
+   - Include OCCASIONAL HUMOR and light jokes that match each character's personality
+   - Add MICRO-JOKES like: "これは難しいですが...（笑）  頑張って説明しますね"
 
 4. For better TTS comprehension and natural pacing:
    - Break long sentences into shorter segments with appropriate pauses
+   - KEEP SENTENCES UNDER 30 CHARACTERS wherever possible for natural speech rhythm
+   - CREATE RHYTHM VARIATION: use quick pace for familiar content, slow down dramatically for key points
+   - For important points: "ここが、  （間）  とても重要なポイントなんです"
+   - For complex explanations: speak slowly with more pauses
+   - For supplementary info: speak at a slightly faster pace
+   - Add INTENTIONAL PAUSES for emphasis: "この手法の最大の利点は、  （間）  汎用性の高さです"
+   - Add THOUGHTFUL PAUSES: "それについては、  （間）  少し考える必要がありますね"
    - Use particles like "ね、  "、"よ、  "、"さ、  " at natural break points (note the comma AND double space)
-   - Add speech fillers at appropriate places (えーと、  あのー、  そうですね、  etc.) with proper spacing
+   - ADD NATURAL FILLERS throughout: "えーっと、  "、"あのー、  "、"そうですねー、  "、"まあ、  なんというか、  "
+   - Don't overuse fillers - aim for 1-2 fillers per speaking turn
+   - Add longer VERBAL PROCESSING when thinking: "うーんと、  そうですね、  これは…  "
    - Keep sentences shorter than 30-40 characters when possible for better breathing rhythm
    - Use 300-500 characters per speaking turn at most
    - Insert mid-sentence pauses with comma+double space: "最新の研究によると、  この方法は、  従来の手法より20%効率的です"
 
 5. Create engaging, interactive conversation:
+   - VARY CHARACTER PERSONALITIES distinctly through their speech patterns and thinking styles
+   - {{ character1 }} should have specific quirks, favorite phrases, or expressions that recur throughout
+   - {{ character2 }} should have consistent question patterns and reaction styles that define their personality
+   - {{ character1 }} should introduce technical terms with immediate plain language explanation: "〇〇法（△△△）とは、  簡単に言えば□□のような方法です"
+   - {{ character1 }} should use the pattern: [technical term] → [simple definition] → [everyday analogy] → [concrete example]
+   - {{ character1 }} should check understanding after complex explanations: "ここまでで質問はありますか？"、"この説明は分かりやすいでしょうか？"
    - {{ character2 }} should frequently acknowledge with reactions ("なるほど、  "、"すごいですね、  "、"面白いです、  ")
    - {{ character2 }} should repeat key terms to reinforce important concepts
+   - INCLUDE RELATABLE EXAMPLES from everyday life to explain complex concepts
+   - USE VIVID METAPHORS: "この技術は、  料理で言えば、  様々な調味料を少しずつ加えながら味を調整するようなものです"
+   - Both characters should SHARE OCCASIONAL PERSONAL ANECDOTES: "以前、  私が似たような問題に取り組んだ時は..."
    - Keep explanations concise, concrete and implementation-focused
    - Include short breaks between complex topic sections
    - End with a clear summary of the key points and practical applications
@@ -101,14 +131,19 @@ Guidelines for TTS compatibility and conversation quality:
 Content structure guidelines:
 1. Create a podcast with academic depth equivalent to reading the original paper, while still being engaging
 2. Structure the conversation logically, with clear progression between topics
-3. {{ character1 }} should provide expert-level information with precise terminology and methodological details
-4. {{ character2 }} should identify difficult concepts and request clarification, then reformulate explanations using compelling analogies and examples
-5. Cover ALL key findings, methodologies, and implications from the paper with proper depth and nuance
-6. Maintain a scholarly tone while ensuring accessibility through effective examples and analogies
-7. Divide the discussion into clear sections: introduction, background/context, methodology, results, implications, and conclusion
-8. Include numerical data, statistics, and specific findings from the paper where relevant
-9. CONSISTENTLY use each character's proper speech pattern throughout the entire conversation
-10. ALWAYS end the podcast with a concise summary of the key points and practical applications
+3. {{ character1 }} should provide expert-level information with precise terminology while IMMEDIATELY breaking down each complex term or concept for beginners
+4. {{ character1 }} should use both technical language AND accessible everyday analogies in parallel to ensure dual-layer understanding
+5. {{ character2 }} should always acknowledge what they understood before asking for clarification on remaining unclear points
+6. {{ character2 }} should attempt to reformulate explanations using their own words to confirm understanding
+7. INCLUDE NATURAL DIGRESSIONS: Occasionally go off-topic briefly to discuss related interesting points, anecdotes, or lighter topics
+8. MAINTAIN CONVERSATION RHYTHM: Vary the pace - quick exchanges for simple points, slower, more deliberate explanations for complex points
+9. ADD PERSONALITY DEVELOPMENT: Each character should become more distinct over time through consistent speech patterns, reactions, and thought processes
+10. USE NATURAL CONVERSATION STRUCTURE: Include greetings, small talk moments, digressions, and a satisfying conclusion
+11. INCLUDE HUMOR: Add occasional light humor, jokes, or playful exchanges that fit each character's personality
+12. Cover ALL key findings, methodologies, and implications from the paper with proper depth and nuance
+13. Include numerical data, statistics, and specific findings from the paper where relevant
+14. CONSISTENTLY use each character's proper speech pattern throughout the entire conversation
+15. ALWAYS end the podcast with a concise summary of the key points and practical applications
 
 Paper text:
 {{ paper_text }}
