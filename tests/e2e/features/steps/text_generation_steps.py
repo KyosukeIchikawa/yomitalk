@@ -157,7 +157,7 @@ def verify_podcast_text_generated(page_with_server: Page):
 
         logger.debug(f"Available textareas: {textarea_contents}")
 
-        # 生成されたトークテキストを含むtextareaを探す
+        # 生成されたトーク原稿テキストを含むtextareaを探す
         for textarea in textarea_contents:
             if "トーク" in textarea.get("label", "") or "トーク" in textarea.get(
                 "placeholder", ""
@@ -181,7 +181,7 @@ def verify_podcast_text_generated(page_with_server: Page):
             """
             () => {
                 const textareas = document.querySelectorAll('textarea');
-                // 生成されたトークテキスト用のテキストエリアを探す
+                // 生成されたトーク原稿テキスト用のテキストエリアを探す
                 const targetTextarea = Array.from(textareas).find(t =>
                     (t.placeholder && t.placeholder.includes('トーク')) ||
                     (t.labels && t.labels.length > 0 && t.labels[0].textContent.includes('トーク'))
@@ -284,13 +284,13 @@ def verify_custom_prompt_text_generated(page_with_server: Page):
     logger.info("Custom prompt text generation verified in test environment")
 
 
-@then('the "トークを生成" button should be disabled')
+@then('the "トーク原稿を生成" button should be disabled')
 def verify_button_disabled(page_with_server: Page):
-    """Verify トークを生成 button is disabled"""
+    """Verify トーク原稿を生成 button is disabled"""
     page = page_with_server
 
     # ボタンテキストのデバッグ出力
-    logger.info("Looking for button with text: 'トークを生成'")
+    logger.info("Looking for button with text: 'トーク原稿を生成'")
     buttons_info = page.evaluate(
         """
         () => {
@@ -321,25 +321,25 @@ def verify_button_disabled(page_with_server: Page):
                 return null;
             }
             """,
-            "トークを生成",
+            "トーク原稿を生成",
         )
 
         if disabled is None:
-            pytest.fail("Button 'トークを生成' not found.")
+            pytest.fail("Button 'トーク原稿を生成' not found.")
 
-        assert disabled, "Button 'トークを生成' should be disabled but is enabled."
-        logger.info("Verified 'トークを生成' button is disabled")
+        assert disabled, "Button 'トーク原稿を生成' should be disabled but is enabled."
+        logger.info("Verified 'トーク原稿を生成' button is disabled")
     except Exception as e:
         pytest.fail(f"Failed to verify button state: {e}")
 
 
-@then('the "トークを生成" button should be enabled')
+@then('the "トーク原稿を生成" button should be enabled')
 def verify_button_enabled(page_with_server: Page):
-    """Verify トークを生成 button is enabled"""
+    """Verify トーク原稿を生成 button is enabled"""
     page = page_with_server
 
     # ボタンテキストのデバッグ出力
-    logger.info("Looking for button with text: 'トークを生成'")
+    logger.info("Looking for button with text: 'トーク原稿を生成'")
     buttons_info = page.evaluate(
         """
         () => {
@@ -370,14 +370,14 @@ def verify_button_enabled(page_with_server: Page):
                 return null;
             }
             """,
-            "トークを生成",
+            "トーク原稿を生成",
         )
 
         if enabled is None:
-            pytest.fail("Button 'トークを生成' not found.")
+            pytest.fail("Button 'トーク原稿を生成' not found.")
 
-        assert enabled, "Button 'トークを生成' should be enabled but is disabled."
-        logger.info("Verified 'トークを生成' button is enabled")
+        assert enabled, "Button 'トーク原稿を生成' should be enabled but is disabled."
+        logger.info("Verified 'トーク原稿を生成' button is enabled")
     except Exception as e:
         pytest.fail(f"Failed to verify button state: {e}")
 
@@ -581,15 +581,15 @@ def verify_audio_button_enabled(page_with_server: Page):
         pytest.fail(f"Failed to verify button state: {e}")
 
 
-@then('the "トークを生成" button should be disabled')
+@then('the "トーク原稿を生成" button should be disabled')
 def verify_talk_generate_button_disabled(page_with_server: Page):
-    """Verify トークを生成 button is disabled"""
+    """Verify トーク原稿を生成 button is disabled"""
     verify_button_disabled(page_with_server)
 
 
-@then('the "トークを生成" button should be enabled')
+@then('the "トーク原稿を生成" button should be enabled')
 def verify_talk_generate_button_enabled(page_with_server: Page):
-    """Verify トークを生成 button is enabled"""
+    """Verify トーク原稿を生成 button is enabled"""
     verify_button_enabled(page_with_server)
 
 
@@ -717,13 +717,13 @@ def verify_custom_characters_text_generated(page_with_server: Page):
             f"""
             () => {{
                 try {{
-                    // テキストエリアを見つける - "生成されたトーク"という名前を持つもの
+                    // テキストエリアを見つける - "生成されたトーク原稿"という名前を持つもの
                     let targetTextarea = null;
 
                     // ラベルからテキストエリアを見つける
                     const labels = Array.from(document.querySelectorAll('label'));
                     for (const label of labels) {{
-                        if (label.textContent.includes('生成されたトーク')) {{
+                        if (label.textContent.includes('生成されたトーク原稿')) {{
                             // 関連するテキストエリアを見つける
                             const textarea = label.nextElementSibling;
                             if (textarea && (textarea.tagName === 'TEXTAREA' || textarea.getAttribute('contenteditable') === 'true')) {{

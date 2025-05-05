@@ -427,13 +427,13 @@ class PaperPodcastApp:
                             label="最大トークン数",
                         )
 
-                    # トークを生成ボタン
+                    # トーク原稿を生成ボタン
                     process_btn = gr.Button(
-                        "トークを生成", variant="secondary", interactive=False
+                        "トーク原稿を生成", variant="secondary", interactive=False
                     )
                     podcast_text = gr.Textbox(
-                        label="生成されたトーク",
-                        placeholder="テキストを処理してトークを生成してください...",
+                        label="生成されたトーク原稿",
+                        placeholder="テキストを処理してトーク原稿を生成してください...",
                         lines=15,
                     )
 
@@ -719,7 +719,7 @@ class PaperPodcastApp:
         Returns:
             gr.Button: 更新されたボタン
         """
-        button = gr.Button(value="トークを生成", variant="primary", interactive=checked)
+        button = gr.Button(value="トーク原稿を生成", variant="primary", interactive=checked)
         return button
 
     def update_audio_button_state(self, checked: bool) -> gr.Button:
@@ -799,7 +799,7 @@ class PaperPodcastApp:
 
     def update_process_button_state(self, extracted_text: str) -> Dict[str, Any]:
         """
-        抽出されたテキストとAPIキーの状態に基づいて"トークを生成"ボタンの有効/無効を切り替えます。
+        抽出されたテキストとAPIキーの状態に基づいて"トーク原稿を生成"ボタンの有効/無効を切り替えます。
 
         Args:
             extracted_text (str): 抽出されたテキスト
