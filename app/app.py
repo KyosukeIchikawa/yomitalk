@@ -429,7 +429,7 @@ class PaperPodcastApp:
                     with gr.Row():
                         max_tokens_slider = gr.Slider(
                             minimum=100,
-                            maximum=4096,
+                            maximum=32768,
                             value=self.get_max_tokens(),
                             step=100,
                             label="最大トークン数",

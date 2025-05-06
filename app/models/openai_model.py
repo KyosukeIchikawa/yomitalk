@@ -38,7 +38,7 @@ class OpenAIModel:
         self.prompt_manager = PromptManager()
 
         # デフォルトの最大トークン数
-        self.max_tokens: int = 3000
+        self.max_tokens: int = 32768
 
         # トークン使用状況の初期化
         self.last_token_usage: Dict[str, int] = {}
@@ -73,10 +73,8 @@ class OpenAIModel:
         try:
             max_tokens_int = int(max_tokens)
             if max_tokens_int < 100:
-                # 最小値は100とする
                 return False
-            if max_tokens_int > 4096:
-                # 最大値は4096とする（モデルにより異なるが、安全圏として）
+            if max_tokens_int > 32768:
                 return False
 
             self.max_tokens = max_tokens_int
