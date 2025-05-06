@@ -3,6 +3,7 @@
 Provides functionality for generating audio from text using VOICEVOX Core.
 """
 
+import datetime
 import os
 import re
 import subprocess
@@ -44,7 +45,7 @@ class AudioGenerator:
     def __init__(self) -> None:
         """Initialize AudioGenerator."""
         self.output_dir = Path("data/output")
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_dir = Path("data/temp/talks")
 
         # VOICEVOX Core
         self.core_initialized = False
@@ -155,8 +156,12 @@ class AudioGenerator:
         if not temp_wav_files:
             return ""
 
-        # 最終的な出力ファイル名
-        output_file = str(self.output_dir / f"podcast_{uuid.uuid4().hex[:8]}.wav")
+        # 日付付きの最終的な出力ファイル名を生成
+        now = datetime.datetime.now()
+        date_str = now.strftime("%Y%m%d_%H%M%S")
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = str(self.output_dir / f"podcast_{date_str}.wav")
 
         # 単一ファイルならそのまま使用
         if len(temp_wav_files) == 1:
@@ -166,7 +171,7 @@ class AudioGenerator:
         # 複数ファイルなら結合
         try:
             # ファイルリストを生成
-            list_file = str(self.output_dir / f"filelist_{uuid.uuid4()}.txt")
+            list_file = str(self.temp_dir / f"filelist_{uuid.uuid4()}.txt")
             with open(list_file, "w") as f:
                 for file in temp_wav_files:
                     f.write(f"file '{os.path.abspath(file)}'\n")
@@ -322,6 +327,16 @@ class AudioGenerator:
             logger.error("Podcast text is empty")
             return None
 
+        # 一時ファイルディレクトリが存在する場合は削除
+        if self.temp_dir.exists():
+            try:
+                os.rmdir(self.temp_dir)
+            except Exception as e:
+                logger.error(f"Error cleaning temporary files: {e}")
+                return None
+        # 一時ファイルディレクトリを作成
+        self.temp_dir.mkdir(parents=True, exist_ok=True)
+
         try:
             # 英語をカタカナに変換
             podcast_text = self._convert_english_to_katakana(podcast_text)
@@ -424,7 +439,7 @@ class AudioGenerator:
                         wav_data = self.core_synthesizer.tts(chunk, style_id)
 
                         # Save to temporary file
-                        temp_file = str(self.output_dir / f"part_{i}_chunk_{j}.wav")
+                        temp_file = str(self.temp_dir / f"part_{i}_chunk_{j}.wav")
                         with open(temp_file, "wb") as f:
                             f.write(wav_data)
                         chunk_wavs.append(temp_file)
@@ -433,7 +448,7 @@ class AudioGenerator:
                 # Combine chunks for this part
                 if chunk_wavs:
                     if len(chunk_wavs) > 1:
-                        part_file = str(self.output_dir / f"part_{i}.wav")
+                        part_file = str(self.temp_dir / f"part_{i}.wav")
                         self._combine_audio_files(chunk_wavs, part_file)
                         logger.debug(
                             f"Combining {len(chunk_wavs)} chunks into {part_file}"
@@ -481,7 +496,7 @@ class AudioGenerator:
             return
 
         # Create a file list for FFmpeg
-        list_file = str(self.output_dir / f"filelist_{uuid.uuid4()}.txt")
+        list_file = str(self.temp_dir / f"filelist_{uuid.uuid4()}.txt")
         with open(list_file, "w") as f:
             for file in input_files:
                 f.write(f"file '{os.path.abspath(file)}'\n")
