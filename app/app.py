@@ -726,19 +726,6 @@ class PaperPodcastApp:
         """
         return self.text_processor.openai_model.model_name
 
-    def update_button_state(self, checked: bool) -> gr.Button:
-        """
-        利用規約チェックボックスの状態に基づいてボタンの有効/無効を切り替えます。
-
-        Args:
-            checked (bool): チェックボックスの状態
-
-        Returns:
-            gr.Button: 更新されたボタン
-        """
-        button = gr.Button(value="トーク原稿を生成", variant="primary", interactive=checked)
-        return button
-
     def update_audio_button_state(self, checked: bool) -> gr.Button:
         """
         VOICEVOX利用規約チェックボックスの状態に基づいて音声生成ボタンの有効/無効を切り替えます。

@@ -55,13 +55,6 @@ class AudioGenerator:
             "九州そら": 16,  # Kyushu Sora (normal)
         }
 
-        # English to Japanese name mapping
-        self.voice_name_mapping = {
-            "Zundamon": "ずんだもん",
-            "Shikoku Metan": "四国めたん",
-            "Kyushu Sora": "九州そら",
-        }
-
         # Initialize VOICEVOX Core if available
         if VOICEVOX_CORE_AVAILABLE:
             self._init_voicevox_core()
@@ -148,94 +141,6 @@ class AudioGenerator:
 
         # 英単語をカタカナに置換
         return word_pattern.sub(replace_word, text)
-
-    def generate_audio(
-        self,
-        text: str,
-        voice_type: str = "Zundamon",
-    ) -> Optional[str]:
-        """
-        Generate audio from text.
-
-        Args:
-            text (str): Text to convert to audio
-            voice_type (str): Voice type (one of 'Zundamon', 'Shikoku Metan', 'Kyushu Sora')
-
-        Returns:
-            str: Path to the generated audio file
-        """
-        if not text or text.strip() == "":
-            return None
-
-        try:
-            # Check if VOICEVOX Core is available
-            if not VOICEVOX_CORE_AVAILABLE or not self.core_initialized:
-                error_message = (
-                    "VOICEVOX Core is not available or not properly initialized."
-                )
-                if not VOICEVOX_CORE_AVAILABLE:
-                    error_message += " VOICEVOX module is not installed."
-                elif not self.core_initialized:
-                    error_message += " Failed to initialize VOICEVOX."
-                error_message += (
-                    "\nRun 'make download-voicevox-core' to set up VOICEVOX."
-                )
-                logger.error(error_message)
-                return None
-
-            # 英語をカタカナに変換
-            text = self._convert_english_to_katakana(text)
-            logger.info("Converted English words to katakana")
-
-            # Convert English name to Japanese name
-            ja_voice_type = self.voice_name_mapping.get(voice_type, "ずんだもん")
-
-            # Generate audio using VOICEVOX Core
-            return self._generate_audio_with_core(text, ja_voice_type)
-
-        except Exception as e:
-            logger.error(f"Audio generation error: {e}")
-            return None
-
-    def _generate_audio_with_core(self, text: str, voice_type: str) -> str:
-        """
-        Generate audio using VOICEVOX Core.
-
-        Args:
-            text (str): Text to convert to audio
-            voice_type (str): Voice type
-
-        Returns:
-            str: Path to the generated audio file
-        """
-        try:
-            # Get style ID for the selected voice
-            style_id = self.core_style_ids.get(voice_type, 3)
-
-            # Split text into chunks
-            text_chunks = self._split_text(text)
-            temp_wav_files = []
-
-            # Process each chunk
-            for i, chunk in enumerate(text_chunks):
-                # Generate audio data using core
-                if self.core_synthesizer is not None:  # Type check for mypy
-                    wav_data = self.core_synthesizer.tts(chunk, style_id)
-
-                    # Save to temporary file
-                    temp_file = str(self.output_dir / f"chunk_{i}.wav")
-                    with open(temp_file, "wb") as f:
-                        f.write(wav_data)
-
-                    temp_wav_files.append(temp_file)
-
-            # Combine all chunks to create the final audio file
-            output_file = self._create_final_audio_file(temp_wav_files)
-
-            return output_file
-        except Exception as e:
-            logger.error(f"Audio generation error with VOICEVOX Core: {e}")
-            raise
 
     def _create_final_audio_file(self, temp_wav_files: List[str]) -> str:
         """

@@ -59,30 +59,3 @@ def setup_logger(name="yomitalk", level=logging.INFO):
 
 # Create default logger
 logger = setup_logger()
-
-
-def log_process(process_name):
-    """
-    Log process start and end.
-
-    Args:
-        process_name (str): Name of the process
-
-    Returns:
-        function: Decorator function
-    """
-
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            logger.info(f"{process_name} started")
-            try:
-                result = func(*args, **kwargs)
-                logger.info(f"{process_name} completed successfully")
-                return result
-            except Exception as e:
-                logger.error(f"{process_name} error occurred: {str(e)}", exc_info=True)
-                raise
-
-        return wrapper
-
-    return decorator

@@ -5,7 +5,7 @@ Provides text extraction functionality for the Paper Podcast Generator applicati
 
 import os
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import List
 
 from app.utils.logger import logger
 from app.utils.pdf_extractor import PDFExtractor
@@ -24,29 +24,6 @@ class FileUploader:
             self.supported_text_extensions + self.supported_pdf_extensions
         )
         self.pdf_extractor = PDFExtractor()
-
-    def extract_text(self, file: Optional[Any]) -> str:
-        """
-        Extract text from a file.
-
-        Args:
-            file: Uploaded file object
-
-        Returns:
-            str: Extracted text
-        """
-        if file is None:
-            return "Please upload a file."
-
-        try:
-            # Save temporary file
-            temp_path = self._save_uploaded_file(file)
-
-            # Extract text
-            return self.extract_text_from_path(temp_path)
-
-        except Exception as e:
-            return f"An error occurred: {e}"
 
     def extract_text_from_path(self, file_path: str) -> str:
         """
@@ -71,43 +48,6 @@ class FileUploader:
             return self.pdf_extractor.extract_from_pdf(file_path)
         else:
             return f"Unsupported file type: {file_ext}. Supported types: {', '.join(self.supported_extensions)}"
-
-    def _save_uploaded_file(self, file: Any) -> str:
-        """
-        Save the uploaded file to the temporary directory.
-
-        Args:
-            file: Uploaded file
-
-        Returns:
-            str: Path to the saved file
-        """
-        temp_path = os.path.join(self.temp_dir, os.path.basename(file.name))
-
-        # File object handling
-        try:
-            with open(temp_path, "wb") as f:
-                # Rewind file pointer (just in case)
-                if hasattr(file, "seek") and callable(file.seek):
-                    try:
-                        file.seek(0)
-                    except Exception:
-                        pass
-
-                # Try direct reading
-                if hasattr(file, "read") and callable(file.read):
-                    f.write(file.read())
-                # If read method is not available, try value
-                elif hasattr(file, "value") and isinstance(file.value, bytes):
-                    f.write(file.value)
-                # If neither is available
-                else:
-                    raise ValueError("Unsupported file format")
-
-        except Exception as e:
-            raise ValueError(f"Failed to save file: {e}")
-
-        return temp_path
 
     def _extract_from_text_file(self, file_path: str) -> str:
         """

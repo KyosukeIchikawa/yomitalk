@@ -188,18 +188,19 @@ class TestPromptManager(unittest.TestCase):
             self.assertEqual(metan_pattern.get("first_person"), "わたし")
             sentence_end = metan_pattern.get("sentence_end", [])
             if sentence_end is not None:
-                self.assertIn("わ", sentence_end)
-                self.assertIn("よ", sentence_end)
+                self.assertIn("です", sentence_end)
+                self.assertIn("ます", sentence_end)
 
         # 九州そらの口調設定を確認
         sora_pattern = self.prompt_manager.character_speech_patterns.get("九州そら")
         self.assertIsNotNone(sora_pattern)
         if sora_pattern is not None:
             self.assertTrue(isinstance(sora_pattern, dict))
-            self.assertEqual(sora_pattern.get("first_person"), "うち")
+            self.assertEqual(sora_pattern.get("first_person"), "わたし")
             sentence_end = sora_pattern.get("sentence_end", [])
             if sentence_end is not None:
-                self.assertIn("ばい", sentence_end)
+                self.assertIn("ですね", sentence_end)
+                self.assertIn("ですよ", sentence_end)
 
     def test_speech_patterns_in_prompt(self):
         """Test if speech patterns are included in the generated prompt."""
@@ -218,8 +219,8 @@ class TestPromptManager(unittest.TestCase):
         updated_prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
 
         # 更新後の口調情報が含まれていることを確認
-        self.assertIn("うち", updated_prompt)  # 九州そら
-        self.assertIn("ばい", updated_prompt)  # 九州そらの語尾
+        self.assertIn("わたし", updated_prompt)  # 九州そら
+        self.assertIn("ですね", updated_prompt)  # 九州そらの語尾
 
 
 if __name__ == "__main__":

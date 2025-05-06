@@ -144,13 +144,6 @@ def test_init():
     assert isinstance(uploader.pdf_extractor, PDFExtractor)
 
 
-def test_extract_text_no_file():
-    """Test extract_text with no file."""
-    uploader = FileUploader()
-    result = uploader.extract_text(None)
-    assert "Please upload a file" in result
-
-
 def test_extract_text_from_path_not_found():
     """Test extract_text_from_path with non-existent file."""
     uploader = FileUploader()
