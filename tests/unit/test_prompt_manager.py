@@ -62,37 +62,10 @@ class TestPromptManager(unittest.TestCase):
 
     def test_default_prompt_template(self):
         """Test getting default prompt template."""
-        template = self.prompt_manager.get_current_prompt_template()
+        template = self.prompt_manager.get_template_content()
         self.assertIsNotNone(template)
         # テンプレートにJinja2の変数構文が含まれているか確認
         self.assertIn("{{ paper_text }}", template)
-
-    def test_set_custom_prompt_template(self):
-        """Test setting custom prompt template."""
-        custom_template = (
-            "カスタムテンプレート {{ paper_text }} for {{ character1 }} and {{ character2 }}"
-        )
-        result = self.prompt_manager.set_prompt_template(custom_template)
-
-        self.assertTrue(result)
-        self.assertEqual(
-            custom_template, self.prompt_manager.get_current_prompt_template()
-        )
-        self.assertTrue(self.prompt_manager.use_custom_template)
-        self.assertEqual(custom_template, self.prompt_manager.custom_template)
-
-    def test_set_empty_prompt_template(self):
-        """Test setting an empty prompt template."""
-        # まずカスタムテンプレートを設定
-        custom_template = "カスタムテンプレート {{ paper_text }}"
-        self.prompt_manager.set_prompt_template(custom_template)
-        self.assertTrue(self.prompt_manager.use_custom_template)
-
-        # 空のテンプレートを設定
-        result = self.prompt_manager.set_prompt_template("")
-        self.assertTrue(result)
-        self.assertFalse(self.prompt_manager.use_custom_template)
-        self.assertIsNone(self.prompt_manager.custom_template)
 
     def test_generate_podcast_conversation(self):
         """Test generating podcast conversation from paper text."""
@@ -104,16 +77,16 @@ class TestPromptManager(unittest.TestCase):
         self.assertIn("四国めたん", prompt)
         self.assertIn("ずんだもん", prompt)
 
-        # カスタムテンプレートを設定した場合
-        custom_template = (
-            "Custom: {{ character1 }} and {{ character2 }} discussing {{ paper_text }}"
-        )
-        self.prompt_manager.set_prompt_template(custom_template)
-
-        custom_prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
-        self.assertIn("Custom:", custom_prompt)
-        self.assertIn("四国めたん", custom_prompt)
-        self.assertIn(paper_text, custom_prompt)
+        # モードを変更して再テスト
+        self.prompt_manager.set_podcast_mode("section_by_section")
+        # section_by_sectionモードのテンプレートが存在する場合はそれを使用
+        if (
+            self.template_dir / self.prompt_manager.section_by_section_template_path
+        ).exists():
+            updated_prompt = self.prompt_manager.generate_podcast_conversation(
+                paper_text
+            )
+            self.assertIn(paper_text, updated_prompt)
 
     def test_set_and_get_character_mapping(self):
         """Test setting and getting character mapping."""

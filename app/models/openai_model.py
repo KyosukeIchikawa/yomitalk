@@ -9,7 +9,6 @@ from typing import Dict, List, Optional
 import httpx
 from openai import OpenAI
 
-from app.prompt_manager import PromptManager
 from app.utils.logger import logger
 
 
@@ -33,9 +32,6 @@ class OpenAIModel:
             "gpt-4.1-nano",
             "o4-mini",
         ]
-
-        # プロンプトマネージャーを初期化
-        self.prompt_manager = PromptManager()
 
         # デフォルトの最大トークン数
         self.max_tokens: int = 32768
@@ -120,27 +116,6 @@ class OpenAIModel:
         self.model_name = model_name
         return True
 
-    def set_prompt_template(self, prompt_template: str) -> bool:
-        """
-        Set a custom prompt template for podcast generation.
-
-        Args:
-            prompt_template (str): Custom prompt template
-
-        Returns:
-            bool: Whether the template was successfully set
-        """
-        return self.prompt_manager.set_prompt_template(prompt_template)
-
-    def get_current_prompt_template(self) -> str:
-        """
-        Get the current prompt template.
-
-        Returns:
-            str: The current prompt template (custom if set, otherwise default)
-        """
-        return self.prompt_manager.get_current_prompt_template()
-
     def generate_text(self, prompt: str) -> str:
         """
         Generate text using OpenAI API based on the provided prompt.
@@ -202,139 +177,3 @@ class OpenAIModel:
         if hasattr(self, "last_token_usage"):
             return self.last_token_usage
         return {}
-
-    def set_character_mapping(self, character1: str, character2: str) -> bool:
-        """
-        キャラクターマッピングを設定します。
-
-        Args:
-            character1 (str): Character1に割り当てるキャラクターの名前
-            character2 (str): Character2に割り当てるキャラクターの名前
-
-        Returns:
-            bool: 設定が成功したかどうか
-        """
-        return self.prompt_manager.set_character_mapping(character1, character2)
-
-    def get_character_mapping(self) -> dict:
-        """
-        現在のキャラクターマッピングを取得します。
-
-        Returns:
-            dict: 現在のキャラクターマッピング
-        """
-        return self.prompt_manager.get_character_mapping()
-
-    def get_valid_characters(self) -> list:
-        """
-        有効なキャラクターのリストを取得します。
-
-        Returns:
-            list: 有効なキャラクター名のリスト
-        """
-        return self.prompt_manager.get_valid_characters()
-
-    def convert_abstract_to_real_characters(self, text: str) -> str:
-        """
-        抽象的なキャラクター名（Character1, Character2）を実際のキャラクター名に変換します。
-
-        Args:
-            text (str): 変換するテキスト
-
-        Returns:
-            str: 変換後のテキスト
-        """
-        return self.prompt_manager.convert_abstract_to_real_characters(text)
-
-    def generate_podcast_conversation(self, paper_summary: str) -> str:
-        """
-        Generate podcast-style conversation text from a paper summary.
-
-        Args:
-            paper_summary (str): Paper summary text
-
-        Returns:
-            str: Conversation-style podcast text
-        """
-        if not paper_summary.strip():
-            return "Error: No paper summary provided."
-
-        # プロンプトマネージャーを使用してプロンプトを生成
-        prompt = self.prompt_manager.generate_podcast_conversation(paper_summary)
-
-        logger.info("Sending podcast generation prompt to OpenAI")
-
-        # Use the general text generation method
-        result = self.generate_text(prompt)
-
-        # 抽象キャラクター名を実際のキャラクター名に変換
-        if not result.startswith("Error"):
-            result = self.convert_abstract_to_real_characters(result)
-
-        # Debug: Log conversation lines
-        if not result.startswith("Error"):
-            lines = result.split("\n")
-            speaker_lines = [
-                line
-                for line in lines
-                if line.startswith(
-                    f"{self.prompt_manager.character_mapping['Character1']}:"
-                )
-                or line.startswith(
-                    f"{self.prompt_manager.character_mapping['Character2']}:"
-                )
-                or line.startswith(
-                    f"{self.prompt_manager.character_mapping['Character1']}："
-                )
-                or line.startswith(
-                    f"{self.prompt_manager.character_mapping['Character2']}："
-                )
-            ]
-            logger.info(f"Generated {len(speaker_lines)} conversation lines")
-            if speaker_lines:
-                logger.debug(f"First few lines: {speaker_lines[:3]}")
-            else:
-                logger.warning("No lines with correct speaker format found")
-                logger.warning(f"First few output lines: {lines[:3]}")
-                # Try to reformat the result if format is incorrect
-                real_char1 = self.prompt_manager.character_mapping["Character1"]
-                real_char2 = self.prompt_manager.character_mapping["Character2"]
-                if real_char1 in result and real_char2 in result:
-                    logger.info("Attempting to fix formatting...")
-                    import re
-
-                    # Add colons after character names if missing
-                    fixed_result = re.sub(
-                        f"({real_char1})\\s+",
-                        "\\1: ",
-                        result,
-                    )
-                    fixed_result = re.sub(
-                        f"({real_char2})\\s+",
-                        "\\1: ",
-                        fixed_result,
-                    )
-                    result = fixed_result
-
-        return result
-
-    def set_podcast_mode(self, mode: str) -> bool:
-        """
-        ポッドキャスト生成モードを設定します。
-
-        Args:
-            mode (str): 'standard' または 'section_by_section'
-
-        Returns:
-            bool: モードが正常に設定されたかどうか
-        """
-        return self.prompt_manager.set_podcast_mode(mode)
-
-    def get_podcast_mode(self) -> str:
-        """
-        現在のポッドキャスト生成モードを取得します。
-
-        Returns:
-            str: 現在のモード ('standard' または 'section_by_section')
-        """
-        return self.prompt_manager.get_podcast_mode()

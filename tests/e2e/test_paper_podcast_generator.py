@@ -1,24 +1,22 @@
-"""
-Test runner for paper podcast generator features
-"""
+"""E2E tests for the paper podcast generator."""
 
 import os
 
-from pytest_bdd import scenarios
+import pytest_bdd
 
-from tests.e2e.features.steps.audio_generation_steps import *  # noqa
+# Import step implementations
+from tests.e2e.features.steps.audio_generation_steps import *  # noqa: F401, F403
+from tests.e2e.features.steps.common_steps import *  # noqa: F401, F403
+from tests.e2e.features.steps.max_tokens_steps import *  # noqa: F401, F403
+from tests.e2e.features.steps.pdf_extraction_steps import *  # noqa: F401, F403
+from tests.e2e.features.steps.podcast_generation_steps import *  # noqa: F401, F403
+from tests.e2e.features.steps.podcast_mode_steps import *  # noqa: F401, F403
+from tests.e2e.features.steps.settings_steps import *  # noqa: F401, F403
+from tests.e2e.features.steps.text_generation_steps import *  # noqa: F401, F403
 
-# Import steps from all step modules
-from tests.e2e.features.steps.common_steps import *  # noqa
-from tests.e2e.features.steps.max_tokens_steps import *  # noqa
-from tests.e2e.features.steps.pdf_extraction_steps import *  # noqa
-from tests.e2e.features.steps.podcast_mode_steps import *  # noqa
-from tests.e2e.features.steps.settings_steps import *  # noqa
-from tests.e2e.features.steps.text_generation_steps import *  # noqa
-
-# Get the directory of this file
+# Get the directory of this file and resolve the feature path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 feature_path = os.path.join(current_dir, "features", "paper_podcast.feature")
 
-# Register scenarios with absolute path
-scenarios(feature_path)
+# Features and scenarios are defined in feature files in the features/ directory.
+pytest_bdd.scenarios(feature_path)

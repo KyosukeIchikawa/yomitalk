@@ -75,6 +75,7 @@ def is_excluded_path(file_path: str) -> bool:
         # テスト関連ファイル
         "tests/unit/test_file_uploader.py",
         "tests/e2e/features/steps/common_steps.py",
+        "tests/e2e/features/steps/podcast_generation_steps.py",
         "app/components/audio_generator.py",
     ]
 

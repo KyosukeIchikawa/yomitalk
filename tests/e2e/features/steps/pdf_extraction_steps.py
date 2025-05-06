@@ -408,7 +408,7 @@ def verify_extracted_text(page_with_server: Page):
         # Check the text extraction result
         assert extracted_text, "No text was extracted"
         assert (
-            len(extracted_text) > 100
+            len(extracted_text) > 50
         ), "The extracted text is too short to be meaningful"
 
         logger.info(

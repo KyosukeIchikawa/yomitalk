@@ -55,11 +55,6 @@ class PaperPodcastApp:
             f"OpenAI API: {api_key_status}\nVOICEVOXステータス: {self.check_voicevox_core()}"
         )
 
-        # 利用可能なキャラクター
-        self.available_characters = (
-            self.text_processor.openai_model.get_valid_characters()
-        )
-
         # ポッドキャスト生成モード
         self.podcast_modes = ["標準モード", "セクション解説モード"]
 
@@ -86,67 +81,6 @@ class PaperPodcastApp:
         result = "✅ APIキーが正常に設定されました" if success else "❌ APIキーの設定に失敗しました"
         self.update_log(f"OpenAI API: {result}")
         return result, self.system_log
-
-    def set_prompt_template(self, prompt_template: str) -> Tuple[str, str]:
-        """
-        Set the prompt template and returns a result message.
-
-        Args:
-            prompt_template (str): Custom prompt template
-
-        Returns:
-            tuple: (status_message, system_log)
-        """
-        success = self.text_processor.set_prompt_template(prompt_template)
-        result = "✅ プロンプトテンプレートが保存されました" if success else "❌ プロンプトテンプレートの保存に失敗しました"
-        self.update_log(f"プロンプトテンプレート: {result}")
-        return result, self.system_log
-
-    def get_prompt_template(self) -> str:
-        """
-        現在のプロンプトテンプレートを取得します。
-
-        Returns:
-            str: 現在のプロンプトテンプレート
-        """
-        return self.text_processor.get_prompt_template()
-
-    def get_prompt_template_for_mode(self, mode=None) -> str:
-        """
-        指定されたモードに基づいたプロンプトテンプレートを取得します。
-        UIのプロンプトテンプレート表示更新用に使用します。
-
-        Args:
-            mode (str, optional): モード名（"標準モード"または"セクション解説モード"）
-
-        Returns:
-            str: モードに対応するプロンプトテンプレート
-        """
-        # UIでの表示用にハードコードされたテンプレートを返す
-        try:
-            if mode == "セクション解説モード":
-                # セクション解説モード用のテンプレートをハードコード
-                template_path = Path("app/templates/section_by_section.j2")
-                if template_path.exists():
-                    with open(template_path, "r", encoding="utf-8") as f:
-                        return f.read()
-                else:
-                    self.update_log(f"セクション解説モード用テンプレートが見つかりません: {template_path}")
-
-            # 標準モードまたは不明なモードの場合、デフォルトテンプレートを返す
-            template_path = Path("app/templates/paper_to_podcast.j2")
-            if template_path.exists():
-                with open(template_path, "r", encoding="utf-8") as f:
-                    return f.read()
-            else:
-                self.update_log(f"標準モード用テンプレートが見つかりません: {template_path}")
-                return "テンプレートファイルが見つかりません。"
-
-        except Exception as e:
-            error_msg = f"テンプレート読み込みエラー: {str(e)}"
-            self.update_log(error_msg)
-            logger.error(error_msg)
-            return f"エラー: {error_msg}"
 
     def handle_file_upload(self, file_obj):
         """
@@ -390,26 +324,16 @@ class PaperPodcastApp:
                     # キャラクター設定
                     with gr.Accordion(label="キャラクター設定", open=False):
                         with gr.Row():
+                            available_characters = self.get_available_characters()
                             character1_dropdown = gr.Dropdown(
-                                choices=self.get_available_characters(),
+                                choices=available_characters,
                                 value="四国めたん",
                                 label="キャラクター1（専門家役）",
                             )
                             character2_dropdown = gr.Dropdown(
-                                choices=self.get_available_characters(),
+                                choices=available_characters,
                                 value="ずんだもん",
                                 label="キャラクター2（初学者役）",
-                            )
-
-                    # Prompt template settings accordion
-                    with gr.Accordion(label="プロンプトテンプレート設定", open=False) as _:
-                        with gr.Column():
-                            prompt_template = gr.Textbox(
-                                placeholder="プロンプトテンプレートを入力してください...",
-                                lines=10,
-                                elem_id="prompt-template",
-                                value=self.get_prompt_template(),
-                                show_label=False,
                             )
 
                     # OpenAI API設定
@@ -530,14 +454,6 @@ class PaperPodcastApp:
                 outputs=[system_log_display],
             )
 
-            # Prompt template
-            prompt_template.change(
-                fn=self.set_prompt_template,
-                inputs=[prompt_template],
-                outputs=[system_log_display],
-            )
-
-            # キャラクター設定 - ドロップダウンが変更されたらすぐに保存
             character1_dropdown.change(
                 fn=self.set_character_mapping,
                 inputs=[character1_dropdown, character2_dropdown],
@@ -684,11 +600,6 @@ class PaperPodcastApp:
                 fn=self.set_podcast_mode,
                 inputs=[podcast_mode_radio],
                 outputs=[system_log_display],
-            ).then(
-                # モード変更後にプロンプトテンプレートを更新
-                fn=self.get_prompt_template_for_mode,
-                inputs=[podcast_mode_radio],  # モード情報を明示的に渡す
-                outputs=[prompt_template],
             )
 
         return app
@@ -752,9 +663,7 @@ class PaperPodcastApp:
         Returns:
             tuple: (status_message, system_log)
         """
-        success = self.text_processor.openai_model.set_character_mapping(
-            character1, character2
-        )
+        success = self.text_processor.set_character_mapping(character1, character2)
         result = "✅ キャラクター設定が完了しました" if success else "❌ キャラクター設定に失敗しました"
         self.update_log(f"キャラクター設定: {result}")
         return result, self.system_log
@@ -766,7 +675,7 @@ class PaperPodcastApp:
         Returns:
             dict: 現在のキャラクターマッピング
         """
-        return self.text_processor.openai_model.get_character_mapping()
+        return self.text_processor.get_character_mapping()
 
     def get_available_characters(self) -> List[str]:
         """
@@ -775,7 +684,7 @@ class PaperPodcastApp:
         Returns:
             List[str]: 利用可能なキャラクター名のリスト
         """
-        return self.available_characters
+        return self.text_processor.get_valid_characters()
 
     def set_max_tokens(self, max_tokens: int) -> str:
         """
@@ -848,8 +757,13 @@ class PaperPodcastApp:
         # 現在のUIで選択されているモードを記録
         self.current_ui_mode = mode
 
+        # バックエンドのモードも設定
+        internal_mode = "standard" if mode == "標準モード" else "section_by_section"
+        success = self.text_processor.set_podcast_mode(internal_mode)
+
         # ログ記録
-        self.update_log(f"ポッドキャストモード: ✅ モードを '{mode}' に設定しました")
+        mode_status = "✅" if success else "⚠️"
+        self.update_log(f"ポッドキャストモード: {mode_status} モードを '{mode}' に設定しました")
         return self.system_log
 
     def get_podcast_modes(self):

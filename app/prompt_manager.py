@@ -5,7 +5,7 @@ It includes the PromptManager class which handles Jinja2 templates and generatio
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import jinja2
 
@@ -35,12 +35,6 @@ class PromptManager:
         self.default_template_path = "paper_to_podcast.j2"
         # セクション解説モード用テンプレートのパス
         self.section_by_section_template_path = "section_by_section.j2"
-
-        # カスタムテンプレートをメモリに保持
-        self.custom_template: Optional[str] = None
-
-        # 現在使用中のテンプレート
-        self.use_custom_template = False
 
         # 現在のモード（標準またはセクション解説）
         self.current_mode = "standard"
@@ -102,42 +96,6 @@ class PromptManager:
         else:
             logger.info(f"セクション解説モード用テンプレートファイル確認: {section_path}")
 
-    def set_prompt_template(self, prompt_template: str) -> bool:
-        """カスタムプロンプトテンプレートを設定します。
-
-        Args:
-            prompt_template (str): カスタムプロンプトテンプレート
-
-        Returns:
-            bool: テンプレートが正常に設定されたかどうか
-        """
-        if not prompt_template or prompt_template.strip() == "":
-            # カスタムテンプレートをクリア
-            self.custom_template = None
-            self.use_custom_template = False
-            return True
-
-        try:
-            # テンプレート文字列の検証
-            template_str = prompt_template.strip()
-            try:
-                # Jinja2テンプレートとして構文チェック
-                jinja2.Template(template_str)
-                # 問題なければメモリに保存
-                self.custom_template = template_str
-                self.use_custom_template = True
-                return True
-            except Exception as e:
-                logger.error(f"Custom template syntax error: {e}")
-                # エラーの場合はクリア
-                self.custom_template = None
-                self.use_custom_template = False
-                return False
-
-        except Exception as e:
-            logger.error(f"Error setting prompt template: {e}")
-            return False
-
     def set_podcast_mode(self, mode: str) -> bool:
         """ポッドキャスト生成モードを設定します。
 
@@ -161,15 +119,12 @@ class PromptManager:
         """
         return self.current_mode
 
-    def get_current_prompt_template(self) -> str:
+    def get_template_content(self) -> str:
         """現在のプロンプトテンプレートを取得します。
 
         Returns:
-            str: 現在のプロンプトテンプレート（カスタムが設定されている場合はカスタム、そうでなければモードに応じたデフォルト）
+            str: 現在のプロンプトテンプレート（モードに応じたデフォルト）
         """
-        if self.use_custom_template and self.custom_template:
-            return self.custom_template
-
         try:
             # モードに応じたテンプレートファイルを選択
             template_path = (
@@ -287,40 +242,31 @@ class PromptManager:
             char2_speech_pattern = self.character_speech_patterns.get(character2, {})
 
             try:
-                if self.use_custom_template and self.custom_template:
-                    # カスタムテンプレートがある場合はメモリから使用
-                    logger.info("カスタムテンプレートを使用します")
-                    template = jinja2.Template(self.custom_template)
-                else:
-                    # モードに応じたテンプレートを使用
-                    template_path = (
-                        self.section_by_section_template_path
-                        if self.current_mode == "section_by_section"
-                        else self.default_template_path
-                    )
-                    logger.info(
-                        f"モード '{self.current_mode}' のテンプレート '{template_path}' を使用します"
-                    )
+                # モードに応じたテンプレートを使用
+                template_path = (
+                    self.section_by_section_template_path
+                    if self.current_mode == "section_by_section"
+                    else self.default_template_path
+                )
+                logger.info(
+                    f"モード '{self.current_mode}' のテンプレート '{template_path}' を使用します"
+                )
 
-                    # ファイルの存在を確認
-                    if not (self.template_dir / template_path).exists():
-                        logger.error(f"テンプレートファイルが見つかりません: {template_path}")
-                        if (
-                            self.current_mode == "section_by_section"
-                            and (
-                                self.template_dir / self.default_template_path
-                            ).exists()
-                        ):
-                            # セクション解説モードでファイルが見つからない場合は標準モードのテンプレートを使用
-                            logger.warning("代わりに標準モードのテンプレートを使用します")
-                            template_path = self.default_template_path
-                        else:
-                            raise FileNotFoundError(
-                                f"テンプレートファイルが見つかりません: {template_path}"
-                            )
+                # ファイルの存在を確認
+                if not (self.template_dir / template_path).exists():
+                    logger.error(f"テンプレートファイルが見つかりません: {template_path}")
+                    if (
+                        self.current_mode == "section_by_section"
+                        and (self.template_dir / self.default_template_path).exists()
+                    ):
+                        # セクション解説モードでファイルが見つからない場合は標準モードのテンプレートを使用
+                        logger.warning("代わりに標準モードのテンプレートを使用します")
+                        template_path = self.default_template_path
+                    else:
+                        raise FileNotFoundError(f"テンプレートファイルが見つかりません: {template_path}")
 
-                    # テンプレートを取得
-                    template = self.jinja_env.get_template(template_path)
+                # テンプレートを取得
+                template = self.jinja_env.get_template(template_path)
             except Exception as template_error:
                 logger.error(f"テンプレート取得エラー: {template_error}")
                 return f"Error: テンプレートの取得に失敗しました: {template_error}"

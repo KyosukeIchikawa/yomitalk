@@ -37,33 +37,11 @@ Feature: Generate podcast from research paper PDF
     When the user clicks the text generation button
     Then podcast-style text is generated
 
-  Scenario: Prompt template editing
-    Given the user has opened the application
-    When the user opens the prompt template settings section
-    And the user edits the prompt template
-    Then the prompt template is saved
-
-  Scenario: Podcast generation with custom prompt
+  Scenario: Podcast generation with characters
     Given text has been extracted from a PDF
     And a valid API key has been configured
-    And a custom prompt template has been saved
     When the user clicks the text generation button
-    Then podcast-style text is generated using the custom prompt
-
-  Scenario: Character selection configuration
-    Given text has been extracted from a PDF
-    And a valid API key has been configured
-    When the user opens the character settings section
-    And the user selects 九州そら for Character1
-    And the user selects 四国めたん for Character2
-    Then the character settings are saved
-
-  Scenario: Podcast generation with custom characters
-    Given text has been extracted from a PDF
-    And a valid API key has been configured
-    And the user sets character settings
-    When the user clicks the text generation button
-    Then podcast-style text is generated with the selected characters
+    Then podcast-style text is generated with characters
 
   Scenario: Podcast generation with custom max tokens
     Given text has been extracted from a PDF
@@ -83,15 +61,6 @@ Feature: Generate podcast from research paper PDF
     Given the user has opened the application
     When the user selects "セクション解説モード" as the podcast mode
     Then the podcast mode is changed to "セクション解説モード"
-    And the prompt template is updated to section-by-section template
-
-  Scenario: Podcast mode template switching
-    Given the user has opened the application
-    When the user selects "セクション解説モード" as the podcast mode
-    And the user opens the prompt template settings section
-    Then the section-by-section template is displayed
-    When the user selects "標準モード" as the podcast mode
-    Then the standard template is displayed
 
   Scenario: Section-by-Section podcast generation
     Given text has been extracted from a PDF
