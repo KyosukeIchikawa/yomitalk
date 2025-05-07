@@ -20,7 +20,7 @@ class TestOpenAIModel(unittest.TestCase):
     def test_initialization(self):
         """Test model initialization."""
         self.assertIsNotNone(self.model)
-        self.assertEqual(self.model.model_name, "gpt-4.1-nano")
+        self.assertEqual(self.model.model_name, "gpt-4.1-mini")
         self.assertEqual(self.model.max_tokens, 32768)
         self.assertDictEqual(self.model.last_token_usage, {})
 
