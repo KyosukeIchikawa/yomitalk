@@ -59,13 +59,13 @@ Feature: Generate podcast from research paper PDF
 
   Scenario: Podcast mode selection
     Given the user has opened the application
-    When the user selects "セクション解説モード" as the podcast mode
-    Then the podcast mode is changed to "セクション解説モード"
+    When the user selects "論文の詳細解説" as the podcast mode
+    Then the podcast mode is changed to "論文の詳細解説"
 
   Scenario: Section-by-Section podcast generation
     Given text has been extracted from a PDF
     And a valid API key has been configured
-    When the user selects "セクション解説モード" as the podcast mode
+    When the user selects "論文の詳細解説" as the podcast mode
     And the user clicks the text generation button
     Then podcast-style text is generated with section-by-section format
 

@@ -268,7 +268,7 @@ def verify_standard_template_displayed(page_with_server: Page):
             """
         )
 
-        # セクション解説モードの文字列が含まれていないことを確認
+        # 論文の詳細解説の文字列が含まれていないことを確認
         if (
             "SECTION-BY-SECTION" not in template_text
             and "paper text" in template_text.lower()

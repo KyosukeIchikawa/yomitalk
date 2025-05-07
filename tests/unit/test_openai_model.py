@@ -39,13 +39,13 @@ class TestOpenAIModel(unittest.TestCase):
         """Test getting available models."""
         models = self.model.get_available_models()
         self.assertIsInstance(models, list)
-        self.assertIn("gpt-4o", models)
+        self.assertIn("gpt-4.1", models)
         self.assertIn("gpt-4.1-mini", models)
 
     def test_set_model_name(self):
         """Test setting a model name."""
         # 有効なモデル名を設定
-        result = self.model.set_model_name("gpt-4o")
+        result = self.model.set_model_name("gpt-4.1")
         self.assertTrue(result)
         self.assertEqual("gpt-4o", self.model.model_name)
 

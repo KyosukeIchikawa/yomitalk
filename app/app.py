@@ -56,10 +56,10 @@ class PaperPodcastApp:
         )
 
         # ポッドキャスト生成モード
-        self.podcast_modes = ["標準モード", "セクション解説モード"]
+        self.podcast_modes = ["論文の概要解説", "論文の詳細解説"]
 
         # 現在選択されているUIモード
-        self.current_ui_mode = "標準モード"
+        self.current_ui_mode = "論文の概要解説"
 
     def set_api_key(self, api_key: str) -> Tuple[str, str]:
         """
@@ -318,7 +318,7 @@ class PaperPodcastApp:
                         choices=self.get_podcast_modes(),
                         value=self.get_current_podcast_mode(),
                         label="生成モード",
-                        info="標準モード: 論文全体を要約したポッドキャスト形式の会話を生成します。\nセクション解説モード: 論文のセクションごとに順を追って解説する会話を生成します。",
+                        info="論文の概要解説: 論文全体を要約したポッドキャスト形式の会話を生成します。\n論文の詳細解説: 論文のセクションごとに順を追って解説する会話を生成します。",
                     )
 
                     # キャラクター設定
@@ -744,7 +744,7 @@ class PaperPodcastApp:
         注: 内部のモード切替機能は廃止され、UIでの表示切替のみを行います。
 
         Args:
-            mode (str): '標準モード' または 'セクション解説モード'
+            mode (str): '論文の概要解説' または '論文の詳細解説'
 
         Returns:
             str: 結果メッセージとシステムログ
@@ -758,7 +758,7 @@ class PaperPodcastApp:
         self.current_ui_mode = mode
 
         # バックエンドのモードも設定
-        internal_mode = "standard" if mode == "標準モード" else "section_by_section"
+        internal_mode = "standard" if mode == "論文の概要解説" else "section_by_section"
         success = self.text_processor.set_podcast_mode(internal_mode)
 
         # ログ記録
@@ -783,7 +783,7 @@ class PaperPodcastApp:
             str: 現在のポッドキャストモード
         """
         if not hasattr(self, "current_ui_mode"):
-            self.current_ui_mode = "標準モード"
+            self.current_ui_mode = "論文の詳細解説"
         return self.current_ui_mode
 
     def update_token_usage_display(self) -> str:

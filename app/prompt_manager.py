@@ -33,7 +33,7 @@ class PromptManager:
 
         # デフォルトテンプレートのパス
         self.default_template_path = "paper_to_podcast.j2"
-        # セクション解説モード用テンプレートのパス
+        # 論文の詳細解説用テンプレートのパス
         self.section_by_section_template_path = "section_by_section.j2"
         # 共通ユーティリティのパス
         self.common_utils_path = "common_podcast_utils.j2"
@@ -62,12 +62,12 @@ class PromptManager:
         else:
             logger.info(f"デフォルトテンプレートファイル確認: {default_path}")
 
-        # セクション解説モード用テンプレートの確認
+        # 論文の詳細解説用テンプレートの確認
         section_path = self.template_dir / self.section_by_section_template_path
         if not section_path.exists():
-            logger.warning(f"セクション解説モード用テンプレートファイルが見つかりません: {section_path}")
+            logger.warning(f"論文の詳細解説用テンプレートファイルが見つかりません: {section_path}")
         else:
-            logger.info(f"セクション解説モード用テンプレートファイル確認: {section_path}")
+            logger.info(f"論文の詳細解説用テンプレートファイル確認: {section_path}")
 
         # 共通ユーティリティテンプレートの確認
         common_path = self.template_dir / self.common_utils_path
@@ -119,12 +119,12 @@ class PromptManager:
 
             if not full_path.exists():
                 logger.error(f"テンプレートファイルが見つかりません: {full_path}")
-                # セクション解説モードでファイルが見つからない場合は標準モードのテンプレートを使用
+                # 論文の詳細解説でファイルが見つからない場合は論文の概要解説のテンプレートを使用
                 if (
                     self.current_mode == "section_by_section"
                     and (self.template_dir / self.default_template_path).exists()
                 ):
-                    logger.warning("代わりに標準モードのテンプレートを使用します")
+                    logger.warning("代わりに論文の概要解説のテンプレートを使用します")
                     full_path = self.template_dir / self.default_template_path
                 else:
                     return "エラー: テンプレートファイルが見つかりません。"
@@ -235,8 +235,8 @@ class PromptManager:
                         self.current_mode == "section_by_section"
                         and (self.template_dir / self.default_template_path).exists()
                     ):
-                        # セクション解説モードでファイルが見つからない場合は標準モードのテンプレートを使用
-                        logger.warning("代わりに標準モードのテンプレートを使用します")
+                        # 論文の詳細解説でファイルが見つからない場合は論文の概要解説のテンプレートを使用
+                        logger.warning("代わりに論文の概要解説のテンプレートを使用します")
                         template_path = self.default_template_path
                     else:
                         raise FileNotFoundError(f"テンプレートファイルが見つかりません: {template_path}")
