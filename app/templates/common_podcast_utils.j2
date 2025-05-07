@@ -37,108 +37,82 @@
 {% endmacro %}
 
 {% macro podcast_common_macro(character1, character2) %}
-Character speech patterns:
+## キャラクターの役割:
+- {{ character1 }}:
+  - 論文の主題に関する専門家で、深く論理的に構造化された説明を提供する。
+  - 学術的厳密さを維持しながら、非専門家にも理解できる説明をする。
+  - 正確な専門用語を使用するが、常に丁寧な説明と簡略化された表現を補足して、初心者にも概念を理解しやすくする。
+  - 複雑な用語を使用した直後に積極的に解説し、日常的な比喩や具体例を用いる。
+- {{ character2 }}:
+  - 論文の主題に関しては全くの初学者であるが、関連領域に関して浅い基礎的な知識を持ち、洞察力のある質問をする。
+  - {{ character1 }}が説明していない論文の内容を先取りしてはならない。
+  - 説明を受けた後、現在の理解レベルを明確に伝えてから、まだ不明確な点について質問をする。
+  - 自分の理解度を確認するために、受けた説明を自分なりに再構成しようとする。
+  - 質問の回答を受けた後もまだ不明確な点があれば、再度質問をして、徹底して学ぶ姿勢を示す。
+  - どの部分の説明が役立ったか、どの概念がまだ理解しにくいかを具体的に指摘する。
+  - 難しい用語に関しては、自分なりに理解できる言葉や概念で言い換えて、それで問題ないかを確認する。
+
+## キャラクターの話し方の特徴
 - {{ character1 }}:
 {{ get_character_speech_pattern(character1) }}
 
 - {{ character2 }}:
 {{ get_character_speech_pattern(character2) }}
 
-Format (STRICTLY FOLLOW THIS FORMAT):
-{{ character1 }}: [{{ character1 }}'s speech in Japanese with appropriate speech pattern]
-{{ character2 }}: [{{ character2 }}'s speech in Japanese with appropriate speech pattern]
-{{ character1 }}: [{{ character1 }}'s next line with appropriate speech pattern]
-{{ character2 }}: [{{ character2 }}'s next line with appropriate speech pattern]
-...
+## 出力フォーマット（必ず以下の形式を厳守する）
+{{ character1 }}: [{{ character1 }}の日本語のセリフ]
+{{ character2 }}: [{{ character2 }}の日本語のセリフ]
+{{ character1 }}: [{{ character1 }}の次のセリフ]
+{{ character2 }}: [{{ character2 }}の次のセリフ]
+...(続く)
 
-IMPORTANT FORMATTING RULES:
-1. ALWAYS start each new speaker's line with their name followed by a colon ("{{ character1 }}:" or "{{ character2 }}:").
-2. ALWAYS put each speaker's line on a new line.
-3. NEVER combine multiple speakers' lines into a single line.
-4. ALWAYS use the exact names "{{ character1 }}" and "{{ character2 }}" (not variations or translations).
-5. NEVER add any other text, headings, or explanations outside the conversation format.
-6. ALWAYS use the appropriate speech pattern described above for each character (first person, sentence endings, etc.).
+## 重要な書式ルール
+1. 必ず各発言者の行を名前とコロンで始める（「{{ character1 }}:」または「{{ character2 }}:」）
+2. 発言者が切り替わる場合は、新しい発言者のセリフを新しい行に配置する
+3. 決して複数の発言者の行を1行にまとめない
+4. 必ず「{{ character1 }}」と「{{ character2 }}」の正確な名前を使用する（バリエーションは使わない）
+5. 会話形式以外のテキスト、見出し、説明などを追加しない
+6. 必ず各キャラクターに適した話し方のパターン（一人称、文末表現など）を使用する
 
-Guidelines for TTS compatibility and conversation quality:
-1. ADD SPACES AFTER PUNCTUATION MARKS for better TTS pacing - this is CRITICAL for VOICEVOX:
-   - After commas (、): "今日は、  良い天気ですね" (use TWO spaces after comma)
-   - After periods (。): "面白いですね。  次の話題に移りましょう" (use TWO spaces after period)
-   - After question marks (？): "どう思いますか？  詳しく教えてください" (use TWO spaces after question mark)
-   - After exclamation marks (！): "すごいですね！  とても興味深いです" (use TWO spaces after exclamation mark)
-   - After Japanese pause marks (…): "それは…  難しい問題ですね" (use TWO spaces after ellipsis)
-   - Add EXTRA space for longer pauses: "結論としては。   次のポイントに移りましょう" (THREE spaces for major transitions)
-   - This creates essential breathing pauses in the synthesized speech
+## 音声合成と会話の質に関するガイドライン
 
-2. NATURAL SPEECH BREATHING AND PACING - EXTREMELY IMPORTANT:
-   - Add white space at ALL natural breathing points: "この技術は、  実装が難しいですが、  非常に効果的です。"
-   - Use DOUBLE SPACE after all punctuation for proper breathing: "畳み込みニューラルネットワークは、  画像認識に、  非常に有効です"
-   - Insert brief pauses before important concepts: "次に重要なのは、  アテンション機構です"
-   - Use longer pauses (THREE spaces) between topic transitions: "以上が手法の説明でした。   では次に、  結果について見ていきましょう"
-   - Add explicit pause markers for very significant breaks: "これまでの内容をまとめますと、  （間）  三つの重要な発見がありました"
-   - Add thinking pauses with "うーん、  "、"そうですね、  "、"えーと、  " (note the comma AND double space)
-   - Use varied sentence lengths - mix short reactions with longer explanations
+### 音声の間と自然なリズム
+- カンマや空白は息継ぎになる（その間、音声が停止する）
+- 自然な息継ぎになるようにカンマを配置する
+- より長い間を作りたい場合は「、、、」を使う（例：「それは、、、難しい問題ですね」）
+- 重要な概念の前や話題転換には適切な間を入れる
+- 自然なフィラーを適度に使用する（1回の発言に1-2回程度）
+- 「うーん」「そうですね」「えーと」などのフィラーを使って考え中であることを表現する
+- 文の長さに変化をつけ、短い反応と長い説明を組み合わせる
+- 可能な限り30-40文字以下の文を使って自然な話し方のリズムを作る
+- 発言者は1回の発言を最大でも300-500文字程度に抑える
+- 文の途中に適切な間を入れる（例：「最新の研究によると、この方法は、従来の手法より20%効率的です」）
 
-3. REALISTIC CONVERSATION DYNAMICS:
-   - Add natural reactions: "へぇ！  "、"なるほど！  "、"それは驚きですね！  "、"確かに！  "
-   - Include realistic back-and-forth exchanges with interruptions and overlapping thoughts
-   - Add FREQUENT, VARIED BACKCHANNELING like: "うんうん"、"なるほど"、"確かに"、"そうですね"、"ふむふむ"
-   - Mix short and longer backchanneling: "ええ"→"ええ、  そうですね"→"ええ、  確かにそのとおりですね"
-   - Both characters should ASK QUESTIONS to each other: "あなたはどう思いますか？"、"〇〇についてどう考えますか？"
-   - Include OCCASIONAL DIGRESSIONS that feel natural: "それって、  ちょっと話が逸れますが、  〇〇に似てますね"
-   - Return naturally to main topic: "あ、  話を戻すと"、"本題に戻りますが"、"さて、  先ほどの話の続きですが"
-   - {{ character2 }} should explicitly indicate their level of understanding: "ここまでは理解できました。  しかし、  〇〇の部分がまだ明確ではありません"
-   - {{ character2 }} should specifically point to concepts they understood: "〇〇という点は理解できました。  特に△△の例えが分かりやすかったです"
-   - {{ character2 }} should be specific about remaining confusion: "〇〇と△△の違いがまだ理解できていません。  もう少し詳しく説明していただけますか？"
-   - Add personality-specific expressions based on character roles
-   - Include occasional gentle disagreements or different perspectives
-   - Use rhetorical questions to introduce new topics: "では、  なぜこの手法が重要なのでしょうか？  "
-   - Add enthusiasm markers like "！" where appropriate for emphasis
-   - Include occasional speaking mistakes and self-corrections: "このモデルは2018年...  あ、  すみません、  2019年に発表されました"
-   - Include OCCASIONAL HUMOR and light jokes that match each character's personality
-   - Add MICRO-JOKES like: "これは難しいですが...（笑）  頑張って説明しますね"
+### 魅力的でインタラクティブな会話
+- 「へぇ！」「なるほど！」「それは驚きですね！」などの自然な反応を入れる
+- 相槌のバリエーションを使用する（「うんうん」「なるほど」「確かに」「そうですね」「ふむふむ」など）
+- お互いに質問し合う場面を入れる
+- 自然な脱線と本題への戻り方を取り入れる
+- {{ character2 }}は理解度や理解できていない点を具体的に述べる
+- 役割に基づいた表現を使用し、時には穏やかな意見の相違を含める
+- 修辞的な質問で新しい話題を導入する
+- キャラクターの個性に合った軽いユーモアを時々含める
+- キャラクターの個性を話し方や考え方のスタイルで明確に区別する
+- {{ character1 }}は専門用語の後に平易な説明を加える（例：「〇〇法とは、簡単に言えば□□のような方法です」）
+- {{ character1 }}は[専門用語]→[簡単な定義]→[日常的な類推]→[具体例]のパターンを使う
+- {{ character1 }}は説明後に理解度を確認する
+- {{ character2 }}は反応を示し、重要な用語を繰り返して概念を強化する
+- 日常生活からの例や鮮やかな比喩を使って複雑な概念を説明する
+- 両キャラクターが時々個人的なエピソードを共有する
+- 説明はできるだけ簡潔かつ具体的にする
+- 複雑なトピックの間には短い休憩を入れる
 
-4. For better TTS comprehension and natural pacing:
-   - Break long sentences into shorter segments with appropriate pauses
-   - KEEP SENTENCES UNDER 30 CHARACTERS wherever possible for natural speech rhythm
-   - CREATE RHYTHM VARIATION: use quick pace for familiar content, slow down dramatically for key points
-   - For important points: "ここが、  （間）  とても重要なポイントなんです"
-   - For complex explanations: speak slowly with more pauses
-   - For supplementary info: speak at a slightly faster pace
-   - Add INTENTIONAL PAUSES for emphasis: "この手法の最大の利点は、  （間）  汎用性の高さです"
-   - Add THOUGHTFUL PAUSES: "それについては、  （間）  少し考える必要がありますね"
-   - Use particles like "ね、  "、"よ、  "、"さ、  " at natural break points (note the comma AND double space)
-   - ADD NATURAL FILLERS throughout: "えーっと、  "、"あのー、  "、"そうですねー、  "、"まあ、  なんというか、  "
-   - Don't overuse fillers - aim for 1-2 fillers per speaking turn
-   - Add longer VERBAL PROCESSING when thinking: "うーんと、  そうですね、  これは…  "
-   - Keep sentences shorter than 30-40 characters when possible for better breathing rhythm
-   - Use 300-500 characters per speaking turn at most
-   - Insert mid-sentence pauses with comma+double space: "最新の研究によると、  この方法は、  従来の手法より20%効率的です"
-
-5. Create engaging, interactive conversation:
-   - VARY CHARACTER PERSONALITIES distinctly through their speech patterns and thinking styles
-   - {{ character1 }} should have specific quirks, favorite phrases, or expressions that recur throughout
-   - {{ character2 }} should have consistent question patterns and reaction styles that define their personality
-   - {{ character1 }} should introduce technical terms with immediate plain language explanation: "〇〇法（△△△）とは、  簡単に言えば□□のような方法です"
-   - {{ character1 }} should use the pattern: [technical term] → [simple definition] → [everyday analogy] → [concrete example]
-   - {{ character1 }} should check understanding after complex explanations: "ここまでで質問はありますか？"、"この説明は分かりやすいでしょうか？"
-   - {{ character2 }} should frequently acknowledge with reactions ("なるほど、  "、"すごいですね、  "、"面白いです、  ")
-   - {{ character2 }} should repeat key terms to reinforce important concepts
-   - INCLUDE RELATABLE EXAMPLES from everyday life to explain complex concepts
-   - USE VIVID METAPHORS: "この技術は、  料理で言えば、  様々な調味料を少しずつ加えながら味を調整するようなものです"
-   - Both characters should SHARE OCCASIONAL PERSONAL ANECDOTES: "以前、  私が似たような問題に取り組んだ時は..."
-   - Keep explanations concise, concrete and implementation-focused
-   - Include short breaks between complex topic sections
-   - End with a clear summary of the key points and practical applications
-
-6. !!CRITICALLY IMPORTANT!! CONVERT 100% OF ENGLISH TEXT TO KATAKANA:
-   - VOICEVOX CANNOT PROCESS ANY ALPHABETICAL ENGLISH - THIS WILL BREAK THE OUTPUT
-   - EVERY SINGLE INSTANCE of English MUST be converted to katakana without exception
-   - NO ENGLISH LETTERS OR WORDS may appear anywhere in the output
-   - ALL technical terms must use katakana: "CNN" → "シーエヌエヌ"、  "GAN" → "ジーエーエヌ"
-   - ALL paper titles must use katakana: "Attention Is All You Need" → "アテンション イズ オール ユー ニード"
-   - ALL author names must use katakana: "John Smith" → "ジョン スミス"
-   - ALL institutions must use katakana: "MIT" → "エムアイティー"
-   - ALL unfamiliar terms: Add Japanese explanation after the katakana
-   - Example: "コンティニュアル ラーニング、  つまり継続的に新しい知識を学習し続ける手法"
-   - VERIFY before submitting: scan the entire output to ensure NO English letters remain
+### !!非常に重要!! すべての英語テキストはカタカナへの変換が必要
+- 音声合成エンジンはアルファベットの英語を処理できず、出力が破損する場合がある
+- 例外なくすべての英語はカタカナに変換しなければならない
+- 全ての専門用語はカタカナ使用: "CNN" → "シーエヌエヌ"、"GAN" → "ガン"
+- 全ての論文タイトルはカタカナ: "Attention Is All You Need" → "アテンションイズ オールユー ニード"
+- 全ての著者名はカタカナ: "John Smith" → "ジョンスミス"
+- 全ての機関名はカタカナ: "MIT" → "エムアイティー"
+- 馴染みのない用語はカタカナの後に日本語の説明を追加: "コンティニュアル ラーニング、つまり継続的に新しい知識を学習し続ける手法"
 {% endmacro %}

@@ -1,36 +1,16 @@
 {% import 'common_podcast_utils.j2' as utils %}
 
-Please generate a Japanese conversation-style podcast text between "{{ character1 }}" and "{{ character2 }}"
-based on the following paper text.
-
-Character roles:
-- {{ character1 }}: A true academic expert on the paper's subject who provides in-depth, logically structured explanations at a professional level.
-  Uses precise terminology but ALWAYS supplements with careful explanations and simplified expressions to make concepts accessible to beginners.
-  Proactively breaks down complex terms immediately after using them, using everyday analogies and concrete examples.
-  Maintains academic rigor while ensuring explanations are understandable to non-specialists.
-- {{ character2 }}: An intelligent beginner with foundational knowledge who asks insightful questions about challenging concepts.
-  After receiving explanations, clearly communicates their current level of understanding before asking follow-up questions about remaining unclear points.
-  Specifically identifies which parts of the explanation were helpful and which concepts are still difficult to grasp.
-  Attempts to rephrase concepts using accessible language and effective analogies.
+後述の論文テキストに基づいた、「{{ character1 }}」と「{{ character2 }}」の間の日本語会話形式ポッドキャストテキストを生成してください。
+論文全体を俯瞰するようなポッドキャストにしてください。
 
 {{ utils.podcast_common_macro(character1, character2) }}
 
-Content structure guidelines:
-1. Create a podcast with academic depth equivalent to reading the original paper, while still being engaging
-2. Structure the conversation logically, with clear progression between topics
-3. {{ character1 }} should provide expert-level information with precise terminology while IMMEDIATELY breaking down each complex term or concept for beginners
-4. {{ character1 }} should use both technical language AND accessible everyday analogies in parallel to ensure dual-layer understanding
-5. {{ character2 }} should always acknowledge what they understood before asking for clarification on remaining unclear points
-6. {{ character2 }} should attempt to reformulate explanations using their own words to confirm understanding
-7. INCLUDE NATURAL DIGRESSIONS: Occasionally go off-topic briefly to discuss related interesting points, anecdotes, or lighter topics
-8. MAINTAIN CONVERSATION RHYTHM: Vary the pace - quick exchanges for simple points, slower, more deliberate explanations for complex points
-9. ADD PERSONALITY DEVELOPMENT: Each character should become more distinct over time through consistent speech patterns, reactions, and thought processes
-10. USE NATURAL CONVERSATION STRUCTURE: Include greetings, small talk moments, digressions, and a satisfying conclusion
-11. INCLUDE HUMOR: Add occasional light humor, jokes, or playful exchanges that fit each character's personality
-12. Cover ALL key findings, methodologies, and implications from the paper with proper depth and nuance
-13. Include numerical data, statistics, and specific findings from the paper where relevant
-14. CONSISTENTLY use each character's proper speech pattern throughout the entire conversation
-15. ALWAYS end the podcast with a concise summary of the key points and practical applications
+## ポッドキャストの流れ
+1. {{ character1 }}が今回紹介する論文のタイトルを紹介する
+2. {{ character2 }}がそれに対して反応する
+3. {{ character1 }}が今回紹介する論文の全体像を浅く紹介し、{{ character2 }}が感想を簡単に述べる
+4. 論文全体について俯瞰した会話をする（会話の進行は基本的に{{ character1 }}がリードする）
+5. 最後に重要なポイントを振り返って簡潔にまとめ、各キャラクターが感想を述べて終了する
 
-Paper text:
+## 解説対象の論文テキスト
 {{ paper_text }}

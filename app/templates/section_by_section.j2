@@ -1,58 +1,29 @@
 {% import 'common_podcast_utils.j2' as utils %}
 
-Please generate a Japanese conversation-style podcast text between "{{ character1 }}" and "{{ character2 }}"
-based on the following paper text. This template focuses on DETAILED SECTION-BY-SECTION ANALYSIS.
-
-Character roles:
-- {{ character1 }}: A true academic expert who systematically guides the audience through EACH SECTION of the paper.
-  Takes the lead in explaining each section in sequence, identifying section boundaries clearly.
-  Uses precise terminology but ALWAYS supplements with careful explanations to make complex concepts accessible.
-  Provides detailed analysis of methodology, results, and implications in each section.
-  Maintains academic rigor while ensuring explanations are understandable to non-specialists.
-- {{ character2 }}: An intelligent beginner who asks clarifying questions about challenging concepts in each section.
-  After each section explanation, identifies which parts were clear and which concepts remain difficult.
-  Asks specific follow-up questions that help clarify the most important aspects of each section.
-  Attempts to rephrase key points using accessible language to confirm understanding.
+後述の論文テキストに基づいた、「{{ character1 }}」と「{{ character2 }}」の間の日本語会話形式ポッドキャストテキストを生成してください。
+ただし、論文のセクションごとに網羅的に解説し、論文の全てのセクションをカバーしたポッドキャストにしてください。
 
 {{ utils.podcast_common_macro(character1, character2) }}
 
-SECTION-BY-SECTION ANALYSIS APPROACH:
-1. START WITH PAPER TITLE: {{ character1 }} should begin by introducing the paper title
+## ポッドキャストの流れ
+1. {{ character1 }}が今回紹介する論文のタイトルを紹介する
    - "今日は「[論文タイトル]」という論文について解説します。"
-   - Briefly mention publication venue/date if available
+   - 可能であれば著者名や所属について述べる
+2. {{ character2 }}がそれに対して反応する
+3. {{ character1 }}が論文の概要を簡単に紹介し、{{ character2 }}が反応する
+   - 詳細は後続のセクションでカバーされるため、ここは短くする（1-2回のやり取り）
+   - セクションごとの分析に移ることについての明確な声明で終える
+4. 論文のセクションごとに{{ character1 }}が解説を行い、{{ character2 }}が適宜反応する
+   - 論文のセクションの順番に厳密に従い、完全に網羅する
+   - {{ character1 }}はセクション名/番号を明確に述べて、セクション間を明確に移行する: "以上が「手法」の説明です。それでは次のセクションに移りましょう。第X章の「結果」について見ていきます。"
+   - 論文のセクションの内容が構造的であれば、どのような構成になっているかを解説する: "このセクションでは、論文の著者は次の３つのポイントを議論しています。"
+   - サブセクションがある場合は明確に識別する: "このセクションには３つのサブセクションがあります。まず最初の..."
+   - {{ character1 }}はセクションの目的/目標を明確に述べる
+   - リスナーにとって具体的な理論や実装を知る機会になるように、{{ character1 }}はセクションごとに深く詳細な解説をする
+   - 以前のセクションとの関連性や、重要な発見・方法を強調する
+   - 各セクションの相対的な重要性を念頭に置きながら、重要なセクションほど長めに解説する（目安として、重要なセクションであれば10回以上のやり取り、そうでなければ3-6回のやり取りとする）
+5. ポッドキャストの締め
+   - 最後に{{ character1 }}と{{ character2 }}はそれぞれ簡単な個人的な印象/学びを簡潔に共有する（2-3回のやり取り）
 
-2. OVERVIEW SECTION:
-   - {{ character1 }} should provide a very brief overview of the paper without going into details
-   - Cover the main problem addressed and general approach only
-   - Keep this section short (1-2 exchanges) as details will be covered in subsequent sections
-   - End with a clear statement about moving to section-by-section analysis
-
-3. SECTION-BY-SECTION APPROACH:
-   - For each section, {{ character1 }} should clearly state the section name/number:
-     "次は「手法」のセクション、論文の第X章について説明します"
-   - Transition clearly between sections: "それでは次のセクションに移りましょう。第X章の「結果」について見ていきます。"
-   - Use visual cues like: "このセクションでは、論文の著者は次の３つのポイントを議論しています。"
-   - Clearly identify subsections if present: "このセクションには３つのサブセクションがあります。まず最初の..."
-
-4. SECTION CONTENT:
-   - For each section, {{ character1 }} should:
-     - Clearly state the purpose/goal of this specific section
-     - Summarize the most important content (don't try to cover everything)
-     - Explain complex concepts and technical terms
-     - Highlight connections with previous sections
-     - Emphasize key findings or methods
-   - {{ character2 }} should ask 2-3 focused questions after each section
-   - The conversation should follow the exact structure of the paper, moving from introduction to conclusion
-   - Dedicate roughly equal time to each section, keeping in mind their relative importance
-   - Keep section explanations concise yet comprehensive (approximately 2-3 turns per section)
-   - Use explicit section markers in the conversation: "以上が「手法」セクションの説明です。次は「結果」のセクションに移ります。"
-   - Keep section explanations concise to avoid reaching token limits
-
-5. CONCLUSION:
-   - After explaining all paper sections, keep conclusion brief as the paper's conclusion section already provides a summary
-   - {{ character1 }} and {{ character2 }} should each share a brief personal impression/takeaway
-   - End with a simple closing remark without rehashing content
-   - Keep this final exchange very concise (just 1-2 lines per speaker)
-
-Paper text:
+## 解説対象の論文テキスト
 {{ paper_text }}
