@@ -21,15 +21,13 @@ class OpenAIModel:
         self.api_key: Optional[str] = os.environ.get("OPENAI_API_KEY")
 
         # デフォルトモデル
-        self.model_name: str = "gpt-4.1-mini"
+        self.model_name: str = "gpt-4.1-nano"
 
         # 利用可能なモデルのリスト
         self._available_models = [
-            "gpt-4o-mini",
-            "gpt-4o",
-            "gpt-4.1",
-            "gpt-4.1-mini",
             "gpt-4.1-nano",
+            "gpt-4.1-mini",
+            "gpt-4.1",
             "o4-mini",
         ]
 
