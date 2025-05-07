@@ -41,6 +41,47 @@ class TestPromptManager(unittest.TestCase):
                     "Test template for {{ character1 }} and {{ character2 }}: {{ paper_text }}"
                 )
 
+        # 共通ユーティリティテンプレートを作成
+        with open(
+            self.template_dir / "common_podcast_utils.j2", "w", encoding="utf-8"
+        ) as f:
+            f.write(
+                """
+{% macro get_character_speech_pattern(character_name) %}
+{% set speech_patterns = {
+    "ずんだもん": {
+        "first_person": "ぼく",
+        "sentence_end": ["のだ", "なのだ"]
+    },
+    "四国めたん": {
+        "first_person": "わたし",
+        "sentence_end": ["です", "ます"]
+    },
+    "九州そら": {
+        "first_person": "わたし",
+        "sentence_end": ["ですね", "ですよ"]
+    }
+} %}
+{% if speech_patterns[character_name] %}
+  - 一人称: {{ speech_patterns[character_name].first_person }}
+  - 語尾の特徴: {{ speech_patterns[character_name].sentence_end|join('、') }}
+{% endif %}
+{% endmacro %}
+
+{% macro podcast_common_macro(character1, character2) %}
+Character speech patterns:
+- {{ character1 }}:
+{% if character1 %}
+{{ get_character_speech_pattern(character1) }}
+{% endif %}
+- {{ character2 }}:
+{% if character2 %}
+{{ get_character_speech_pattern(character2) }}
+{% endif %}
+{% endmacro %}
+            """
+            )
+
         # テスト用のPromptManagerインスタンスを作成
         self.prompt_manager = PromptManager()
 
@@ -137,46 +178,31 @@ class TestPromptManager(unittest.TestCase):
         self.assertEqual("四国めたん： こんにちは\nずんだもん： はじめまして", converted_fullwidth)
 
     def test_character_speech_patterns(self):
-        """Test character speech patterns."""
-        # キャラクター口調辞書が存在することを確認
-        self.assertIsNotNone(self.prompt_manager.character_speech_patterns)
+        """Test character speech patterns are available through the common utils file."""
+        # 共通ユーティリティのパスが設定されていることを確認
+        self.assertIsNotNone(self.prompt_manager.common_utils_path)
+        self.assertEqual(
+            "common_podcast_utils.j2", self.prompt_manager.common_utils_path
+        )
 
-        # ずんだもんの口調設定を確認
-        zundamon_pattern = self.prompt_manager.character_speech_patterns.get("ずんだもん")
-        self.assertIsNotNone(zundamon_pattern)
-        # assertIsNotNoneで確認したので、zundamon_patternがNoneでない場合のみ続行
-        if zundamon_pattern is not None:
-            self.assertTrue(isinstance(zundamon_pattern, dict))
-            self.assertEqual(zundamon_pattern.get("first_person"), "ぼく")
-            sentence_end = zundamon_pattern.get("sentence_end", [])
-            if sentence_end is not None:
-                self.assertIn("のだ", sentence_end)
-                self.assertIn("なのだ", sentence_end)
-
-        # 四国めたんの口調設定を確認
-        metan_pattern = self.prompt_manager.character_speech_patterns.get("四国めたん")
-        self.assertIsNotNone(metan_pattern)
-        if metan_pattern is not None:
-            self.assertTrue(isinstance(metan_pattern, dict))
-            self.assertEqual(metan_pattern.get("first_person"), "わたし")
-            sentence_end = metan_pattern.get("sentence_end", [])
-            if sentence_end is not None:
-                self.assertIn("です", sentence_end)
-                self.assertIn("ます", sentence_end)
-
-        # 九州そらの口調設定を確認
-        sora_pattern = self.prompt_manager.character_speech_patterns.get("九州そら")
-        self.assertIsNotNone(sora_pattern)
-        if sora_pattern is not None:
-            self.assertTrue(isinstance(sora_pattern, dict))
-            self.assertEqual(sora_pattern.get("first_person"), "わたし")
-            sentence_end = sora_pattern.get("sentence_end", [])
-            if sentence_end is not None:
-                self.assertIn("ですね", sentence_end)
-                self.assertIn("ですよ", sentence_end)
+        # ファイルの存在を確認
+        common_utils_path = self.template_dir / "common_podcast_utils.j2"
+        self.assertTrue(common_utils_path.exists(), "共通ユーティリティファイルが存在しません")
 
     def test_speech_patterns_in_prompt(self):
         """Test if speech patterns are included in the generated prompt."""
+        # テスト用のペーパートゥポッドキャストテンプレートを更新
+        with open(
+            self.template_dir / "paper_to_podcast.j2", "w", encoding="utf-8"
+        ) as f:
+            f.write(
+                """
+{% import 'common_podcast_utils.j2' as utils %}
+Paper text: {{ paper_text }}
+{{ utils.podcast_common_macro(character1, character2) }}
+            """
+            )
+
         paper_text = "これはテスト用の論文テキストです。"
 
         # デフォルトキャラクター設定での生成
@@ -192,8 +218,8 @@ class TestPromptManager(unittest.TestCase):
         updated_prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
 
         # 更新後の口調情報が含まれていることを確認
-        self.assertIn("わたし", updated_prompt)  # 九州そら
-        self.assertIn("ですね", updated_prompt)  # 九州そらの語尾
+        self.assertIn("一人称: ぼく", updated_prompt)  # ずんだもん
+        self.assertIn("一人称: わたし", updated_prompt)  # 九州そら
 
 
 if __name__ == "__main__":

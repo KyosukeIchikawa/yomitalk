@@ -35,6 +35,8 @@ class PromptManager:
         self.default_template_path = "paper_to_podcast.j2"
         # セクション解説モード用テンプレートのパス
         self.section_by_section_template_path = "section_by_section.j2"
+        # 共通ユーティリティのパス
+        self.common_utils_path = "common_podcast_utils.j2"
 
         # 現在のモード（標準またはセクション解説）
         self.current_mode = "standard"
@@ -44,35 +46,6 @@ class PromptManager:
 
         # 有効なキャラクターのリスト
         self.valid_characters = ["ずんだもん", "四国めたん", "九州そら", "中国うさぎ", "中部つるぎ"]
-
-        # キャラクターの口調パターン
-        self.character_speech_patterns = {
-            "ずんだもん": {
-                "first_person": "ぼく",
-                "sentence_end": ["のだ", "なのだ", "のだよ", "なのだよ"],
-                "characteristic": "元気で子供っぽく、ややくだけた話し方（タメ口）になることが多い。調子がいいときは語尾が「〜のだよ！」などになる。",
-            },
-            "四国めたん": {
-                "first_person": "わたし",
-                "sentence_end": ["です", "ます"],
-                "characteristic": "丁寧さを保ちつつ、文末までフラットなトーンで話すことが多い。疑問形でも「〜ですか？」のように、丁寧さを崩さない。",
-            },
-            "九州そら": {
-                "first_person": "わたし",
-                "sentence_end": ["ですね", "ですよ"],
-                "characteristic": "全体的に柔らかく、おっとりとした、少し「天然」な雰囲気を感じさせる話し方。",
-            },
-            "中国うさぎ": {
-                "first_person": "わし",
-                "sentence_end": ["じゃ", "のじゃ", "じゃろ", "のう"],
-                "characteristic": "くだけた、あるいは少し尊大な印象を与える言い回しが多い。古風、あるいはステレオタイプの広島弁のような話し方をする。",
-            },
-            "中部つるぎ": {
-                "first_person": "ぼく",
-                "sentence_end": ["だ", "だぞ", "だぞ"],
-                "characteristic": "ややトーンが低めで、ぶっきらぼう、あるいは「ツンデレ」の「ツン」の部分を思わせるような、少しトゲのある（あるいは素っ気ない）話し方をする。",
-            },
-        }
 
         # 初期化時にテンプレートファイルの存在を確認
         self._check_template_files()
@@ -95,6 +68,13 @@ class PromptManager:
             logger.warning(f"セクション解説モード用テンプレートファイルが見つかりません: {section_path}")
         else:
             logger.info(f"セクション解説モード用テンプレートファイル確認: {section_path}")
+
+        # 共通ユーティリティテンプレートの確認
+        common_path = self.template_dir / self.common_utils_path
+        if not common_path.exists():
+            logger.warning(f"共通ユーティリティテンプレートファイルが見つかりません: {common_path}")
+        else:
+            logger.info(f"共通ユーティリティテンプレートファイル確認: {common_path}")
 
     def set_podcast_mode(self, mode: str) -> bool:
         """ポッドキャスト生成モードを設定します。
@@ -237,10 +217,6 @@ class PromptManager:
             character1 = self.character_mapping["Character1"]
             character2 = self.character_mapping["Character2"]
 
-            # キャラクターの口調情報を取得
-            char1_speech_pattern = self.character_speech_patterns.get(character1, {})
-            char2_speech_pattern = self.character_speech_patterns.get(character2, {})
-
             try:
                 # モードに応じたテンプレートを使用
                 template_path = (
@@ -277,8 +253,6 @@ class PromptManager:
                     paper_text=paper_text,
                     character1=character1,
                     character2=character2,
-                    char1_speech_pattern=char1_speech_pattern,
-                    char2_speech_pattern=char2_speech_pattern,
                 )
                 return prompt
             except Exception as render_error:
