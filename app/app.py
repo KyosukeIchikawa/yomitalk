@@ -273,17 +273,13 @@ class PaperPodcastApp:
             gr.Blocks: Gradio Blocks instance
         """
         app = gr.Blocks(
-            title="Paper Podcast Generator", css="footer {display: none !important;}"
+            title="Yomitalk",
+            css="footer {display: none !important;}",
+            theme=gr.themes.Soft(),
         )
 
         with app:
-            gr.Markdown(
-                """
-                # YomiTalk
-
-                テキストファイルやPDFから"ずんだもん"と"四国めたん"によるポッドキャスト音声を生成します。
-                """
-            )
+            gr.Markdown("""# Yomitalk""")
 
             with gr.Row():
                 # File upload and text extraction
