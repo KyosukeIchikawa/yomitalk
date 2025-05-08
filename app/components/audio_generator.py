@@ -137,8 +137,20 @@ class AudioGenerator:
 
         def replace_word(match: re.Match) -> str:
             word: str = match.group(0).lower()
-            katakana: str = alkana.get_kana(word)
-            return katakana if katakana else word
+
+            # ハイフンが含まれている場合、各部分を個別に変換
+            parts = word.split("-")
+            katakana_parts = []
+
+            for part in parts:
+                if part:  # 空の部分をスキップ
+                    katakana = alkana.get_kana(part)
+                    katakana_parts.append(katakana if katakana else part)
+                else:
+                    katakana_parts.append("")
+
+            # ハイフンで再結合
+            return "-".join(katakana_parts)
 
         # 英単語をカタカナに置換
         return word_pattern.sub(replace_word, text)
