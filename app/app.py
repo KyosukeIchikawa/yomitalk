@@ -59,7 +59,7 @@ class PaperPodcastApp:
         self.podcast_modes = ["論文の概要解説", "論文の詳細解説"]
 
         # 現在選択されているUIモード
-        self.current_ui_mode = "論文の概要解説"
+        self.current_ui_mode = "論文の詳細解説"
 
     def set_api_key(self, api_key: str) -> Tuple[str, str]:
         """
