@@ -149,8 +149,8 @@ class AudioGenerator:
                 else:
                     katakana_parts.append("")
 
-            # ハイフンで再結合
-            return "-".join(katakana_parts)
+            # 再結合（ハイフンは音声に必要ないため捨てる）
+            return "".join(katakana_parts)
 
         # 英単語をカタカナに置換
         return word_pattern.sub(replace_word, text)

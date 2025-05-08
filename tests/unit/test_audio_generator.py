@@ -39,7 +39,7 @@ class TestAudioGenerator(unittest.TestCase):
 
             # ハイフンを含む英単語
             result = self.audio_generator._convert_english_to_katakana("user-friendly")
-            self.assertEqual(result, "ユーザー-フレンドリー")
+            self.assertEqual(result, "ユーザーフレンドリー")
 
     def test_convert_english_to_katakana_with_multiple_hyphens(self):
         """複数のハイフンを含む英単語のカタカナ変換テスト"""
@@ -56,7 +56,7 @@ class TestAudioGenerator(unittest.TestCase):
             result = self.audio_generator._convert_english_to_katakana(
                 "deep-learning-ai"
             )
-            self.assertEqual(result, "ディープ-ラーニング-エーアイ")
+            self.assertEqual(result, "ディープラーニングエーアイ")
 
     def test_convert_english_to_katakana_with_unknown_parts(self):
         """変換できない部分を含む英単語のカタカナ変換テスト"""
@@ -73,7 +73,7 @@ class TestAudioGenerator(unittest.TestCase):
             result = self.audio_generator._convert_english_to_katakana(
                 "user-unknown-test"
             )
-            self.assertEqual(result, "ユーザー-unknown-テスト")
+            self.assertEqual(result, "ユーザーunknownテスト")
 
     def test_convert_english_to_katakana_with_consecutive_hyphens(self):
         """連続したハイフンを含む英単語のカタカナ変換テスト"""
@@ -87,7 +87,7 @@ class TestAudioGenerator(unittest.TestCase):
 
             # 連続したハイフンを含む英単語
             result = self.audio_generator._convert_english_to_katakana("test--hello")
-            self.assertEqual(result, "テスト--ハロー")
+            self.assertEqual(result, "テストハロー")
 
 
 if __name__ == "__main__":
