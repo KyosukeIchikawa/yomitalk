@@ -24,18 +24,29 @@ class TestTextProcessor(unittest.TestCase):
                 self.mock_openai_model = MagicMock()
                 mock_openai_model_class.return_value = self.mock_openai_model
 
-                # TextProcessorを作成
-                self.text_processor = TextProcessor()
+                # GeminiModelのモックを設定
+                with patch(
+                    "app.models.gemini_model.GeminiModel"
+                ) as mock_gemini_model_class:
+                    self.mock_gemini_model = MagicMock()
+                    mock_gemini_model_class.return_value = self.mock_gemini_model
 
-                # モックを直接適用
-                self.text_processor.prompt_manager = self.mock_prompt_manager
-                self.text_processor.openai_model = self.mock_openai_model
+                    # TextProcessorを作成
+                    self.text_processor = TextProcessor()
+
+                    # モックを直接適用
+                    self.text_processor.prompt_manager = self.mock_prompt_manager
+                    self.text_processor.openai_model = self.mock_openai_model
+                    self.text_processor.gemini_model = self.mock_gemini_model
 
     def test_init(self):
         """Test initialization of TextProcessor."""
         self.assertIsNotNone(self.text_processor)
         self.assertFalse(self.text_processor.use_openai)
+        self.assertFalse(self.text_processor.use_gemini)
+        self.assertEqual(self.text_processor.current_api_type, "openai")
         self.assertIsNotNone(self.text_processor.openai_model)
+        self.assertIsNotNone(self.text_processor.gemini_model)
         self.assertIsNotNone(self.text_processor.prompt_manager)
 
     def test_preprocess_text(self):
@@ -56,6 +67,7 @@ class TestTextProcessor(unittest.TestCase):
         result = self.text_processor.set_openai_api_key("valid-api-key")
         self.assertTrue(result)
         self.assertTrue(self.text_processor.use_openai)
+        self.assertEqual(self.text_processor.current_api_type, "openai")
         self.mock_openai_model.set_api_key.assert_called_with("valid-api-key")
 
         # Test with invalid API key
@@ -63,6 +75,59 @@ class TestTextProcessor(unittest.TestCase):
         result = self.text_processor.set_openai_api_key("invalid-api-key")
         self.assertFalse(result)
         self.mock_openai_model.set_api_key.assert_called_with("invalid-api-key")
+
+    def test_set_gemini_api_key(self):
+        """Test setting the Gemini API key."""
+        # Test with valid API key
+        self.mock_gemini_model.set_api_key.return_value = True
+        result = self.text_processor.set_gemini_api_key("valid-api-key")
+        self.assertTrue(result)
+        self.assertTrue(self.text_processor.use_gemini)
+        self.assertEqual(self.text_processor.current_api_type, "gemini")
+        self.mock_gemini_model.set_api_key.assert_called_with("valid-api-key")
+
+        # Test with invalid API key
+        self.mock_gemini_model.set_api_key.return_value = False
+        result = self.text_processor.set_gemini_api_key("invalid-api-key")
+        self.assertFalse(result)
+        self.mock_gemini_model.set_api_key.assert_called_with("invalid-api-key")
+
+    def test_set_api_type(self):
+        """Test setting API type."""
+        # OpenAIが設定されている場合
+        self.text_processor.use_openai = True
+        self.text_processor.use_gemini = False
+
+        # OpenAIに切り替え（成功）
+        result = self.text_processor.set_api_type("openai")
+        self.assertTrue(result)
+        self.assertEqual(self.text_processor.current_api_type, "openai")
+
+        # Geminiに切り替え（失敗：APIキーが設定されていない）
+        result = self.text_processor.set_api_type("gemini")
+        self.assertFalse(result)
+        self.assertEqual(self.text_processor.current_api_type, "openai")  # 変更されない
+
+        # 無効なタイプの指定
+        result = self.text_processor.set_api_type("invalid-type")
+        self.assertFalse(result)
+
+        # 両方設定されている場合
+        self.text_processor.use_openai = True
+        self.text_processor.use_gemini = True
+
+        # Geminiに切り替え（成功）
+        result = self.text_processor.set_api_type("gemini")
+        self.assertTrue(result)
+        self.assertEqual(self.text_processor.current_api_type, "gemini")
+
+    def test_get_current_api_type(self):
+        """Test getting current API type."""
+        self.text_processor.current_api_type = "openai"
+        self.assertEqual("openai", self.text_processor.get_current_api_type())
+
+        self.text_processor.current_api_type = "gemini"
+        self.assertEqual("gemini", self.text_processor.get_current_api_type())
 
     def test_get_template_content(self):
         """Test getting prompt template content."""
@@ -87,8 +152,12 @@ class TestTextProcessor(unittest.TestCase):
         self.assertEqual(result, "standard")
         self.mock_prompt_manager.get_podcast_mode.assert_called_once()
 
-    def test_generate_podcast_conversation(self):
-        """Test generating podcast conversation."""
+    def test_generate_podcast_conversation_with_openai(self):
+        """Test generating podcast conversation with OpenAI."""
+        # OpenAIモデルのセットアップ
+        self.text_processor.current_api_type = "openai"
+        self.text_processor.use_openai = True
+
         # モックの設定
         self.mock_prompt_manager.generate_podcast_conversation.return_value = "テストプロンプト"
         self.mock_openai_model.generate_text.return_value = (
@@ -111,6 +180,49 @@ class TestTextProcessor(unittest.TestCase):
             "Character1: こんにちは\nCharacter2: はじめまして"
         )
 
+    def test_generate_podcast_conversation_with_gemini(self):
+        """Test generating podcast conversation with Gemini."""
+        # Geminiモデルのセットアップ
+        self.text_processor.current_api_type = "gemini"
+        self.text_processor.use_gemini = True
+
+        # モックの設定
+        self.mock_prompt_manager.generate_podcast_conversation.return_value = "テストプロンプト"
+        self.mock_gemini_model.generate_text.return_value = (
+            "Character1: こんにちは\nCharacter2: はじめまして"
+        )
+        self.mock_prompt_manager.convert_abstract_to_real_characters.return_value = (
+            "ずんだもん: こんにちは\n四国めたん: はじめまして"
+        )
+
+        # メソッド実行
+        result = self.text_processor.generate_podcast_conversation("テスト論文")
+
+        # 検証
+        self.assertEqual("ずんだもん: こんにちは\n四国めたん: はじめまして", result)
+        self.mock_prompt_manager.generate_podcast_conversation.assert_called_with(
+            "テスト論文"
+        )
+        self.mock_gemini_model.generate_text.assert_called_with("テストプロンプト")
+        self.mock_prompt_manager.convert_abstract_to_real_characters.assert_called_with(
+            "Character1: こんにちは\nCharacter2: はじめまして"
+        )
+
+    def test_generate_podcast_conversation_no_api(self):
+        """Test generating podcast conversation without valid API."""
+        # APIが設定されていない状態
+        self.text_processor.current_api_type = "openai"
+        self.text_processor.use_openai = False
+        self.text_processor.use_gemini = False
+
+        # メソッド実行
+        result = self.text_processor.generate_podcast_conversation("テスト論文")
+
+        # 検証
+        self.assertEqual(
+            "Error: No API key is set or valid API type is not selected.", result
+        )
+
     def test_convert_abstract_to_real_characters(self):
         """Test converting abstract characters to real characters."""
         self.mock_prompt_manager.convert_abstract_to_real_characters.return_value = (
@@ -126,8 +238,11 @@ class TestTextProcessor(unittest.TestCase):
 
     def test_process_text_with_openai(self):
         """Test text processing with OpenAI API."""
-        # モックの設定
+        # OpenAIの設定
+        self.text_processor.current_api_type = "openai"
         self.text_processor.use_openai = True
+
+        # モックの設定
         with patch.object(
             self.text_processor,
             "generate_podcast_conversation",
@@ -137,19 +252,48 @@ class TestTextProcessor(unittest.TestCase):
             self.assertEqual(result, "ずんだもん: こんにちは")
             mock_gen.assert_called_once_with("Test text")
 
-    def test_process_text_no_openai(self):
-        """Test text processing without OpenAI API configured."""
+    def test_process_text_with_gemini(self):
+        """Test text processing with Gemini API."""
+        # Geminiの設定
+        self.text_processor.current_api_type = "gemini"
+        self.text_processor.use_gemini = True
+
+        # モックの設定
+        with patch.object(
+            self.text_processor,
+            "generate_podcast_conversation",
+            return_value="ずんだもん: こんにちは",
+        ) as mock_gen:
+            result = self.text_processor.process_text("Test text")
+            self.assertEqual(result, "ずんだもん: こんにちは")
+            mock_gen.assert_called_once_with("Test text")
+
+    def test_process_text_no_api(self):
+        """Test text processing without API configured."""
+        # OpenAIタイプだがAPIキーが設定されていない
+        self.text_processor.current_api_type = "openai"
         self.text_processor.use_openai = False
+
         result = self.text_processor.process_text("Test text")
         self.assertIn("OpenAI API key is not set", result)
+
+        # GeminiタイプだがAPIキーが設定されていない
+        self.text_processor.current_api_type = "gemini"
+        self.text_processor.use_gemini = False
+
+        result = self.text_processor.process_text("Test text")
+        self.assertIn("Google Gemini API key is not set", result)
 
     def test_process_text_empty(self):
         """Test text processing with empty input."""
         result = self.text_processor.process_text("")
         self.assertEqual(result, "No text has been input for processing.")
 
-    def test_get_token_usage(self):
-        """Test getting token usage information."""
+    def test_get_token_usage_openai(self):
+        """Test getting token usage information from OpenAI."""
+        # OpenAIを使用
+        self.text_processor.current_api_type = "openai"
+
         self.mock_openai_model.get_last_token_usage.return_value = {
             "prompt_tokens": 100,
             "completion_tokens": 50,
@@ -161,6 +305,127 @@ class TestTextProcessor(unittest.TestCase):
         self.assertEqual(50, usage.get("completion_tokens"))
         self.assertEqual(150, usage.get("total_tokens"))
         self.mock_openai_model.get_last_token_usage.assert_called_once()
+
+    def test_get_token_usage_gemini(self):
+        """Test getting token usage information from Gemini."""
+        # Geminiを使用
+        self.text_processor.current_api_type = "gemini"
+
+        self.mock_gemini_model.get_last_token_usage.return_value = {
+            "prompt_tokens": 200,
+            "completion_tokens": 100,
+            "total_tokens": 300,
+        }
+
+        usage = self.text_processor.get_token_usage()
+        self.assertEqual(200, usage.get("prompt_tokens"))
+        self.assertEqual(100, usage.get("completion_tokens"))
+        self.assertEqual(300, usage.get("total_tokens"))
+        self.mock_gemini_model.get_last_token_usage.assert_called_once()
+
+    def test_set_model_name_openai(self):
+        """Test setting OpenAI model name."""
+        # OpenAIを使用
+        self.text_processor.current_api_type = "openai"
+
+        self.mock_openai_model.set_model_name.return_value = True
+        result = self.text_processor.set_model_name("gpt-4.1")
+        self.assertTrue(result)
+        self.mock_openai_model.set_model_name.assert_called_with("gpt-4.1")
+
+    def test_set_model_name_gemini(self):
+        """Test setting Gemini model name."""
+        # Geminiを使用
+        self.text_processor.current_api_type = "gemini"
+
+        self.mock_gemini_model.set_model_name.return_value = True
+        result = self.text_processor.set_model_name("gemini-1.5-pro")
+        self.assertTrue(result)
+        self.mock_gemini_model.set_model_name.assert_called_with("gemini-1.5-pro")
+
+    def test_get_current_model_openai(self):
+        """Test getting current OpenAI model."""
+        # OpenAIを使用
+        self.text_processor.current_api_type = "openai"
+        self.mock_openai_model.model_name = "gpt-4.1-mini"
+
+        model = self.text_processor.get_current_model()
+        self.assertEqual("gpt-4.1-mini", model)
+
+    def test_get_current_model_gemini(self):
+        """Test getting current Gemini model."""
+        # Geminiを使用
+        self.text_processor.current_api_type = "gemini"
+        self.mock_gemini_model.model_name = "gemini-pro"
+
+        model = self.text_processor.get_current_model()
+        self.assertEqual("gemini-pro", model)
+
+    def test_get_available_models_openai(self):
+        """Test getting available OpenAI models."""
+        # OpenAIを使用
+        self.text_processor.current_api_type = "openai"
+
+        self.mock_openai_model.get_available_models.return_value = [
+            "gpt-4.1",
+            "gpt-4.1-mini",
+        ]
+        models = self.text_processor.get_available_models()
+        self.assertEqual(["gpt-4.1", "gpt-4.1-mini"], models)
+        self.mock_openai_model.get_available_models.assert_called_once()
+
+    def test_get_available_models_gemini(self):
+        """Test getting available Gemini models."""
+        # Geminiを使用
+        self.text_processor.current_api_type = "gemini"
+
+        self.mock_gemini_model.get_available_models.return_value = [
+            "gemini-pro",
+            "gemini-1.5-pro",
+        ]
+        models = self.text_processor.get_available_models()
+        self.assertEqual(["gemini-pro", "gemini-1.5-pro"], models)
+        self.mock_gemini_model.get_available_models.assert_called_once()
+
+    def test_set_max_tokens_openai(self):
+        """Test setting OpenAI max tokens."""
+        # OpenAIを使用
+        self.text_processor.current_api_type = "openai"
+
+        self.mock_openai_model.set_max_tokens.return_value = True
+        result = self.text_processor.set_max_tokens(1000)
+        self.assertTrue(result)
+        self.mock_openai_model.set_max_tokens.assert_called_with(1000)
+
+    def test_set_max_tokens_gemini(self):
+        """Test setting Gemini max tokens."""
+        # Geminiを使用
+        self.text_processor.current_api_type = "gemini"
+
+        self.mock_gemini_model.set_max_tokens.return_value = True
+        result = self.text_processor.set_max_tokens(2000)
+        self.assertTrue(result)
+        self.mock_gemini_model.set_max_tokens.assert_called_with(2000)
+
+    def test_get_max_tokens_openai(self):
+        """Test getting OpenAI max tokens."""
+        # OpenAIを使用
+        self.text_processor.current_api_type = "openai"
+
+        self.mock_openai_model.get_max_tokens.return_value = 32768
+        tokens = self.text_processor.get_max_tokens()
+        self.assertEqual(32768, tokens)
+        self.mock_openai_model.get_max_tokens.assert_called_once()
+
+    def test_get_max_tokens_gemini(self):
+        """Test getting Gemini max tokens."""
+        # Geminiを使用
+        self.text_processor.current_api_type = "gemini"
+
+        self.mock_gemini_model.get_max_tokens.return_value = 8192
+        tokens = self.text_processor.get_max_tokens()
+        self.assertEqual(8192, tokens)
+        self.mock_gemini_model.get_max_tokens.assert_called_once()
 
     def test_set_character_mapping(self):
         """Test setting character mapping."""

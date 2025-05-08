@@ -46,13 +46,18 @@ class PaperPodcastApp:
         )
 
         # APIキーの状態を確認
-        api_key_status = (
+        openai_api_key_status = (
             "✅ 設定済み" if self.text_processor.openai_model.api_key else "❌ 未設定"
+        )
+        gemini_api_key_status = (
+            "✅ 設定済み" if self.text_processor.gemini_model.api_key else "❌ 未設定"
         )
 
         # システムログの初期化
         self.system_log = (
-            f"OpenAI API: {api_key_status}\nVOICEVOXステータス: {self.check_voicevox_core()}"
+            f"OpenAI API: {openai_api_key_status}\n"
+            f"Gemini API: {gemini_api_key_status}\n"
+            f"VOICEVOXステータス: {self.check_voicevox_core()}"
         )
 
         # ポッドキャスト生成モード
@@ -61,7 +66,10 @@ class PaperPodcastApp:
         # 現在選択されているUIモード
         self.current_ui_mode = "論文の詳細解説"
 
-    def set_api_key(self, api_key: str) -> Tuple[str, str]:
+        # 現在選択されているLLMタイプ
+        self.current_llm_type = "openai"
+
+    def set_openai_api_key(self, api_key: str) -> Tuple[str, str]:
         """
         Set the OpenAI API key and returns a result message based on the outcome.
 
@@ -80,7 +88,63 @@ class PaperPodcastApp:
         success = self.text_processor.set_openai_api_key(api_key)
         result = "✅ APIキーが正常に設定されました" if success else "❌ APIキーの設定に失敗しました"
         self.update_log(f"OpenAI API: {result}")
+
+        # OpenAIがアクティブになった場合、LLMタイプも更新
+        if success:
+            self.current_llm_type = "openai"
+
         return result, self.system_log
+
+    def set_gemini_api_key(self, api_key: str) -> Tuple[str, str]:
+        """
+        Set the Google Gemini API key and returns a result message based on the outcome.
+
+        Args:
+            api_key (str): Google API key
+
+        Returns:
+            tuple: (status_message, system_log)
+        """
+        # APIキーが空白や空文字の場合は処理しない
+        if not api_key or api_key.strip() == "":
+            result = "❌ APIキーが空です。有効なAPIキーを入力してください"
+            self.update_log(f"Gemini API: {result}")
+            return result, self.system_log
+
+        success = self.text_processor.set_gemini_api_key(api_key)
+        result = "✅ APIキーが正常に設定されました" if success else "❌ APIキーの設定に失敗しました"
+        self.update_log(f"Gemini API: {result}")
+
+        # Geminiがアクティブになった場合、LLMタイプも更新
+        if success:
+            self.current_llm_type = "gemini"
+
+        return result, self.system_log
+
+    def switch_llm_type(self, llm_type: str) -> str:
+        """
+        LLMタイプを切り替えます。
+
+        Args:
+            llm_type (str): "openai" または "gemini"
+
+        Returns:
+            str: システムログ
+        """
+        if llm_type not in ["openai", "gemini"]:
+            self.update_log(f"LLM切替: ❌ 無効なLLMタイプ '{llm_type}'")
+            return self.system_log
+
+        success = self.text_processor.set_api_type(llm_type)
+        if success:
+            self.current_llm_type = llm_type
+            api_name = "OpenAI" if llm_type == "openai" else "Google Gemini"
+            self.update_log(f"LLM切替: ✅ {api_name}に切り替えました")
+        else:
+            api_name = "OpenAI" if llm_type == "openai" else "Google Gemini"
+            self.update_log(f"LLM切替: ❌ {api_name}のAPIキーが設定されていません")
+
+        return self.system_log
 
     def handle_file_upload(self, file_obj):
         """
@@ -332,28 +396,54 @@ class PaperPodcastApp:
                                 label="キャラクター2（初学者役）",
                             )
 
-                    # OpenAI API設定
-                    with gr.Row():
-                        with gr.Column(scale=3):
-                            api_key_input = gr.Textbox(
-                                placeholder="sk-...",
-                                type="password",
-                                label="OpenAI APIキー",
-                            )
-                        with gr.Column(scale=2):
-                            model_dropdown = gr.Dropdown(
-                                choices=self.get_available_models(),
-                                value=self.get_current_model(),
-                                label="モデル",
-                            )
-                    with gr.Row():
-                        max_tokens_slider = gr.Slider(
-                            minimum=100,
-                            maximum=32768,
-                            value=self.get_max_tokens(),
-                            step=100,
-                            label="最大トークン数",
-                        )
+                    # LLM API設定タブ
+                    llm_tabs = gr.Tabs()
+                    with llm_tabs:
+                        with gr.TabItem("OpenAI") as openai_tab:
+                            with gr.Row():
+                                with gr.Column(scale=3):
+                                    openai_api_key_input = gr.Textbox(
+                                        placeholder="sk-...",
+                                        type="password",
+                                        label="OpenAI APIキー",
+                                    )
+                                with gr.Column(scale=2):
+                                    openai_model_dropdown = gr.Dropdown(
+                                        choices=self.get_openai_available_models(),
+                                        value=self.get_openai_current_model(),
+                                        label="モデル",
+                                    )
+                            with gr.Row():
+                                openai_max_tokens_slider = gr.Slider(
+                                    minimum=100,
+                                    maximum=32768,
+                                    value=self.get_openai_max_tokens(),
+                                    step=100,
+                                    label="最大トークン数",
+                                )
+
+                        with gr.TabItem("Google Gemini") as gemini_tab:
+                            with gr.Row():
+                                with gr.Column(scale=3):
+                                    gemini_api_key_input = gr.Textbox(
+                                        placeholder="AIza...",
+                                        type="password",
+                                        label="Google Gemini APIキー",
+                                    )
+                                with gr.Column(scale=2):
+                                    gemini_model_dropdown = gr.Dropdown(
+                                        choices=self.get_gemini_available_models(),
+                                        value=self.get_gemini_current_model(),
+                                        label="モデル",
+                                    )
+                            with gr.Row():
+                                gemini_max_tokens_slider = gr.Slider(
+                                    minimum=100,
+                                    maximum=30720,
+                                    value=self.get_gemini_max_tokens(),
+                                    step=100,
+                                    label="最大トークン数",
+                                )
 
                     # トーク原稿を生成ボタン
                     process_btn = gr.Button(
@@ -425,10 +515,10 @@ class PaperPodcastApp:
                 outputs=[process_btn],
             )
 
-            # API key - ユーザが入力したらすぐに保存
-            api_key_input.change(
-                fn=self.set_api_key,
-                inputs=[api_key_input],
+            # OpenAI API key - ユーザが入力したらすぐに保存
+            openai_api_key_input.change(
+                fn=self.set_openai_api_key,
+                inputs=[openai_api_key_input],
                 outputs=[system_log_display],
             ).then(
                 fn=self.update_process_button_state,
@@ -436,17 +526,53 @@ class PaperPodcastApp:
                 outputs=[process_btn],
             )
 
-            # Model selection
-            model_dropdown.change(
-                fn=self.set_model_name,
-                inputs=[model_dropdown],
+            # Gemini API key
+            gemini_api_key_input.change(
+                fn=self.set_gemini_api_key,
+                inputs=[gemini_api_key_input],
+                outputs=[system_log_display],
+            ).then(
+                fn=self.update_process_button_state,
+                inputs=[extracted_text],
+                outputs=[process_btn],
+            )
+
+            # タブ切り替え時のLLMタイプ変更
+            openai_tab.select(
+                fn=lambda: self.switch_llm_type("openai"),
                 outputs=[system_log_display],
             )
 
-            # Max tokens selection
-            max_tokens_slider.change(
-                fn=self.set_max_tokens,
-                inputs=[max_tokens_slider],
+            gemini_tab.select(
+                fn=lambda: self.switch_llm_type("gemini"),
+                outputs=[system_log_display],
+            )
+
+            # OpenAI Model selection
+            openai_model_dropdown.change(
+                fn=self.set_openai_model_name,
+                inputs=[openai_model_dropdown],
+                outputs=[system_log_display],
+            )
+
+            # Gemini Model selection
+            gemini_model_dropdown.change(
+                fn=self.set_gemini_model_name,
+                inputs=[gemini_model_dropdown],
+                outputs=[system_log_display],
+            )
+
+            # OpenAI Max tokens selection
+            openai_max_tokens_slider.change(
+                fn=self.set_openai_max_tokens,
+                inputs=[openai_max_tokens_slider],
+                outputs=[system_log_display],
+            )
+
+            # Gemini Max tokens selection
+            gemini_max_tokens_slider.change(
+                fn=self.set_gemini_max_tokens,
+                inputs=[gemini_max_tokens_slider],
                 outputs=[system_log_display],
             )
 
@@ -600,7 +726,43 @@ class PaperPodcastApp:
 
         return app
 
-    def set_model_name(self, model_name: str) -> str:
+    def get_openai_available_models(self) -> List[str]:
+        """
+        利用可能なOpenAIモデルのリストを取得します。
+
+        Returns:
+            List[str]: 利用可能なモデル名のリスト
+        """
+        return self.text_processor.openai_model.get_available_models()
+
+    def get_openai_current_model(self) -> str:
+        """
+        現在設定されているOpenAIモデル名を取得します。
+
+        Returns:
+            str: 現在のモデル名
+        """
+        return self.text_processor.openai_model.model_name
+
+    def get_gemini_available_models(self) -> List[str]:
+        """
+        利用可能なGeminiモデルのリストを取得します。
+
+        Returns:
+            List[str]: 利用可能なモデル名のリスト
+        """
+        return self.text_processor.gemini_model.get_available_models()
+
+    def get_gemini_current_model(self) -> str:
+        """
+        現在設定されているGeminiモデル名を取得します。
+
+        Returns:
+            str: 現在のモデル名
+        """
+        return self.text_processor.gemini_model.model_name
+
+    def set_openai_model_name(self, model_name: str) -> str:
         """
         OpenAIモデル名を設定します。
 
@@ -615,42 +777,83 @@ class PaperPodcastApp:
         self.update_log(f"OpenAI モデル: {result} ({model_name})")
         return self.system_log
 
-    def get_available_models(self) -> List[str]:
+    def set_gemini_model_name(self, model_name: str) -> str:
         """
-        利用可能なOpenAIモデルのリストを取得します。
-
-        Returns:
-            List[str]: 利用可能なモデル名のリスト
-        """
-        return self.text_processor.openai_model.get_available_models()
-
-    def get_current_model(self) -> str:
-        """
-        現在設定されているOpenAIモデル名を取得します。
-
-        Returns:
-            str: 現在のモデル名
-        """
-        return self.text_processor.openai_model.model_name
-
-    def update_audio_button_state(self, checked: bool) -> gr.Button:
-        """
-        VOICEVOX利用規約チェックボックスの状態に基づいて音声生成ボタンの有効/無効を切り替えます。
+        Geminiモデル名を設定します。
 
         Args:
-            checked (bool): チェックボックスの状態
+            model_name (str): 使用するモデル名
 
         Returns:
-            gr.Button: 更新されたボタン
+            str: システムログ
         """
-        button = gr.Button(value="音声を生成", variant="primary", interactive=checked)
-        return button
+        success = self.text_processor.gemini_model.set_model_name(model_name)
+        result = "✅ モデルが正常に設定されました" if success else "❌ モデル設定に失敗しました"
+        self.update_log(f"Gemini モデル: {result} ({model_name})")
+        return self.system_log
+
+    def get_openai_max_tokens(self) -> int:
+        """
+        現在設定されているOpenAIの最大トークン数を取得します。
+
+        Returns:
+            int: 現在の最大トークン数
+        """
+        return self.text_processor.openai_model.get_max_tokens()
+
+    def get_gemini_max_tokens(self) -> int:
+        """
+        現在設定されているGeminiの最大トークン数を取得します。
+
+        Returns:
+            int: 現在の最大トークン数
+        """
+        return self.text_processor.gemini_model.get_max_tokens()
+
+    def set_openai_max_tokens(self, max_tokens: int) -> str:
+        """
+        OpenAIの最大トークン数を設定します。
+
+        Args:
+            max_tokens (int): 設定する最大トークン数
+
+        Returns:
+            str: システムログ
+        """
+        success = self.text_processor.openai_model.set_max_tokens(max_tokens)
+        result = "✅ 最大トークン数が正常に設定されました" if success else "❌ 最大トークン数の設定に失敗しました"
+        self.update_log(f"OpenAI 最大トークン数: {result} ({max_tokens})")
+        return self.system_log
+
+    def set_gemini_max_tokens(self, max_tokens: int) -> str:
+        """
+        Geminiの最大トークン数を設定します。
+
+        Args:
+            max_tokens (int): 設定する最大トークン数
+
+        Returns:
+            str: システムログ
+        """
+        success = self.text_processor.gemini_model.set_max_tokens(max_tokens)
+        result = "✅ 最大トークン数が正常に設定されました" if success else "❌ 最大トークン数の設定に失敗しました"
+        self.update_log(f"Gemini 最大トークン数: {result} ({max_tokens})")
+        return self.system_log
+
+    def get_available_characters(self) -> List[str]:
+        """
+        利用可能なキャラクターのリストを取得します。
+
+        Returns:
+            List[str]: 利用可能なキャラクター名のリスト
+        """
+        return self.text_processor.get_valid_characters()
 
     def set_character_mapping(
         self, character1: str, character2: str
     ) -> Tuple[str, str]:
         """
-        キャラクターマッピングを設定する。
+        キャラクターマッピングを設定します。
 
         Args:
             character1 (str): Character1に割り当てるキャラクター名
@@ -663,48 +866,6 @@ class PaperPodcastApp:
         result = "✅ キャラクター設定が完了しました" if success else "❌ キャラクター設定に失敗しました"
         self.update_log(f"キャラクター設定: {result}")
         return result, self.system_log
-
-    def get_character_mapping(self) -> dict:
-        """
-        現在のキャラクターマッピングを取得する。
-
-        Returns:
-            dict: 現在のキャラクターマッピング
-        """
-        return self.text_processor.get_character_mapping()
-
-    def get_available_characters(self) -> List[str]:
-        """
-        利用可能なキャラクターのリストを取得する。
-
-        Returns:
-            List[str]: 利用可能なキャラクター名のリスト
-        """
-        return self.text_processor.get_valid_characters()
-
-    def set_max_tokens(self, max_tokens: int) -> str:
-        """
-        最大トークン数を設定します。
-
-        Args:
-            max_tokens (int): 設定する最大トークン数
-
-        Returns:
-            str: システムログ
-        """
-        success = self.text_processor.openai_model.set_max_tokens(max_tokens)
-        result = "✅ 最大トークン数が正常に設定されました" if success else "❌ 最大トークン数の設定に失敗しました"
-        self.update_log(f"最大トークン数: {result} ({max_tokens})")
-        return self.system_log
-
-    def get_max_tokens(self) -> int:
-        """
-        現在設定されている最大トークン数を取得します。
-
-        Returns:
-            int: 現在の最大トークン数
-        """
-        return self.text_processor.openai_model.get_max_tokens()
 
     def update_process_button_state(self, extracted_text: str) -> Dict[str, Any]:
         """
@@ -797,9 +958,16 @@ class PaperPodcastApp:
         completion_tokens = token_usage.get("completion_tokens", math.nan)
         total_tokens = token_usage.get("total_tokens", math.nan)
 
+        # API名を取得
+        api_name = (
+            "OpenAI API"
+            if self.text_processor.current_api_type == "openai"
+            else "Google Gemini API"
+        )
+
         html = f"""
         <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-top: 10px;">
-            <h3 style="margin-top: 0; margin-bottom: 8px;">OpenAI API Token Usage</h3>
+            <h3 style="margin-top: 0; margin-bottom: 8px;">{api_name} Token Usage</h3>
             <div style="display: flex; justify-content: space-between;">
                 <div><strong>Input Tokens:</strong> {prompt_tokens}</div>
                 <div><strong>Output Tokens:</strong> {completion_tokens}</div>
@@ -808,6 +976,18 @@ class PaperPodcastApp:
         </div>
         """
         return html
+
+    def update_audio_button_state(self, checked: bool) -> gr.Button:
+        """
+        VOICEVOX利用規約チェックボックスの状態に基づいて音声生成ボタンの有効/無効を切り替えます。
+
+        Args:
+            checked (bool): チェックボックスの状態
+
+        Returns:
+            gr.Button: 更新されたボタン
+        """
+        return gr.Button(value="音声を生成", variant="primary", interactive=checked)
 
 
 # Create and launch application instance

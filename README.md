@@ -1,91 +1,68 @@
-# YomiTalk
+# Yomitalk
 
-テキストをアップロードして、日本語での解説音声を自動生成するGradioアプリケーションです。
+論文PDFなどからポッドキャスト風の解説音声を自動生成するアプリケーション
 
-## 機能
+## 特徴
 
-### モード
-
-- 論文からポッドキャスト形式での解説音声を自動生成
-
-### 対応ファイル形式
-
-- PDF
-
-### 音声キャラクター
-
-- ずんだもん
-- 四国めたん
+- 論文PDFやテキストファイルから内容を抽出
+- OpenAI API または Google Gemini API を使用して会話形式の解説テキストを生成
+- VOICEVOXを使用してキャラクター音声に変換
+- Gradioベースの使いやすいWebインターフェース
 
 ## 必要条件
 
-- Python 3.10以上
-- FFmpeg
-- OpenAI APIキー（テキスト生成に必要）
+- Python 3.8以上
+- OpenAI API キー または Google Gemini API キー
+- VOICEVOX Core (音声生成に必要)
 
-## インストール
+## インストール方法
 
-1. リポジトリをクローンします：
+1. リポジトリをクローン:
+   ```
+   git clone https://github.com/yourusername/yomitalk.git
+   cd yomitalk
+   ```
 
-```bash
-git clone https://github.com/KyosukeIchikawa/yomitalk.git
-cd yomitalk
-```
+2. 依存パッケージのインストール:
+   ```
+   pip install -r requirements.txt
+   ```
 
-2. 環境セットアップを一括で行います：
+3. VOICEVOX Coreのインストール (音声生成が必要な場合):
+   ```
+   make download-voicevox-core
+   ```
 
-```bash
-make setup
-```
+## 使い方
 
-このコマンドは以下の処理を自動的に実行します：
-- Python仮想環境の作成
-- 必要パッケージのインストール
-- VOICEVOXコアのダウンロードとセットアップ
-- pre-commitフックの設定
+1. アプリケーションを起動:
+   ```
+   python -m app.app
+   ```
 
-## 使用方法
+2. ブラウザで `http://localhost:7860` にアクセス
 
-1. アプリケーションを起動します：
+3. PDFファイルをアップロードしてテキストを抽出
 
-```bash
-python main.py
-```
+4. OpenAI API キー または Google Gemini API キーを設定
 
-2. ブラウザで表示されるGradioインターフェースにアクセスします（通常は http://127.0.0.1:7860）
+5. 「トーク原稿を生成」ボタンをクリックして会話形式の解説テキストを生成
 
-3. 使用手順：
-   - 論文PDFをアップロードします
-   - 「Extract Text」ボタンをクリックしてテキストを抽出します
-   - OpenAI API設定セクションでAPIキーを設定します
-   - 「Generate Podcast Text」ボタンをクリックして会話形式のテキストを生成します
-   - 音声キャラクターを選択し、「Generate Audio」ボタンをクリックして音声を生成します
-   - 生成された音声はダウンロード可能です
+6. VOICEVOX利用規約に同意し、「音声を生成」ボタンをクリックして音声を生成
 
-## テスト
+## APIキーの取得方法
 
-次のコマンドでテストを実行できます：
+### OpenAI APIキー
+1. OpenAIのアカウントを作成: https://platform.openai.com/
+2. APIキーを作成: https://platform.openai.com/api-keys
 
-```bash
-make test
+### Google Gemini APIキー
+1. Google AIのアカウントを作成: https://ai.google.dev/
+2. APIキーを作成: https://makersuite.google.com/app/apikey
 
-# unit testのみ
-make test-unit
+## ライセンス情報
 
-# e2e testのみ
-make test-e2e
-```
+- このアプリケーション: MIT License
+- VOICEVOX: [VOICEVOX CORE LICENSE](https://github.com/VOICEVOX/voicevox_core/blob/main/LICENSE)
 
-## 開発
-
-- pre-commitフックが自動的にlintチェックを実行します
-
-## ライセンス
-
-このプロジェクトはMITライセンスの下で公開されています。
-
-## 謝辞
-
-- [VOICEVOX](https://voicevox.hiroshiba.jp/) - 日本語音声合成エンジン
-- [Gradio](https://gradio.app/) - インタラクティブなUIフレームワーク
-- [OpenAI](https://openai.com/) - 自然言語処理API
+音声を生成する際には、[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。

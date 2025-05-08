@@ -13,11 +13,24 @@ Feature: Generate podcast from research paper PDF
     And the user clicks the extract text button
     Then the extracted text is displayed
 
-  Scenario: API settings
+  Scenario: OpenAI API settings
     Given the user has opened the application
     When the user opens the OpenAI API settings section
     And the user enters a valid API key
     Then the API key is saved
+
+  Scenario: Gemini API settings
+    Given the user has opened the application
+    When the user opens the Gemini API settings section
+    And the user enters a valid Gemini API key
+    Then the Gemini API key is saved
+
+  Scenario: LLM tab switching
+    Given the user has opened the application
+    When the user switches to the Gemini tab
+    Then the Gemini API settings are displayed
+    When the user switches to the OpenAI tab
+    Then the OpenAI API settings are displayed
 
   Scenario: OpenAI model selection
     Given the user has opened the application
@@ -25,15 +38,33 @@ Feature: Generate podcast from research paper PDF
     And the user selects a different OpenAI model
     Then the selected model is saved
 
-  Scenario: Max tokens configuration
+  Scenario: Gemini model selection
+    Given the user has opened the application
+    When the user opens the Gemini API settings section
+    And the user selects a different Gemini model
+    Then the selected Gemini model is saved
+
+  Scenario: Max tokens configuration for OpenAI
     Given the user has opened the application
     When the user opens the OpenAI API settings section
     And the user adjusts the max tokens slider to 2000
-    Then the max tokens value is saved
+    Then the max tokens value is saved for OpenAI
 
-  Scenario: Podcast text generation
+  Scenario: Max tokens configuration for Gemini
+    Given the user has opened the application
+    When the user opens the Gemini API settings section
+    And the user adjusts the max tokens slider to 2000
+    Then the max tokens value is saved for Gemini
+
+  Scenario: Podcast text generation with OpenAI
     Given text has been extracted from a PDF
-    And a valid API key has been configured
+    And a valid OpenAI API key has been configured
+    When the user clicks the text generation button
+    Then podcast-style text is generated
+
+  Scenario: Podcast text generation with Gemini
+    Given text has been extracted from a PDF
+    And a valid Gemini API key has been configured
     When the user clicks the text generation button
     Then podcast-style text is generated
 
