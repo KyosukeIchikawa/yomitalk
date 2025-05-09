@@ -47,17 +47,17 @@ class TestOpenAIModel(unittest.TestCase):
         # 有効なモデル名を設定
         result = self.model.set_model_name("gpt-4.1")
         self.assertTrue(result)
-        self.assertEqual("gpt-4o", self.model.model_name)
+        self.assertEqual("gpt-4.1", self.model.model_name)
 
         # 無効なモデル名を設定
         result = self.model.set_model_name("invalid-model")
         self.assertFalse(result)
-        self.assertEqual("gpt-4o", self.model.model_name)  # 変更されない
+        self.assertEqual("gpt-4.1", self.model.model_name)  # 変更されない
 
         # 空のモデル名を設定
         result = self.model.set_model_name("")
         self.assertFalse(result)
-        self.assertEqual("gpt-4o", self.model.model_name)  # 変更されない
+        self.assertEqual("gpt-4.1", self.model.model_name)  # 変更されない
 
     def test_set_max_tokens(self):
         """Test setting max tokens."""

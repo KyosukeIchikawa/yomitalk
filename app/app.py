@@ -345,6 +345,35 @@ class PaperPodcastApp:
         with app:
             gr.Markdown("""# Yomitalk""")
 
+            # カスタムCSSスタイルを追加
+            css = """
+            /* メインコンテンツエリアにボトムパディングを追加して、固定システムログの高さ分の空間を確保 */
+            .gradio-container {
+                padding-bottom: 110px !important;
+            }
+
+            #system_log_container {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                background-color: white;
+                padding: 10px;
+                border-top: 1px solid #ddd;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+                max-height: 100px;
+                overflow: auto;
+            }
+
+            /* システムログのテキストエリアのスタイル調整 */
+            #system_log_container .wrap {
+                height: auto !important;
+                min-height: 80px;
+            }
+            """
+            gr.HTML(f"<style>{css}</style>")
+
             with gr.Row():
                 # File upload and text extraction
                 with gr.Column():
@@ -490,12 +519,13 @@ class PaperPodcastApp:
                     )
 
             # システムログ表示エリア（VOICEVOXステータスを含む）
-            system_log_display = gr.Textbox(
-                label="システム状態",
-                value=self.system_log,
-                interactive=False,
-                show_label=True,
-            )
+            with gr.Row(elem_id="system_log_container"):
+                system_log_display = gr.Textbox(
+                    label="システム状態",
+                    value=self.system_log,
+                    interactive=False,
+                    show_label=False,
+                )
 
             # Set up event handlers
             # ファイルがアップロードされたらボタンを有効化
