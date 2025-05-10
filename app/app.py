@@ -928,7 +928,6 @@ class PaperPodcastApp:
     def set_podcast_mode(self, mode: str) -> str:
         """
         ポッドキャスト生成モードを設定します。
-        注: 内部のモード切替機能は廃止され、UIでの表示切替のみを行います。
 
         Args:
             mode (str): '論文の概要解説' または '論文の詳細解説'
@@ -944,8 +943,11 @@ class PaperPodcastApp:
         # 現在のUIで選択されているモードを記録
         self.current_ui_mode = mode
 
-        # バックエンドのモードも設定
+        # UIモードから内部モードへの変換
         internal_mode = "standard" if mode == "論文の概要解説" else "section_by_section"
+        logger.info(f"UIからのモード: {mode}, 内部モード: {internal_mode}")
+
+        # TextProcessorを使ってPodcastModeのEnumに変換
         success = self.text_processor.set_podcast_mode(internal_mode)
 
         # ログ記録

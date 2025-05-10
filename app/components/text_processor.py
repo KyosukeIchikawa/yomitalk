@@ -3,14 +3,18 @@
 Functions to process, summarize, and convert research paper text to podcast format.
 """
 
+import logging
 from typing import Dict, List
 
 from app.models.gemini_model import GeminiModel
 from app.models.openai_model import OpenAIModel
-from app.prompt_manager import PromptManager
+from app.prompt_manager import PodcastMode, PromptManager
 
 # Removed transformers import (not used)
 # from transformers import Pipeline, pipeline
+
+# ロガーの設定
+logger = logging.getLogger(__name__)
 
 
 class TextProcessor:
@@ -116,14 +120,23 @@ class TextProcessor:
         Returns:
             bool: モードが正常に設定されたかどうか
         """
-        return self.prompt_manager.set_podcast_mode(mode)
+        # 文字列からPodcastModeへの変換
+        if mode == "standard":
+            enum_mode = PodcastMode.STANDARD
+        elif mode == "section_by_section":
+            enum_mode = PodcastMode.SECTION_BY_SECTION
+        else:
+            logger.error(f"無効なポッドキャストモード: {mode}")
+            return False
 
-    def get_podcast_mode(self) -> str:
+        return self.prompt_manager.set_podcast_mode(enum_mode)
+
+    def get_podcast_mode(self) -> PodcastMode:
         """
         現在のポッドキャスト生成モードを取得します。
 
         Returns:
-            str: 現在のモード ('standard' または 'section_by_section')
+            PodcastMode: 現在のモード
         """
         return self.prompt_manager.get_podcast_mode()
 
@@ -217,6 +230,10 @@ class TextProcessor:
             # Text preprocessing
             cleaned_text = self._preprocess_text(text)
 
+            # 現在のポッドキャストモードをログに記録
+            current_mode = self.prompt_manager.get_podcast_mode()
+            logger.info(f"現在のポッドキャストモード: {current_mode.name}")
+
             # 現在のAPIタイプに基づいて適切なAPIが設定されているか確認
             if self.current_api_type == "openai" and self.use_openai:
                 podcast_text = self.generate_podcast_conversation(cleaned_text)
@@ -233,6 +250,7 @@ class TextProcessor:
             return podcast_text
 
         except Exception as e:
+            logger.error(f"テキスト処理エラー: {e}")
             return f"An error occurred during text processing: {e}"
 
     def _preprocess_text(self, text: str) -> str:

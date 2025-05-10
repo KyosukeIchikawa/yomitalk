@@ -4,12 +4,20 @@ This module provides functionality to manage prompt templates.
 It includes the PromptManager class which handles Jinja2 templates and generation.
 """
 
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List
 
 import jinja2
 
 from app.utils.logger import logger
+
+
+class PodcastMode(Enum):
+    """ポッドキャスト生成モードを表すEnum。"""
+
+    STANDARD = "standard"  # 論文の概要解説
+    SECTION_BY_SECTION = "section_by_section"  # 論文の詳細解説
 
 
 class PromptManager:
@@ -39,7 +47,7 @@ class PromptManager:
         self.common_utils_path = "common_podcast_utils.j2"
 
         # 現在のモード（標準またはセクション解説）
-        self.current_mode = "standard"
+        self.current_mode = PodcastMode.STANDARD
 
         # キャラクターマッピング
         self.character_mapping = {"Character1": "四国めたん", "Character2": "ずんだもん"}
@@ -76,26 +84,26 @@ class PromptManager:
         else:
             logger.info(f"共通ユーティリティテンプレートファイル確認: {common_path}")
 
-    def set_podcast_mode(self, mode: str) -> bool:
+    def set_podcast_mode(self, mode: PodcastMode) -> bool:
         """ポッドキャスト生成モードを設定します。
 
         Args:
-            mode (str): 'standard' または 'section_by_section'
+            mode (PodcastMode): PodcastMode.STANDARDまたはPodcastMode.SECTION_BY_SECTION
 
         Returns:
             bool: モードが正常に設定されたかどうか
         """
-        if mode not in ["standard", "section_by_section"]:
+        if not isinstance(mode, PodcastMode):
             return False
 
         self.current_mode = mode
         return True
 
-    def get_podcast_mode(self) -> str:
+    def get_podcast_mode(self) -> PodcastMode:
         """現在のポッドキャスト生成モードを取得します。
 
         Returns:
-            str: 現在のモード ('standard' または 'section_by_section')
+            PodcastMode: 現在のモード
         """
         return self.current_mode
 
@@ -109,7 +117,7 @@ class PromptManager:
             # モードに応じたテンプレートファイルを選択
             template_path = (
                 self.section_by_section_template_path
-                if self.current_mode == "section_by_section"
+                if self.current_mode == PodcastMode.SECTION_BY_SECTION
                 else self.default_template_path
             )
 
@@ -121,7 +129,7 @@ class PromptManager:
                 logger.error(f"テンプレートファイルが見つかりません: {full_path}")
                 # 論文の詳細解説でファイルが見つからない場合は論文の概要解説のテンプレートを使用
                 if (
-                    self.current_mode == "section_by_section"
+                    self.current_mode == PodcastMode.SECTION_BY_SECTION
                     and (self.template_dir / self.default_template_path).exists()
                 ):
                     logger.warning("代わりに論文の概要解説のテンプレートを使用します")
@@ -133,17 +141,12 @@ class PromptManager:
             with open(full_path, "r", encoding="utf-8") as f:
                 template_content = f.read()
 
-            # 内容を確認
-            if not template_content or template_content.strip() == "":
-                logger.error(f"テンプレートファイルが空です: {full_path}")
-                return "エラー: テンプレートファイルが空です。"
-
+            logger.info(f"使用するモード: {self.current_mode.name}, テンプレート: {template_path}")
             return template_content
 
         except Exception as e:
-            logger.error(f"テンプレートファイル読み込みエラー: {e}")
-            # デフォルトテンプレートが読めない場合は緊急措置としてエラーメッセージを返す
-            return f"エラー: テンプレートファイルの読み込みに失敗しました: {e}"
+            logger.error(f"テンプレート取得エラー: {e}")
+            return f"エラー: テンプレートの取得に失敗しました: {e}"
 
     def set_character_mapping(self, character1: str, character2: str) -> bool:
         """
@@ -201,17 +204,19 @@ class PromptManager:
         return result
 
     def generate_podcast_conversation(self, paper_text: str) -> str:
-        """
-        論文テキストからポッドキャスト形式の会話テキストを生成します。
+        """論文テキストからポッドキャスト形式の会話テキストを生成します。
+
+        Jinja2テンプレートを使用して、論文テキストをポッドキャスト形式の会話に変換します。
+        テンプレートには論文テキストとキャラクター名が渡されます。
 
         Args:
-            paper_text (str): 論文テキスト（全文または一部）
+            paper_text (str): 論文テキスト
 
         Returns:
             str: 会話形式のポッドキャストテキスト
         """
-        if not paper_text.strip():
-            return "Error: No paper text provided."
+        if not paper_text:
+            return "Error: Paper text is empty."
 
         try:
             character1 = self.character_mapping["Character1"]
@@ -221,18 +226,18 @@ class PromptManager:
                 # モードに応じたテンプレートを使用
                 template_path = (
                     self.section_by_section_template_path
-                    if self.current_mode == "section_by_section"
+                    if self.current_mode == PodcastMode.SECTION_BY_SECTION
                     else self.default_template_path
                 )
                 logger.info(
-                    f"モード '{self.current_mode}' のテンプレート '{template_path}' を使用します"
+                    f"モード '{self.current_mode.name}' のテンプレート '{template_path}' を使用します"
                 )
 
                 # ファイルの存在を確認
                 if not (self.template_dir / template_path).exists():
                     logger.error(f"テンプレートファイルが見つかりません: {template_path}")
                     if (
-                        self.current_mode == "section_by_section"
+                        self.current_mode == PodcastMode.SECTION_BY_SECTION
                         and (self.template_dir / self.default_template_path).exists()
                     ):
                         # 論文の詳細解説でファイルが見つからない場合は論文の概要解説のテンプレートを使用

@@ -10,7 +10,7 @@ from pathlib import Path
 
 import jinja2
 
-from app.prompt_manager import PromptManager
+from app.prompt_manager import PodcastMode, PromptManager
 
 
 class TestPromptManager(unittest.TestCase):
@@ -119,7 +119,7 @@ Character speech patterns:
         self.assertIn("ずんだもん", prompt)
 
         # モードを変更して再テスト
-        self.prompt_manager.set_podcast_mode("section_by_section")
+        self.prompt_manager.set_podcast_mode(PodcastMode.SECTION_BY_SECTION)
         # section_by_sectionモードのテンプレートが存在する場合はそれを使用
         if (
             self.template_dir / self.prompt_manager.section_by_section_template_path
@@ -220,6 +220,28 @@ Paper text: {{ paper_text }}
         # 更新後の口調情報が含まれていることを確認
         self.assertIn("一人称: ぼく", updated_prompt)  # ずんだもん
         self.assertIn("一人称: わたし", updated_prompt)  # 九州そら
+
+    def test_set_and_get_podcast_mode(self):
+        """Test setting and getting podcast mode using Enum."""
+        # デフォルトモードの確認
+        self.assertEqual(PodcastMode.STANDARD, self.prompt_manager.get_podcast_mode())
+
+        # モードをSECTION_BY_SECTIONに変更
+        result = self.prompt_manager.set_podcast_mode(PodcastMode.SECTION_BY_SECTION)
+        self.assertTrue(result)
+        self.assertEqual(
+            PodcastMode.SECTION_BY_SECTION, self.prompt_manager.get_podcast_mode()
+        )
+
+        # モードをSTANDARDに戻す
+        result = self.prompt_manager.set_podcast_mode(PodcastMode.STANDARD)
+        self.assertTrue(result)
+        self.assertEqual(PodcastMode.STANDARD, self.prompt_manager.get_podcast_mode())
+
+        # 無効な値を渡した場合
+        with self.assertRaises(TypeError):
+            # Enumでない値を渡すとTypeErrorが発生するはず
+            self.prompt_manager.set_podcast_mode("invalid_value")  # type: ignore
 
 
 if __name__ == "__main__":

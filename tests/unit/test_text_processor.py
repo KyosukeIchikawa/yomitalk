@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from app.components.text_processor import TextProcessor
+from app.prompt_manager import PodcastMode
 
 
 class TestTextProcessor(unittest.TestCase):
@@ -139,17 +140,43 @@ class TestTextProcessor(unittest.TestCase):
     def test_set_podcast_mode(self):
         """Test setting podcast mode."""
         self.mock_prompt_manager.set_podcast_mode.return_value = True
+
+        # Enumに変換されるので、内部で使用されるEnumの値をチェック
         result = self.text_processor.set_podcast_mode("section_by_section")
         self.assertTrue(result)
         self.mock_prompt_manager.set_podcast_mode.assert_called_with(
-            "section_by_section"
+            PodcastMode.SECTION_BY_SECTION
         )
+
+        # "standard"モードの場合もテスト
+        self.mock_prompt_manager.set_podcast_mode.reset_mock()
+        result = self.text_processor.set_podcast_mode("standard")
+        self.assertTrue(result)
+        self.mock_prompt_manager.set_podcast_mode.assert_called_with(
+            PodcastMode.STANDARD
+        )
+
+        # 無効なモードの場合
+        self.mock_prompt_manager.set_podcast_mode.reset_mock()
+        result = self.text_processor.set_podcast_mode("invalid_mode")
+        self.assertFalse(result)
+        self.mock_prompt_manager.set_podcast_mode.assert_not_called()
 
     def test_get_podcast_mode(self):
         """Test getting podcast mode."""
-        self.mock_prompt_manager.get_podcast_mode.return_value = "standard"
+        # PodcastMode.STANDARDを返すよう設定
+        self.mock_prompt_manager.get_podcast_mode.return_value = PodcastMode.STANDARD
         result = self.text_processor.get_podcast_mode()
-        self.assertEqual(result, "standard")
+        self.assertEqual(result, PodcastMode.STANDARD)
+        self.mock_prompt_manager.get_podcast_mode.assert_called_once()
+
+        # PodcastMode.SECTION_BY_SECTIONの場合もテスト
+        self.mock_prompt_manager.get_podcast_mode.reset_mock()
+        self.mock_prompt_manager.get_podcast_mode.return_value = (
+            PodcastMode.SECTION_BY_SECTION
+        )
+        result = self.text_processor.get_podcast_mode()
+        self.assertEqual(result, PodcastMode.SECTION_BY_SECTION)
         self.mock_prompt_manager.get_podcast_mode.assert_called_once()
 
     def test_generate_podcast_conversation_with_openai(self):
