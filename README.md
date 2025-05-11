@@ -23,7 +23,7 @@
 
 ## 必要条件
 
-- Python 3.8以上
+- Python 3.11以上
 - OpenAI API キー または Google Gemini API キー
 - VOICEVOX Core (音声生成に必要)
 
