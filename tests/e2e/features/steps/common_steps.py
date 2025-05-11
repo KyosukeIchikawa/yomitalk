@@ -149,3 +149,10 @@ def user_opens_app(page_with_server: Page, server_port):
 def sample_pdf_file_exists():
     """Verify sample PDF file exists"""
     assert Path(TEST_PDF_PATH).exists(), "Test PDF file not found"
+
+
+@pytest.fixture
+def sample_pdf_path():
+    """サンプルPDFファイルのパスを返すフィクスチャー"""
+    assert Path(TEST_PDF_PATH).exists(), "Test PDF file not found"
+    return TEST_PDF_PATH

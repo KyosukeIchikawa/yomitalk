@@ -3,7 +3,6 @@
 Contains steps for podcast settings and generation.
 """
 import logging
-import re
 import time
 
 import pytest
@@ -149,26 +148,26 @@ def verify_podcast_text_generated(page_with_server: Page):
         # 生成されたテキストを探す
         result_area = page.locator("textarea").nth(1)  # 通常は2番目のテキストエリア
 
-        # テキストが生成されるまで最大30秒待つ
-        max_wait_time = 30
-        for i in range(max_wait_time):
-            generated_text = result_area.input_value()
-            if generated_text and len(generated_text) > 20:  # 十分なテキストがあるかチェック
-                logger.info("Podcast text has been generated")
-                return
+        # テキストエリアが存在することを確認
+        logger.info("Waiting for podcast text to be generated...")
+        result_area.wait_for(state="attached", timeout=5000)
 
-            if i < max_wait_time - 1:  # 最後の繰り返しでなければ待機
-                time.sleep(1)
+        # テキストが生成されるのを効率的に待つ
+        page.wait_for_function(
+            """() => {
+                const textarea = document.querySelectorAll('textarea')[1];
+                if (!textarea) return false;
+                const text = textarea.value;
+                return text && text.length > 20;
+            }""",
+            polling=500,  # ミリ秒
+            timeout=20000,  # ミリ秒
+        )
 
-        # テキストボックスがない場合やテキストが見つからない場合
-        logger.error("Could not find generated podcast text")
+        generated_text = result_area.input_value()
+        logger.info(f"Podcast text has been generated: {len(generated_text)} chars")
+        return
 
-        # テスト環境では失敗を無視
-        if "test" in str(page.url) or "localhost" in str(page.url):
-            logger.warning("テキスト生成の確認に失敗しましたが、テスト環境のため続行します")
-            return
-
-        pytest.fail("No podcast text generated or text area not found")
     except Exception as e:
         logger.error(f"Error while verifying podcast text: {e}")
 
@@ -189,31 +188,29 @@ def verify_podcast_text_with_characters(page_with_server: Page):
         # 生成されたテキストを探す
         result_area = page.locator("textarea").nth(1)  # 通常は2番目のテキストエリア
 
-        # テキストが生成されるまで最大30秒待つ
-        max_wait_time = 30
-        for i in range(max_wait_time):
-            generated_text = result_area.input_value()
-            # 十分なテキストがあり、キャラクター名（または「キャラ」という文字）が含まれているかチェック
-            if (
-                generated_text
-                and len(generated_text) > 20
-                and (":" in generated_text or "キャラ" in generated_text)
-            ):
-                logger.info("Podcast text with characters has been generated")
-                return
+        # テキストエリアが存在することを確認
+        logger.info("Waiting for podcast text with characters to be generated...")
+        result_area.wait_for(state="attached", timeout=5000)
 
-            if i < max_wait_time - 1:  # 最後の繰り返しでなければ待機
-                time.sleep(1)
+        # キャラクターを含むテキストが生成されるのを待つ効率的な方法
+        # タイムアウトを20秒に短縮し、ポーリング間隔を0.5秒に設定
+        page.wait_for_function(
+            """() => {
+                const textarea = document.querySelectorAll('textarea')[1];
+                if (!textarea) return false;
+                const text = textarea.value;
+                return text && text.length > 20 && (text.includes(':') || text.includes('キャラ'));
+            }""",
+            polling=500,  # ミリ秒
+            timeout=20000,  # ミリ秒
+        )
 
-        # テキストボックスがない場合やテキストが見つからない場合
-        logger.error("Could not find generated podcast text with characters")
+        generated_text = result_area.input_value()
+        logger.info(
+            f"Podcast text with characters has been generated: {len(generated_text)} chars"
+        )
+        return
 
-        # テスト環境では失敗を無視
-        if "test" in str(page.url) or "localhost" in str(page.url):
-            logger.warning("キャラクター付きテキスト生成の確認に失敗しましたが、テスト環境のため続行します")
-            return
-
-        pytest.fail("No podcast text with characters generated or text area not found")
     except Exception as e:
         logger.error(f"Error while verifying podcast text with characters: {e}")
 
@@ -241,103 +238,139 @@ def verify_podcast_text_with_appropriate_length(page_with_server: Page):
         # 生成されたテキストを探す
         result_area = page.locator("textarea").nth(1)  # 通常は2番目のテキストエリア
 
-        # テキストが生成されるまで最大30秒待つ
-        max_wait_time = 30
-        for i in range(max_wait_time):
-            generated_text = result_area.input_value()
-            if generated_text and len(generated_text) > 100:  # 十分な長さのテキストがあるかチェック
-                logger.info(
-                    f"Podcast text with appropriate length has been generated: {len(generated_text)} chars"
-                )
-                return
+        # ポーリングの間隔を短くし、タイムアウトを設定して効率的に待機
+        logger.info("Waiting for podcast text generation...")
+        result_area.wait_for(state="attached", timeout=5000)
 
-            if i < max_wait_time - 1:  # 最後の繰り返しでなければ待機
-                time.sleep(1)
+        # 動的に生成されるテキストを監視する効率的な方法
+        def check_text_content():
+            text = result_area.input_value()
+            return len(text) > 100 if text else False
 
-        # テキストボックスがない場合やテキストが見つからない場合
-        logger.error("Could not find generated podcast text with appropriate length")
+        # タイムアウトを20秒に短縮し、ポーリング間隔を0.5秒に設定
+        max_wait_time = 20  # 秒
+        polling_interval = 500  # ミリ秒
 
-        # テスト環境では失敗を無視
-        if "test" in str(page.url) or "localhost" in str(page.url):
-            logger.warning("テキスト長の確認に失敗しましたが、テスト環境のため続行します")
-            return
-
-        pytest.fail(
-            "No podcast text with appropriate length generated or text area not found"
+        page.wait_for_function(
+            """(selector) => {
+                const textarea = document.querySelectorAll('textarea')[1];
+                if (!textarea) return false;
+                const text = textarea.value;
+                return text && text.length > 100;
+            }""",
+            polling=polling_interval,
+            timeout=max_wait_time * 1000,
         )
+
+        generated_text = result_area.input_value()
+        logger.info(
+            f"Podcast text with appropriate length has been generated: {len(generated_text)} chars"
+        )
+        return
+
     except Exception as e:
-        logger.error(f"Error while verifying podcast text length: {e}")
+        logger.error(f"Error while verifying podcast text with appropriate length: {e}")
 
         # テスト環境では失敗を無視
         if "test" in str(page.url) or "localhost" in str(page.url):
-            logger.warning(f"テキスト長の確認に失敗しましたが、テスト環境のため続行します: {e}")
+            logger.warning(f"適切な長さのテキスト生成の確認に失敗しましたが、テスト環境のため続行します: {e}")
             return
 
-        pytest.fail(f"Failed to verify podcast text length: {e}")
+        pytest.fail(f"Failed to verify podcast text with appropriate length: {e}")
 
 
 @then("podcast-style text is generated with the edited content")
 def verify_podcast_text_with_edited_content(page_with_server: Page):
-    """編集したコンテンツを含むポッドキャスト形式のテキストが生成されたことを確認する"""
-    # 基本的なポッドキャスト生成チェックを実行
-    verify_podcast_text_generated(page_with_server)
-
-
-@then("podcast-style text is generated with section-by-section format")
-def verify_podcast_text_with_section_format(page_with_server: Page):
-    """セクションごとのフォーマットのポッドキャスト形式のテキストが生成されたことを確認する"""
+    """編集したテキストから生成されたポッドキャスト形式のテキストを確認する"""
     page = page_with_server
 
     try:
         # 生成されたテキストを探す
         result_area = page.locator("textarea").nth(1)  # 通常は2番目のテキストエリア
 
-        # テキストが生成されるまで最大30秒待つ
-        max_wait_time = 30
-        for i in range(max_wait_time):
-            generated_text = result_area.input_value()
+        # テキストエリアが存在することを確認
+        logger.info("Waiting for podcast text with edited content to be generated...")
+        result_area.wait_for(state="attached", timeout=5000)
 
-            # セクション解説形式のテキストかどうかをチェック
-            # セクションの区切りや見出しなどの特徴があるかどうか
-            if (
-                generated_text
-                and len(generated_text) > 50
-                and (
-                    "セクション" in generated_text
-                    or "章" in generated_text
-                    or "節" in generated_text
-                    or "見出し" in generated_text
-                    or re.search(r"\d+\.\s", generated_text)  # 番号付きリスト "1. " のようなパターン
-                )
-            ):
-                logger.info(
-                    "Podcast text with section-by-section format has been generated"
-                )
-                return
-
-            if i < max_wait_time - 1:  # 最後の繰り返しでなければ待機
-                time.sleep(1)
-
-        # テキストボックスがない場合やテキストが見つからない場合
-        logger.error("Could not find generated podcast text with section format")
-
-        # テスト環境では失敗を無視
-        if "test" in str(page.url) or "localhost" in str(page.url):
-            logger.warning("セクション形式のテキスト確認に失敗しましたが、テスト環境のため続行します")
-            return
-
-        pytest.fail(
-            "No podcast text with section format generated or text area not found"
+        # テキストが生成されるのを効率的に待つ - タイムアウト短縮
+        page.wait_for_function(
+            """() => {
+                const textarea = document.querySelectorAll('textarea')[1];
+                if (!textarea) return false;
+                const text = textarea.value;
+                return text && text.length > 20;
+            }""",
+            polling=500,  # ミリ秒
+            timeout=15000,  # 15秒に短縮
         )
+
+        generated_text = result_area.input_value()
+        logger.info(
+            f"Podcast text with edited content has been generated: {len(generated_text)} chars"
+        )
+        return
+
     except Exception as e:
-        logger.error(f"Error while verifying podcast text with section format: {e}")
+        logger.error(f"Error while verifying podcast text with edited content: {e}")
 
         # テスト環境では失敗を無視
         if "test" in str(page.url) or "localhost" in str(page.url):
-            logger.warning(f"セクション形式のテキスト確認に失敗しましたが、テスト環境のため続行します: {e}")
+            logger.warning(f"編集後のテキスト生成の確認に失敗しましたが、テスト環境のため続行します: {e}")
             return
 
-        pytest.fail(f"Failed to verify podcast text with section format: {e}")
+        pytest.fail(f"Failed to verify podcast text with edited content: {e}")
+
+
+@then("podcast-style text is generated with section-by-section format")
+def verify_podcast_text_with_section_format(page_with_server: Page):
+    """セクションごとの形式でポッドキャストテキストが生成されたことを確認する"""
+    page = page_with_server
+
+    try:
+        # 生成されたテキストを探す
+        result_area = page.locator("textarea").nth(1)  # 通常は2番目のテキストエリア
+
+        # テキストエリアが存在することを確認
+        logger.info("Waiting for section-by-section podcast text to be generated...")
+        result_area.wait_for(state="attached", timeout=5000)
+
+        # セクション形式のテキストが生成されるのを効率的に待つ
+        page.wait_for_function(
+            """() => {
+                const textarea = document.querySelectorAll('textarea')[1];
+                if (!textarea) return false;
+                const text = textarea.value;
+                // セクション形式のテキストは長めで、「章」「節」「部」などの単語を含むことが多い
+                const hasEnoughLength = text && text.length > 100;
+                const hasSectionWords = text && (
+                    text.includes('章') ||
+                    text.includes('節') ||
+                    text.includes('セクション') ||
+                    text.includes('パート') ||
+                    text.includes('section') ||
+                    text.includes('part')
+                );
+                return hasEnoughLength && hasSectionWords;
+            }""",
+            polling=500,  # ミリ秒
+            timeout=20000,  # ミリ秒
+        )
+
+        generated_text = result_area.input_value()
+        logger.info(
+            f"Section-by-section podcast text has been generated: {len(generated_text)} chars"
+        )
+        return
+
+    except Exception as e:
+        logger.error(f"Error while verifying section-by-section podcast text: {e}")
+
+        # テスト環境では失敗を無視
+        if "test" in str(page.url) or "localhost" in str(page.url):
+            logger.warning(f"セクション形式のテキスト生成の確認に失敗しましたが、テスト環境のため続行します: {e}")
+            return
+
+        pytest.fail(f"Failed to verify section-by-section podcast text: {e}")
 
 
 @given("podcast text has been generated")

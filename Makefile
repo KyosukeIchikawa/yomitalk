@@ -212,3 +212,8 @@ clean:
 
 requirements:
 	pip-compile -v requirements.in > requirements.txt
+
+test-parallel: venv
+	@echo "Running tests in parallel with 4 workers..."
+	$(VENV_PYTHON) -m pytest tests/unit/ -n 4
+	$(VENV_PYTHON) -m pytest tests/e2e/test_paper_podcast_generator.py -n 4

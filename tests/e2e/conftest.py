@@ -15,6 +15,7 @@ import pytest
 from playwright.sync_api import sync_playwright
 
 from tests.utils.logger import test_logger as logger
+from tests.utils.port_utils import find_free_port
 
 
 def pytest_configure(config):
@@ -131,26 +132,26 @@ def get_worker_id():
 
 @pytest.fixture(scope="session")
 def server_port():
+    """Get a free port for tests.
+
+    Note: This fixture is session-scoped so we only start one server per test session,
+    which improves performance significantly.
     """
-    並列実行時に各ワーカーに一意のポートを割り当てる
+    # テスト並列実行時に異なるポートを使用するために、workerIDベースでポートを選定
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER", "")
+    base_port = 8000
 
-    Returns:
-        int: サーバーポート番号
-    """
-    global _server_port
-    worker_id = get_worker_id()
+    if worker_id:
+        # workerIDがある場合 (例: "gw0", "gw1", ...) は数字部分を取得
+        try:
+            worker_num = int(worker_id[2:])
+            port = base_port + worker_num
+        except (ValueError, IndexError):
+            port = find_free_port(base_port)
+    else:
+        port = find_free_port(base_port)
 
-    # すでにこのワーカー用のポートが割り当てられていれば再利用
-    if worker_id in _worker_servers and "port" in _worker_servers[worker_id]:
-        return _worker_servers[worker_id]["port"]
-
-    # 新しいポートを割り当て
-    port = get_free_port()
-    if worker_id not in _worker_servers:
-        _worker_servers[worker_id] = {}
-    _worker_servers[worker_id]["port"] = port
-
-    logger.info(f"Worker {worker_id} using port {port} for server")
+    logger.info(f"Using port {port} for tests")
     return port
 
 

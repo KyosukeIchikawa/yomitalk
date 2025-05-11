@@ -54,3 +54,12 @@ disallow_incomplete_defs = true
 module = ["gradio.*", "PyPDF2.*", "pdfplumber.*", "transformers.*", "torch.*", "selenium.*", "ffmpeg.*", "reportlab.*", "webdriver_manager.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
+
+[tool.pytest.ini_options]
+addopts = "--timeout=90 -v --tb=native --durations=10"
+markers = [
+    "slow: marks tests as slow running",
+    "requires_voicevox: marks tests that require VOICEVOX Core",
+    "skip: marks tests to be skipped",
+    "e2e: marks end-to-end tests",
+]
