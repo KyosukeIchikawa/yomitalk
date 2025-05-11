@@ -6,6 +6,7 @@ Builds the Paper Podcast Generator application using Gradio.
 import math
 import os
 import uuid
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -14,6 +15,7 @@ import gradio as gr
 from app.components.audio_generator import VOICEVOX_CORE_AVAILABLE, AudioGenerator
 from app.components.file_uploader import FileUploader
 from app.components.text_processor import TextProcessor
+from app.prompt_manager import DocumentType, PodcastMode
 from app.utils.logger import logger
 
 # Check for temporary file directories
@@ -25,6 +27,23 @@ E2E_TEST_MODE = os.environ.get("E2E_TEST_MODE", "false").lower() == "true"
 
 # Default port
 DEFAULT_PORT = 7860
+
+
+class PodcastModeUI(Enum):
+    """ポッドキャスト生成モードのUIオプション"""
+
+    OVERVIEW = "概要解説"  # standard
+    DETAILED = "詳細解説"  # section_by_section
+
+
+class DocumentTypeUI(Enum):
+    """ドキュメントタイプのUIオプション"""
+
+    PAPER = "論文"  # paper
+    MANUAL = "マニュアル"  # manual
+    MINUTES = "議事録"  # minutes
+    BLOG = "ブログ記事"  # blog
+    GENERAL = "一般ドキュメント"  # general
 
 
 # Application class
@@ -60,11 +79,11 @@ class PaperPodcastApp:
             f"VOICEVOXステータス: {self.check_voicevox_core()}"
         )
 
-        # ポッドキャスト生成モード
-        self.podcast_modes = ["論文の概要解説", "論文の詳細解説"]
-
         # 現在選択されているUIモード
-        self.current_ui_mode = "論文の詳細解説"
+        self.current_ui_mode = PodcastModeUI.DETAILED
+
+        # 現在選択されているドキュメントタイプ
+        self.current_document_type = DocumentTypeUI.PAPER
 
         # 現在選択されているLLMタイプ
         self.current_llm_type = "openai"
@@ -284,7 +303,6 @@ class PaperPodcastApp:
                 self.update_log(usage_msg)
 
             self.update_log("ポッドキャストテキスト生成: ✅ 完了")
-            logger.info(f"Podcast text sample: {text[:200]}...")
             return podcast_text, self.system_log
         except Exception as e:
             error_msg = f"ポッドキャストテキスト生成: ❌ エラー - {str(e)}"
@@ -374,11 +392,9 @@ class PaperPodcastApp:
             """
             gr.HTML(f"<style>{css}</style>")
 
-            with gr.Row():
-                # File upload and text extraction
-                with gr.Column():
-                    gr.Markdown("## ファイルアップロード")
-
+            with gr.Column():
+                gr.Markdown("""## トーク原稿の生成""")
+                with gr.Column(variant="panel"):
                     # サポートしているファイル形式の拡張子を取得
                     supported_extensions = self.file_uploader.get_supported_extensions()
 
@@ -386,28 +402,33 @@ class PaperPodcastApp:
                     file_input = gr.File(
                         file_types=supported_extensions,
                         type="filepath",
-                        label=f"サポートしているファイル形式: {', '.join(supported_extensions)}",
+                        label=f"解説対象ファイルをアップロード（{', '.join(supported_extensions)}）",
                     )
                     extract_btn = gr.Button(
                         "テキストを抽出", variant="primary", interactive=False
                     )
 
-            with gr.Row():
-                # Text processing
-                with gr.Column():
-                    gr.Markdown("## 抽出テキスト（トークの元ネタ）")
                     extracted_text = gr.Textbox(
-                        placeholder="ファイルを選択してテキストを抽出してください...",
+                        label="解説対象テキスト（トークの元ネタ）",
+                        placeholder="ファイルを選択して[テキストを抽出]するか, 直接ここに貼り付けてください...",
                         lines=10,
-                        show_label=False,
                     )
 
-                    # ポッドキャスト生成モード選択
+                with gr.Column(variant="panel"):
+                    gr.Markdown("### プロンプト設定")
+
+                    document_type_radio = gr.Radio(
+                        choices=[dt.value for dt in DocumentTypeUI],
+                        value=self.current_document_type.value,
+                        label="ドキュメントタイプ",
+                        elem_id="document_type_radio_group",
+                    )
+
                     podcast_mode_radio = gr.Radio(
-                        choices=self.get_podcast_modes(),
+                        choices=[mode.value for mode in PodcastModeUI],
                         value=self.get_current_podcast_mode(),
                         label="生成モード",
-                        info="論文の概要解説: 論文全体を要約したポッドキャスト形式の会話を生成します。\n論文の詳細解説: 論文のセクションごとに順を追って解説する会話を生成します。",
+                        elem_id="podcast_mode_radio_group",
                     )
 
                     # キャラクター設定
@@ -425,6 +446,7 @@ class PaperPodcastApp:
                                 label="キャラクター2（初学者役）",
                             )
 
+                with gr.Column(variant="panel"):
                     # LLM API設定タブ
                     llm_tabs = gr.Tabs()
                     with llm_tabs:
@@ -489,11 +511,9 @@ class PaperPodcastApp:
                         "<div>トークン使用状況: まだ生成されていません</div>", elem_id="token-usage-info"
                     )
 
-            with gr.Row():
-                # Audio generation section
-                with gr.Column():
-                    gr.Markdown("## トーク音声")
-
+            with gr.Column():
+                gr.Markdown("## トーク音声の生成")
+                with gr.Column(variant="panel"):
                     # VOICEVOX利用規約チェックボックスをここに配置
                     terms_checkbox = gr.Checkbox(
                         label="VOICEVOX 音源利用規約に同意する",
@@ -747,6 +767,13 @@ class PaperPodcastApp:
                 """,
             )
 
+            # ドキュメントタイプ選択のイベントハンドラ
+            document_type_radio.change(
+                fn=self.set_document_type,
+                inputs=[document_type_radio],
+                outputs=[system_log_display],
+            )
+
             # ポッドキャストモード選択のイベントハンドラ
             podcast_mode_radio.change(
                 fn=self.set_podcast_mode,
@@ -930,25 +957,28 @@ class PaperPodcastApp:
         ポッドキャスト生成モードを設定します。
 
         Args:
-            mode (str): '論文の概要解説' または '論文の詳細解説'
+            mode (str): '概要' または '詳細'
 
         Returns:
             str: 結果メッセージとシステムログ
         """
-        # モードの妥当性チェック
-        if mode not in self.get_podcast_modes():
-            self.update_log(f"ポッドキャストモード: ❌ 不明なモード '{mode}'")
-            return self.system_log
-
         # 現在のUIで選択されているモードを記録
-        self.current_ui_mode = mode
+        self.current_ui_mode = PodcastModeUI(mode)
 
-        # UIモードから内部モードへの変換
-        internal_mode = "standard" if mode == "論文の概要解説" else "section_by_section"
-        logger.info(f"UIからのモード: {mode}, 内部モード: {internal_mode}")
+        # UIのEnumからPromptManagerのEnumに直接変換（名前が同じなので直接対応付け可能）
+        # OVERVIEW -> STANDARD, DETAILED -> SECTION_BY_SECTION
+        enum_mapping = {
+            PodcastModeUI.OVERVIEW: PodcastMode.STANDARD,
+            PodcastModeUI.DETAILED: PodcastMode.SECTION_BY_SECTION,
+        }
+        internal_mode = enum_mapping[self.current_ui_mode]
 
-        # TextProcessorを使ってPodcastModeのEnumに変換
-        success = self.text_processor.set_podcast_mode(internal_mode)
+        logger.info(
+            f"UIからのモード: {self.current_ui_mode.value}, 内部モード: {internal_mode.value}"
+        )
+
+        # TextProcessorを使ってPodcastModeのEnumを設定
+        success = self.text_processor.set_podcast_mode(internal_mode.value)
 
         # ログ記録
         mode_status = "✅" if success else "⚠️"
@@ -962,7 +992,7 @@ class PaperPodcastApp:
         Returns:
             list: 利用可能なモードのリスト
         """
-        return self.podcast_modes
+        return [mode.value for mode in PodcastModeUI]
 
     def get_current_podcast_mode(self):
         """
@@ -972,8 +1002,8 @@ class PaperPodcastApp:
             str: 現在のポッドキャストモード
         """
         if not hasattr(self, "current_ui_mode"):
-            self.current_ui_mode = "論文の詳細解説"
-        return self.current_ui_mode
+            self.current_ui_mode = PodcastModeUI.DETAILED
+        return self.current_ui_mode.value
 
     def update_token_usage_display(self) -> str:
         """
@@ -1020,6 +1050,36 @@ class PaperPodcastApp:
             gr.Button: 更新されたボタン
         """
         return gr.Button(value="音声を生成", variant="primary", interactive=checked)
+
+    def set_document_type(self, doc_type: str) -> str:
+        """
+        ドキュメントタイプを設定します。
+
+        Args:
+            doc_type (str): 'マニュアル'、'論文'などのUI表示名
+
+        Returns:
+            tuple: (新しいポッドキャストモードのリスト, システムログ)
+        """
+        self.current_document_type = DocumentTypeUI(doc_type)
+
+        mapping = {
+            DocumentTypeUI.PAPER: DocumentType.PAPER,
+            DocumentTypeUI.MANUAL: DocumentType.MANUAL,
+            DocumentTypeUI.MINUTES: DocumentType.MINUTES,
+            DocumentTypeUI.BLOG: DocumentType.BLOG,
+            DocumentTypeUI.GENERAL: DocumentType.GENERAL,
+        }
+        internal_doc_type = mapping[self.current_document_type]
+
+        # TextProcessorを使ってドキュメントタイプを設定
+        success = self.text_processor.set_document_type(internal_doc_type)
+
+        # ログ記録
+        status = "✅" if success else "⚠️"
+        self.update_log(f"ドキュメントタイプ: {status} '{doc_type}' に設定しました")
+
+        return self.system_log
 
 
 # Create and launch application instance

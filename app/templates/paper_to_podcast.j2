@@ -1,16 +1,16 @@
 {% import 'common_podcast_utils.j2' as utils %}
 
-後述の論文テキストに基づいた、「{{ character1 }}」と「{{ character2 }}」の間の日本語会話形式ポッドキャストテキストを生成してください。
-論文全体を俯瞰するようなポッドキャストにしてください。
+後述の{{ document_type }}テキストに基づいた、「{{ character1 }}」と「{{ character2 }}」の間の日本語会話形式ポッドキャストテキストを生成してください。
+{{ document_type }}全体を俯瞰するようなポッドキャストにしてください。
 
-{{ utils.podcast_common_macro(character1, character2) }}
+{{ utils.podcast_common_macro(character1, character2, document_type) }}
 
 ## ポッドキャストの流れ
-1. {{ character1 }}が今回紹介する論文のタイトルを紹介する
+1. {{ character1 }}が今回紹介する{{ document_type }}のタイトルを紹介する（タイトルが不明であれば挨拶のみで良い）
 2. {{ character2 }}がそれに対して反応する
-3. {{ character1 }}が今回紹介する論文の全体像を浅く紹介し、{{ character2 }}が感想を簡単に述べる
-4. 論文全体について俯瞰した会話をする（会話の進行は基本的に{{ character1 }}がリードする）
+3. {{ character1 }}が今回紹介する{{ document_type }}の全体像を浅く紹介し、{{ character2 }}が感想を簡単に述べる
+4. {{ document_type }}全体について俯瞰した会話をする（会話の進行は基本的に{{ character1 }}がリードする）
 5. 最後に重要なポイントを振り返って簡潔にまとめ、各キャラクターが感想を述べて終了する
 
-## 解説対象の論文テキスト
+## 解説対象の{{ document_type }}テキスト
 {{ paper_text }}

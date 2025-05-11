@@ -1,20 +1,14 @@
-"""Module providing text processing functionality.
+"""Text processor module for podcast generation.
 
-Functions to process, summarize, and convert research paper text to podcast format.
+This module provides text preprocessing and API integrations.
 """
 
-import logging
 from typing import Dict, List
 
 from app.models.gemini_model import GeminiModel
 from app.models.openai_model import OpenAIModel
-from app.prompt_manager import PodcastMode, PromptManager
-
-# Removed transformers import (not used)
-# from transformers import Pipeline, pipeline
-
-# ロガーの設定
-logger = logging.getLogger(__name__)
+from app.prompt_manager import DocumentType, PodcastMode, PromptManager
+from app.utils.logger import logger
 
 
 class TextProcessor:
@@ -115,21 +109,25 @@ class TextProcessor:
         ポッドキャスト生成モードを設定します。
 
         Args:
-            mode (str): 'standard' または 'section_by_section'
+            mode (str): 設定するモード名の文字列、"standard"または"section_by_section"
 
         Returns:
             bool: モードが正常に設定されたかどうか
         """
-        # 文字列からPodcastModeへの変換
-        if mode == "standard":
-            enum_mode = PodcastMode.STANDARD
-        elif mode == "section_by_section":
-            enum_mode = PodcastMode.SECTION_BY_SECTION
-        else:
-            logger.error(f"無効なポッドキャストモード: {mode}")
-            return False
+        try:
+            # 文字列からEnumへの変換
+            if mode == "standard":
+                enum_mode = PodcastMode.STANDARD
+            elif mode == "section_by_section":
+                enum_mode = PodcastMode.SECTION_BY_SECTION
+            else:
+                logger.warning(f"無効なポッドキャストモード: {mode}")
+                return False
 
-        return self.prompt_manager.set_podcast_mode(enum_mode)
+            return self.prompt_manager.set_podcast_mode(enum_mode)
+        except TypeError as e:
+            logger.warning(f"ポッドキャストモード設定エラー: {e}")
+            return False
 
     def get_podcast_mode(self) -> PodcastMode:
         """
@@ -145,47 +143,91 @@ class TextProcessor:
         キャラクターマッピングを設定します。
 
         Args:
-            character1 (str): Character1に割り当てるキャラクターの名前
-            character2 (str): Character2に割り当てるキャラクターの名前
+            character1 (str): 1人目のキャラクター名
+            character2 (str): 2人目のキャラクター名
 
         Returns:
             bool: 設定が成功したかどうか
         """
-        return self.prompt_manager.set_character_mapping(character1, character2)
+        # 明示的に戻り値の型を指定
+        success: bool = self.prompt_manager.set_character_mapping(
+            character1, character2
+        )
+        return success
 
-    def get_character_mapping(self) -> dict:
+    def get_character_mapping(self) -> Dict[str, str]:
         """
         現在のキャラクターマッピングを取得します。
 
         Returns:
             dict: 現在のキャラクターマッピング
         """
-        return self.prompt_manager.get_character_mapping()
+        # 明示的に戻り値の型を指定
+        char_map: Dict[str, str] = self.prompt_manager.get_character_mapping()
+        return char_map
 
-    def get_valid_characters(self) -> list:
+    def get_valid_characters(self) -> List[str]:
         """
         有効なキャラクターのリストを取得します。
 
         Returns:
             list: 有効なキャラクター名のリスト
         """
-        return self.prompt_manager.get_valid_characters()
+        # 明示的に戻り値の型を指定
+        chars: List[str] = self.prompt_manager.get_valid_characters()
+        return chars
+
+    def set_document_type(self, doc_type: DocumentType) -> bool:
+        """
+        ドキュメントタイプを設定します。
+
+        Args:
+            doc_type (str): 設定するドキュメントタイプの文字列
+                           "paper", "blog", "minutes", "manual", "general"のいずれか
+
+        Returns:
+            bool: 設定が成功したかどうか
+        """
+        # 明示的に戻り値の型を指定
+        success: bool = self.prompt_manager.set_document_type(doc_type)
+        return success
+
+    def get_document_type(self) -> DocumentType:
+        """
+        現在のドキュメントタイプを取得します。
+
+        Returns:
+            DocumentType: 現在のドキュメントタイプ
+        """
+        return self.prompt_manager.get_document_type()
+
+    def get_document_type_name(self) -> str:
+        """
+        現在のドキュメントタイプの日本語名を取得します。
+
+        Returns:
+            str: ドキュメントタイプの日本語名
+        """
+        return self.prompt_manager.get_document_type_name()
 
     def generate_podcast_conversation(self, paper_text: str) -> str:
         """
-        論文テキストからポッドキャスト形式の会話テキストを生成します。
+        テキストからポッドキャスト形式の会話テキストを生成します。
 
         Args:
-            paper_text (str): 論文テキスト
+            paper_text (str): ドキュメントのテキスト
 
         Returns:
             str: 会話形式のポッドキャストテキスト
         """
         if not paper_text.strip():
-            return "Error: No paper text provided."
+            return "Error: No text provided."
 
         # プロンプトマネージャーを使用してプロンプトを生成
         prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
+
+        # プロンプトの先頭何文字かをログに記録
+        logger.info(f"生成されたプロンプト: {prompt[:100]}")
 
         # 現在選択されているAPIに基づいてテキスト生成
         if self.current_api_type == "openai" and self.use_openai:

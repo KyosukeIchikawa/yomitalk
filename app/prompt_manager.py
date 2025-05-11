@@ -1,270 +1,329 @@
-"""Prompt management module.
+"""Prompt manager module for podcast generator.
 
-This module provides functionality to manage prompt templates.
-It includes the PromptManager class which handles Jinja2 templates and generation.
+This module provides templates and utilities for generating podcast conversations.
 """
 
+import os
+import shutil
+import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Optional
 
 import jinja2
 
 from app.utils.logger import logger
 
 
+class DocumentType(Enum):
+    """ドキュメントタイプのEnum"""
+
+    PAPER = "paper"  # 論文
+    MANUAL = "manual"  # マニュアル
+    MINUTES = "minutes"  # 議事録
+    BLOG = "blog"  # ブログ記事
+    GENERAL = "general"  # 一般文書
+
+
 class PodcastMode(Enum):
-    """ポッドキャスト生成モードを表すEnum。"""
+    """ポッドキャスト生成モードのEnum"""
 
     STANDARD = "standard"  # 論文の概要解説
-    SECTION_BY_SECTION = "section_by_section"  # 論文の詳細解説
+    SECTION_BY_SECTION = "section_by_section"  # 論文の詳細解説（セクションごと）
 
 
 class PromptManager:
-    """プロンプトテンプレートを管理するクラス。
+    """Manages templates and prompt generation for podcast conversations."""
 
-    このクラスは、ポッドキャスト生成用のプロンプトテンプレートを管理します。
-    Jinja2ライブラリを使用して、テンプレートの管理と変数の置換を行います。
-    """
-
-    def __init__(self) -> None:
-        """Initialize the PromptManager class."""
-        # テンプレートディレクトリのパス
-        self.template_dir = Path("app/templates")
-
-        # Jinja2環境の設定
-        self.jinja_env = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(self.template_dir),
-            trim_blocks=True,
-            lstrip_blocks=True,
-        )
-
-        # デフォルトテンプレートのパス
-        self.default_template_path = "paper_to_podcast.j2"
-        # 論文の詳細解説用テンプレートのパス
-        self.section_by_section_template_path = "section_by_section.j2"
-        # 共通ユーティリティのパス
-        self.common_utils_path = "common_podcast_utils.j2"
-
-        # 現在のモード（標準またはセクション解説）
-        self.current_mode = PodcastMode.STANDARD
-
-        # キャラクターマッピング
-        self.character_mapping = {"Character1": "四国めたん", "Character2": "ずんだもん"}
-
-        # 有効なキャラクターのリスト
-        self.valid_characters = ["ずんだもん", "四国めたん", "九州そら", "中国うさぎ", "中部つるぎ"]
-
-        # 初期化時にテンプレートファイルの存在を確認
-        self._check_template_files()
-
-    def _check_template_files(self) -> None:
-        """
-        テンプレートファイルの存在を確認します。
-        初期化時に呼び出され、警告ログを出力します。
-        """
-        # デフォルトテンプレートの確認
-        default_path = self.template_dir / self.default_template_path
-        if not default_path.exists():
-            logger.warning(f"デフォルトテンプレートファイルが見つかりません: {default_path}")
-        else:
-            logger.info(f"デフォルトテンプレートファイル確認: {default_path}")
-
-        # 論文の詳細解説用テンプレートの確認
-        section_path = self.template_dir / self.section_by_section_template_path
-        if not section_path.exists():
-            logger.warning(f"論文の詳細解説用テンプレートファイルが見つかりません: {section_path}")
-        else:
-            logger.info(f"論文の詳細解説用テンプレートファイル確認: {section_path}")
-
-        # 共通ユーティリティテンプレートの確認
-        common_path = self.template_dir / self.common_utils_path
-        if not common_path.exists():
-            logger.warning(f"共通ユーティリティテンプレートファイルが見つかりません: {common_path}")
-        else:
-            logger.info(f"共通ユーティリティテンプレートファイル確認: {common_path}")
-
-    def set_podcast_mode(self, mode: PodcastMode) -> bool:
-        """ポッドキャスト生成モードを設定します。
+    def __init__(
+        self,
+        template_dir: str = "app/templates",
+        char_mapping: Optional[Dict[str, str]] = None,
+    ):
+        """Initialize the PromptManager.
 
         Args:
-            mode (PodcastMode): PodcastMode.STANDARDまたはPodcastMode.SECTION_BY_SECTION
+            template_dir (str): Directory containing the templates.
+            char_mapping (Dict[str, str], optional): Character mapping.
+                Defaults to None.
+        """
+        self.template_dir = Path(template_dir)
+        self.current_document_type = DocumentType.PAPER
+        self.current_mode = PodcastMode.STANDARD
+
+        self.VALID_CHARACTERS = [
+            "四国めたん",
+            "ずんだもん",
+            "九州そら",
+            "中国うさぎ",
+            "中部つるぎ",
+        ]
+
+        # デフォルトのキャラクターマッピング
+        self.char_mapping = (
+            char_mapping
+            if char_mapping is not None
+            else {"Character1": "四国めたん", "Character2": "ずんだもん"}
+        )
+
+        # テンプレートマッピング：各モードに対応するテンプレートファイル
+        self.template_mapping = {
+            PodcastMode.STANDARD: "paper_to_podcast.j2",
+            PodcastMode.SECTION_BY_SECTION: "section_by_section.j2",
+        }
+
+        # テンプレートファイルの存在を確認
+        self._check_template_files()
+
+    def _check_template_files(self):
+        """Check if template files exist."""
+        # 各モードのテンプレートファイルの存在を確認
+        for mode, template_file in self.template_mapping.items():
+            template_path = self.template_dir / template_file
+            if not template_path.exists():
+                logger.warning(
+                    f"テンプレートファイルが見つかりません: {template_path} (モード: {mode.value})"
+                )
+            else:
+                logger.info(f"テンプレートファイル確認: {template_path} (モード: {mode.value})")
+
+        # 共通ユーティリティテンプレートの存在を確認
+        utils_template = self.template_dir / "common_podcast_utils.j2"
+        if not utils_template.exists():
+            logger.warning(f"共通ユーティリティテンプレートファイルが見つかりません: {utils_template}")
+        else:
+            logger.info(f"共通ユーティリティテンプレートファイル確認: {utils_template}")
+
+    def get_valid_characters(self):
+        """Get the list of valid characters.
 
         Returns:
-            bool: モードが正常に設定されたかどうか
+            list: List of valid character names.
+        """
+        return self.VALID_CHARACTERS
+
+    def set_character_mapping(self, char1: str, char2: str):
+        """Set character mapping.
+
+        Args:
+            char1 (str): Character1 name.
+            char2 (str): Character2 name.
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
+        if char1 not in self.VALID_CHARACTERS or char2 not in self.VALID_CHARACTERS:
+            logger.warning(
+                f"無効なキャラクター名: char1={char1}, char2={char2}、有効なキャラクター: {self.VALID_CHARACTERS}"
+            )
+            return False
+
+        self.char_mapping = {"Character1": char1, "Character2": char2}
+        return True
+
+    def generate_podcast_conversation(self, paper_text: str) -> str:
+        """Generate podcast conversation from paper text.
+
+        Args:
+            paper_text (str): The paper text to process.
+
+        Returns:
+            str: Generated conversation in podcast format.
+        """
+        try:
+            template_content = self.get_template_content()
+            return self._render_template(
+                template_content, paper_text=paper_text, char_mapping=self.char_mapping
+            )
+        except Exception as e:
+            logger.error(f"会話生成エラー: {e}")
+            return f"エラー: 会話の生成に失敗しました: {e}"
+
+    def get_template_content(self) -> str:
+        """Get template content based on the current mode.
+
+        Returns:
+            str: Template content as string.
+        """
+        # 現在のモードに基づいてテンプレートファイルを選択
+        template_file = self.template_mapping.get(self.current_mode)
+
+        if not template_file:
+            logger.warning(
+                f"モード '{self.current_mode.value}' に対応するテンプレートが見つかりません。デフォルトを使用します。"
+            )
+            template_file = self.template_mapping[PodcastMode.STANDARD]
+
+        logger.info(f"テンプレートファイルパス: {self.template_dir / template_file}")
+        logger.info(
+            f"使用するドキュメントタイプ: {self.current_document_type.name}, "
+            f"モード: {self.current_mode.name}, "
+            f"テンプレート: {template_file}"
+        )
+
+        try:
+            with open(self.template_dir / template_file, "r", encoding="utf-8") as f:
+                template_content = f.read()
+                logger.info(f"テンプレート長: {len(template_content)} 文字")
+                return template_content
+        except FileNotFoundError:
+            logger.error(f"テンプレートファイルが見つかりません: {template_file}")
+            # 最低限の情報を含むフォールバックテンプレート
+            return (
+                "Character1: こんにちは、今日は{{document_type}}の解説をします。\n"
+                "Character2: よろしくお願いします。\n"
+                "Character1: では始めましょう。"
+            )
+
+    def _render_template(
+        self, template_content: str, paper_text: str, char_mapping: Dict[str, str]
+    ) -> str:
+        """Render template with jinja2.
+
+        Args:
+            template_content (str): Template content.
+            paper_text (str): Paper text.
+            char_mapping (Dict[str, str]): Character mapping.
+
+        Returns:
+            str: Rendered template.
+
+        Raises:
+            jinja2.exceptions.TemplateError: On template rendering error.
+        """
+        # 一時ディレクトリを作成
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # 一時ディレクトリに templates サブディレクトリを作成
+            temp_templates_dir = os.path.join(temp_dir, "templates")
+            os.makedirs(temp_templates_dir, exist_ok=True)
+
+            # プロジェクトのテンプレートディレクトリから共通テンプレートをコピー
+            common_utils_src = self.template_dir / "common_podcast_utils.j2"
+            if common_utils_src.exists():
+                common_utils_dest = os.path.join(
+                    temp_templates_dir, "common_podcast_utils.j2"
+                )
+                shutil.copy(common_utils_src, common_utils_dest)
+
+            # テンプレートコンテンツをファイルとして保存
+            with open(
+                os.path.join(temp_templates_dir, "template.j2"), "w", encoding="utf-8"
+            ) as f:
+                f.write(template_content)
+
+            # Jinja2環境をセットアップ
+            env = jinja2.Environment(loader=jinja2.FileSystemLoader(temp_templates_dir))
+
+            # テンプレートをロード
+            template = env.get_template("template.j2")
+
+            # レンダリングパラメータを準備
+            render_params = {
+                "paper_text": paper_text,
+                "character1": char_mapping["Character1"],
+                "character2": char_mapping["Character2"],
+                "document_type": self.get_document_type_name(),
+            }
+
+            # テンプレートをレンダリング
+            rendered_text: str = template.render(**render_params)
+            return rendered_text
+        finally:
+            # 一時ディレクトリを削除
+            shutil.rmtree(temp_dir)
+
+    def convert_abstract_to_real_characters(self, text: str) -> str:
+        """Convert abstract character names to real character names.
+
+        Args:
+            text (str): Text with abstract character names.
+
+        Returns:
+            str: Text with real character names.
+        """
+        result = text
+
+        # 半角コロンの置換
+        result = result.replace("Character1:", f"{self.char_mapping['Character1']}:")
+        result = result.replace("Character2:", f"{self.char_mapping['Character2']}:")
+
+        # 全角コロンの置換
+        result = result.replace("Character1：", f"{self.char_mapping['Character1']}：")
+        result = result.replace("Character2：", f"{self.char_mapping['Character2']}：")
+
+        return result
+
+    def set_document_type(self, document_type: DocumentType) -> bool:
+        """Set document type.
+
+        Args:
+            document_type (DocumentType): Document type to set.
+
+        Returns:
+            bool: True if successful, False otherwise.
+
+        Raises:
+            TypeError: If document_type is not a DocumentType instance.
+        """
+        self.current_document_type = document_type
+        return True
+
+    def get_document_type(self) -> DocumentType:
+        """Get current document type.
+
+        Returns:
+            DocumentType: Current document type.
+        """
+        return self.current_document_type
+
+    def get_document_type_name(self) -> str:
+        """現在のドキュメントタイプの日本語名を取得します。
+
+        Returns:
+            str: ドキュメントタイプの日本語名
+        """
+        document_type_names = {
+            DocumentType.PAPER: "論文",
+            DocumentType.MANUAL: "マニュアル",
+            DocumentType.MINUTES: "議事録",
+            DocumentType.BLOG: "ブログ記事",
+            DocumentType.GENERAL: "一般文書",
+        }
+        return document_type_names.get(self.current_document_type, "論文")
+
+    def set_podcast_mode(self, mode: PodcastMode) -> bool:
+        """Set podcast mode.
+
+        Args:
+            mode (PodcastMode): Podcast mode to set.
+
+        Returns:
+            bool: True if successful, False otherwise.
+
+        Raises:
+            TypeError: If mode is not a PodcastMode instance.
         """
         if not isinstance(mode, PodcastMode):
-            return False
+            raise TypeError(
+                f"mode must be an instance of PodcastMode, not {type(mode)}"
+            )
 
         self.current_mode = mode
         return True
 
     def get_podcast_mode(self) -> PodcastMode:
-        """現在のポッドキャスト生成モードを取得します。
+        """Get current podcast mode.
 
         Returns:
-            PodcastMode: 現在のモード
+            PodcastMode: Current podcast mode.
         """
         return self.current_mode
 
-    def get_template_content(self) -> str:
-        """現在のプロンプトテンプレートを取得します。
-
-        Returns:
-            str: 現在のプロンプトテンプレート（モードに応じたデフォルト）
-        """
-        try:
-            # モードに応じたテンプレートファイルを選択
-            template_path = (
-                self.section_by_section_template_path
-                if self.current_mode == PodcastMode.SECTION_BY_SECTION
-                else self.default_template_path
-            )
-
-            # ファイルの存在を確認
-            full_path = self.template_dir / template_path
-            logger.info(f"テンプレートファイルパス: {full_path}")
-
-            if not full_path.exists():
-                logger.error(f"テンプレートファイルが見つかりません: {full_path}")
-                # 論文の詳細解説でファイルが見つからない場合は論文の概要解説のテンプレートを使用
-                if (
-                    self.current_mode == PodcastMode.SECTION_BY_SECTION
-                    and (self.template_dir / self.default_template_path).exists()
-                ):
-                    logger.warning("代わりに論文の概要解説のテンプレートを使用します")
-                    full_path = self.template_dir / self.default_template_path
-                else:
-                    return "エラー: テンプレートファイルが見つかりません。"
-
-            # ファイルを読み込み
-            with open(full_path, "r", encoding="utf-8") as f:
-                template_content = f.read()
-
-            logger.info(f"使用するモード: {self.current_mode.name}, テンプレート: {template_path}")
-            return template_content
-
-        except Exception as e:
-            logger.error(f"テンプレート取得エラー: {e}")
-            return f"エラー: テンプレートの取得に失敗しました: {e}"
-
-    def set_character_mapping(self, character1: str, character2: str) -> bool:
-        """
-        キャラクターマッピングを設定します。
-
-        Args:
-            character1 (str): Character1に割り当てるキャラクターの名前
-            character2 (str): Character2に割り当てるキャラクターの名前
-
-        Returns:
-            bool: 設定が成功したかどうか
-        """
-        if (
-            character1 not in self.valid_characters
-            or character2 not in self.valid_characters
-        ):
-            return False
-
-        self.character_mapping["Character1"] = character1
-        self.character_mapping["Character2"] = character2
-        return True
-
     def get_character_mapping(self) -> Dict[str, str]:
-        """
-        現在のキャラクターマッピングを取得します。
+        """Get character mapping.
 
         Returns:
-            dict: 現在のキャラクターマッピング
+            Dict[str, str]: Current character mapping.
         """
-        return self.character_mapping
-
-    def get_valid_characters(self) -> List[str]:
-        """
-        有効なキャラクターのリストを取得します。
-
-        Returns:
-            list: 有効なキャラクター名のリスト
-        """
-        return self.valid_characters
-
-    def convert_abstract_to_real_characters(self, text: str) -> str:
-        """
-        抽象的なキャラクター名（Character1, Character2）を実際のキャラクター名に変換します。
-
-        Args:
-            text (str): 変換するテキスト
-
-        Returns:
-            str: 変換後のテキスト
-        """
-        result = text
-        for abstract, real in self.character_mapping.items():
-            result = result.replace(f"{abstract}:", f"{real}:")
-            result = result.replace(f"{abstract}：", f"{real}：")  # 全角コロンも対応
-        return result
-
-    def generate_podcast_conversation(self, paper_text: str) -> str:
-        """論文テキストからポッドキャスト形式の会話テキストを生成します。
-
-        Jinja2テンプレートを使用して、論文テキストをポッドキャスト形式の会話に変換します。
-        テンプレートには論文テキストとキャラクター名が渡されます。
-
-        Args:
-            paper_text (str): 論文テキスト
-
-        Returns:
-            str: 会話形式のポッドキャストテキスト
-        """
-        if not paper_text:
-            return "Error: Paper text is empty."
-
-        try:
-            character1 = self.character_mapping["Character1"]
-            character2 = self.character_mapping["Character2"]
-
-            try:
-                # モードに応じたテンプレートを使用
-                template_path = (
-                    self.section_by_section_template_path
-                    if self.current_mode == PodcastMode.SECTION_BY_SECTION
-                    else self.default_template_path
-                )
-                logger.info(
-                    f"モード '{self.current_mode.name}' のテンプレート '{template_path}' を使用します"
-                )
-
-                # ファイルの存在を確認
-                if not (self.template_dir / template_path).exists():
-                    logger.error(f"テンプレートファイルが見つかりません: {template_path}")
-                    if (
-                        self.current_mode == PodcastMode.SECTION_BY_SECTION
-                        and (self.template_dir / self.default_template_path).exists()
-                    ):
-                        # 論文の詳細解説でファイルが見つからない場合は論文の概要解説のテンプレートを使用
-                        logger.warning("代わりに論文の概要解説のテンプレートを使用します")
-                        template_path = self.default_template_path
-                    else:
-                        raise FileNotFoundError(f"テンプレートファイルが見つかりません: {template_path}")
-
-                # テンプレートを取得
-                template = self.jinja_env.get_template(template_path)
-            except Exception as template_error:
-                logger.error(f"テンプレート取得エラー: {template_error}")
-                return f"Error: テンプレートの取得に失敗しました: {template_error}"
-
-            # テンプレートをレンダリング
-            try:
-                prompt: str = template.render(
-                    paper_text=paper_text,
-                    character1=character1,
-                    character2=character2,
-                )
-                return prompt
-            except Exception as render_error:
-                logger.error(f"テンプレートレンダリングエラー: {render_error}")
-                return f"Error: テンプレートのレンダリングに失敗しました: {render_error}"
-
-        except Exception as e:
-            logger.error(f"ポッドキャスト会話生成エラー: {e}")
-            error_message: str = f"Error generating podcast conversation: {e}"
-            return error_message
+        return self.char_mapping

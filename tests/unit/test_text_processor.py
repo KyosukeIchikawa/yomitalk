@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from app.components.text_processor import TextProcessor
-from app.prompt_manager import PodcastMode
+from app.prompt_manager import DocumentType, PodcastMode
 
 
 class TestTextProcessor(unittest.TestCase):
@@ -139,16 +139,15 @@ class TestTextProcessor(unittest.TestCase):
 
     def test_set_podcast_mode(self):
         """Test setting podcast mode."""
+        # 正常系のテスト - 有効なモード
         self.mock_prompt_manager.set_podcast_mode.return_value = True
-
-        # Enumに変換されるので、内部で使用されるEnumの値をチェック
         result = self.text_processor.set_podcast_mode("section_by_section")
         self.assertTrue(result)
         self.mock_prompt_manager.set_podcast_mode.assert_called_with(
             PodcastMode.SECTION_BY_SECTION
         )
 
-        # "standard"モードの場合もテスト
+        # 正常系のテスト - standardモード
         self.mock_prompt_manager.set_podcast_mode.reset_mock()
         result = self.text_processor.set_podcast_mode("standard")
         self.assertTrue(result)
@@ -156,8 +155,18 @@ class TestTextProcessor(unittest.TestCase):
             PodcastMode.STANDARD
         )
 
-        # 無効なモードの場合
+        # エラー系のテスト - PromptManagerがTypeErrorをスロー
         self.mock_prompt_manager.set_podcast_mode.reset_mock()
+        self.mock_prompt_manager.set_podcast_mode.side_effect = TypeError(
+            "mode must be an instance of PodcastMode"
+        )
+        result = self.text_processor.set_podcast_mode("standard")
+        self.assertFalse(result)
+        self.mock_prompt_manager.set_podcast_mode.assert_called_once()
+
+        # エラー系のテスト - 無効なモード
+        self.mock_prompt_manager.set_podcast_mode.reset_mock()
+        self.mock_prompt_manager.set_podcast_mode.side_effect = None
         result = self.text_processor.set_podcast_mode("invalid_mode")
         self.assertFalse(result)
         self.mock_prompt_manager.set_podcast_mode.assert_not_called()
@@ -488,3 +497,31 @@ class TestTextProcessor(unittest.TestCase):
         self.assertIn("四国めたん", characters)
         self.assertEqual(5, len(characters))
         self.mock_prompt_manager.get_valid_characters.assert_called_once()
+
+    def test_set_document_type(self):
+        """Test setting document type."""
+        # 正常系のテスト - 有効なドキュメントタイプ
+        self.mock_prompt_manager.set_document_type.return_value = True
+        result = self.text_processor.set_document_type(DocumentType.PAPER)
+        self.assertTrue(result)
+
+        # 正常系のテスト - blog
+        self.mock_prompt_manager.set_document_type.reset_mock()
+        result = self.text_processor.set_document_type(DocumentType.BLOG)
+        self.assertTrue(result)
+
+    def test_get_document_type(self):
+        """Test getting document type."""
+        from app.prompt_manager import DocumentType
+
+        self.mock_prompt_manager.get_document_type.return_value = DocumentType.MANUAL
+        result = self.text_processor.get_document_type()
+        self.assertEqual(result, DocumentType.MANUAL)
+        self.mock_prompt_manager.get_document_type.assert_called_once()
+
+    def test_get_document_type_name(self):
+        """Test getting document type name."""
+        self.mock_prompt_manager.get_document_type_name.return_value = "論文"
+        result = self.text_processor.get_document_type_name()
+        self.assertEqual(result, "論文")
+        self.mock_prompt_manager.get_document_type_name.assert_called_once()

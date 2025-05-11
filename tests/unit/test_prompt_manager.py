@@ -8,8 +8,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import jinja2
-
 from app.prompt_manager import PodcastMode, PromptManager
 
 
@@ -23,7 +21,7 @@ class TestPromptManager(unittest.TestCase):
         self.template_dir = Path(self.temp_dir) / "templates"
         self.template_dir.mkdir(exist_ok=True)
 
-        # オリジナルのテンプレートディレクトリをバックアップ
+        # オリジナルのテンプレートディレクトリを参照
         self.original_template_dir = Path("app/templates")
 
         # デフォルトのプロンプトテンプレートをテスト用ディレクトリにコピー
@@ -40,6 +38,14 @@ class TestPromptManager(unittest.TestCase):
                 f.write(
                     "Test template for {{ character1 }} and {{ character2 }}: {{ paper_text }}"
                 )
+
+        # セクション分割テンプレートも作成
+        with open(
+            self.template_dir / "section_by_section.j2", "w", encoding="utf-8"
+        ) as f:
+            f.write(
+                "Section by section template for {{ character1 }} and {{ character2 }}: {{ paper_text }}"
+            )
 
         # 共通ユーティリティテンプレートを作成
         with open(
@@ -68,7 +74,7 @@ class TestPromptManager(unittest.TestCase):
 {% endif %}
 {% endmacro %}
 
-{% macro podcast_common_macro(character1, character2) %}
+{% macro podcast_common_macro(character1, character2, document_type="論文") %}
 Character speech patterns:
 - {{ character1 }}:
 {% if character1 %}
@@ -83,21 +89,10 @@ Character speech patterns:
             )
 
         # テスト用のPromptManagerインスタンスを作成
-        self.prompt_manager = PromptManager()
-
-        # template_dirを一時的に変更
-        self._original_template_dir = self.prompt_manager.template_dir
-        self.prompt_manager.template_dir = self.template_dir
-
-        # Jinja2環境を再初期化
-        self.prompt_manager.jinja_env = self.prompt_manager.jinja_env.overlay(
-            loader=jinja2.FileSystemLoader(self.template_dir)
-        )
+        self.prompt_manager = PromptManager(template_dir=str(self.template_dir))
 
     def tearDown(self):
         """Clean up after tests."""
-        # 元のパスに戻す
-        self.prompt_manager.template_dir = self._original_template_dir
         # テンポラリディレクトリを削除
         shutil.rmtree(self.temp_dir)
 
@@ -120,14 +115,10 @@ Character speech patterns:
 
         # モードを変更して再テスト
         self.prompt_manager.set_podcast_mode(PodcastMode.SECTION_BY_SECTION)
-        # section_by_sectionモードのテンプレートが存在する場合はそれを使用
-        if (
-            self.template_dir / self.prompt_manager.section_by_section_template_path
-        ).exists():
-            updated_prompt = self.prompt_manager.generate_podcast_conversation(
-                paper_text
-            )
-            self.assertIn(paper_text, updated_prompt)
+        # 新しいモードで再度プロンプトを生成してテスト
+        section_prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
+        self.assertIn(paper_text, section_prompt)
+        self.assertIn("Section by section", section_prompt)
 
     def test_set_and_get_character_mapping(self):
         """Test setting and getting character mapping."""
@@ -179,13 +170,7 @@ Character speech patterns:
 
     def test_character_speech_patterns(self):
         """Test character speech patterns are available through the common utils file."""
-        # 共通ユーティリティのパスが設定されていることを確認
-        self.assertIsNotNone(self.prompt_manager.common_utils_path)
-        self.assertEqual(
-            "common_podcast_utils.j2", self.prompt_manager.common_utils_path
-        )
-
-        # ファイルの存在を確認
+        # 共通ユーティリティファイルの存在を確認
         common_utils_path = self.template_dir / "common_podcast_utils.j2"
         self.assertTrue(common_utils_path.exists(), "共通ユーティリティファイルが存在しません")
 
