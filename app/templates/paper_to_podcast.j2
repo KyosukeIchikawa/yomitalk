@@ -6,11 +6,19 @@
 {{ utils.podcast_common_macro(character1, character2, document_type) }}
 
 ## ポッドキャストの流れ
+{% if document_type == "議事録" %}
+1. {{ character1 }}が今回紹介する会議の議事録について紹介する（会議名が不明であれば挨拶のみで良い）
+2. {{ character2 }}がそれに対して反応する
+3. {{ character1 }}が会議の概要（目的、参加者、主な議題など）を俯瞰的に紹介し、{{ character2 }}が感想を簡単に述べる
+4. 議事録全体について要点を押さえた会話をする（会議の背景や文脈を含め、{{ character1 }}がリードする）
+5. 最後に重要な決定事項や次のアクションを振り返って簡潔にまとめ、各キャラクターが会議の成果や意義について感想を述べて終了する
+{% else %}
 1. {{ character1 }}が今回紹介する{{ document_type }}のタイトルを紹介する（タイトルが不明であれば挨拶のみで良い）
 2. {{ character2 }}がそれに対して反応する
 3. {{ character1 }}が今回紹介する{{ document_type }}の全体像を浅く紹介し、{{ character2 }}が感想を簡単に述べる
 4. {{ document_type }}全体について俯瞰した会話をする（会話の進行は基本的に{{ character1 }}がリードする）
 5. 最後に重要なポイントを振り返って簡潔にまとめ、各キャラクターが感想を述べて終了する
+{% endif %}
 
 ## 解説対象の{{ document_type }}テキスト
 {{ paper_text }}
