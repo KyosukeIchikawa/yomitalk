@@ -116,11 +116,13 @@ class TextProcessor:
         """
         try:
             # 文字列からEnumへの変換
-            if mode == "standard":
-                enum_mode = PodcastMode.STANDARD
-            elif mode == "section_by_section":
-                enum_mode = PodcastMode.SECTION_BY_SECTION
-            else:
+            enum_mode = None
+            for podcast_mode in PodcastMode:
+                if podcast_mode.value == mode:
+                    enum_mode = podcast_mode
+                    break
+
+            if enum_mode is None:
                 logger.warning(f"無効なポッドキャストモード: {mode}")
                 return False
 

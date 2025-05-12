@@ -8,7 +8,7 @@ import shutil
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import jinja2
 
@@ -18,18 +18,52 @@ from app.utils.logger import logger
 class DocumentType(Enum):
     """ドキュメントタイプのEnum"""
 
-    PAPER = "paper"  # 論文
-    MANUAL = "manual"  # マニュアル
-    MINUTES = "minutes"  # 議事録
-    BLOG = "blog"  # ブログ記事
-    GENERAL = "general"  # 一般文書
+    PAPER = ("paper", "論文")
+    MANUAL = ("manual", "マニュアル")
+    MINUTES = ("minutes", "議事録")
+    BLOG = ("blog", "ブログ記事")
+    GENERAL = ("general", "一般ドキュメント")
+
+    def __init__(self, value, label_name):
+        self._value_ = value
+        self.label_name: str = label_name
+
+    @classmethod
+    def from_label_name(cls, label_name: str):
+        """ラベル名からEnumを取得"""
+        for doc_type in cls:
+            if doc_type.label_name == label_name:
+                return doc_type
+        raise ValueError(f"ラベル名 '{label_name}' に該当するドキュメントタイプが見つかりません。")
+
+    @classmethod
+    def get_all_label_names(cls) -> List[str]:
+        """全てのラベル名を取得"""
+        return [doc_type.label_name for doc_type in cls]
 
 
 class PodcastMode(Enum):
     """ポッドキャスト生成モードのEnum"""
 
-    STANDARD = "standard"  # 論文の概要解説
-    SECTION_BY_SECTION = "section_by_section"  # 論文の詳細解説（セクションごと）
+    STANDARD = ("standard", "概要解説")
+    SECTION_BY_SECTION = ("section_by_section", "詳細解説")
+
+    def __init__(self, value, label_name):
+        self._value_ = value
+        self.label_name: str = label_name
+
+    @classmethod
+    def from_label_name(cls, label_name: str):
+        """ラベル名からEnumを取得"""
+        for mode in cls:
+            if mode.label_name == label_name:
+                return mode
+        raise ValueError(f"ラベル名 '{label_name}' に該当するポッドキャストモードが見つかりません。")
+
+    @classmethod
+    def get_all_label_names(cls) -> List[str]:
+        """全てのラベル名を取得"""
+        return [mode.label_name for mode in cls]
 
 
 class PromptManager:
@@ -283,14 +317,7 @@ class PromptManager:
         Returns:
             str: ドキュメントタイプの日本語名
         """
-        document_type_names = {
-            DocumentType.PAPER: "論文",
-            DocumentType.MANUAL: "マニュアル",
-            DocumentType.MINUTES: "議事録",
-            DocumentType.BLOG: "ブログ記事",
-            DocumentType.GENERAL: "一般文書",
-        }
-        return document_type_names.get(self.current_document_type, "論文")
+        return self.current_document_type.label_name
 
     def set_podcast_mode(self, mode: PodcastMode) -> bool:
         """Set podcast mode.

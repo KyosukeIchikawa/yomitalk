@@ -6,7 +6,6 @@ Builds the Paper Podcast Generator application using Gradio.
 import math
 import os
 import uuid
-from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -27,23 +26,6 @@ E2E_TEST_MODE = os.environ.get("E2E_TEST_MODE", "false").lower() == "true"
 
 # Default port
 DEFAULT_PORT = 7860
-
-
-class PodcastModeUI(Enum):
-    """ポッドキャスト生成モードのUIオプション"""
-
-    OVERVIEW = "概要解説"  # standard
-    DETAILED = "詳細解説"  # section_by_section
-
-
-class DocumentTypeUI(Enum):
-    """ドキュメントタイプのUIオプション"""
-
-    PAPER = "論文"  # paper
-    MANUAL = "マニュアル"  # manual
-    MINUTES = "議事録"  # minutes
-    BLOG = "ブログ記事"  # blog
-    GENERAL = "一般ドキュメント"  # general
 
 
 # Application class
@@ -79,11 +61,11 @@ class PaperPodcastApp:
             f"VOICEVOXステータス: {self.check_voicevox_core()}"
         )
 
-        # 現在選択されているUIモード
-        self.current_ui_mode = PodcastModeUI.DETAILED
+        # 現在選択されているポッドキャストモード
+        self.current_podcast_mode = PodcastMode.SECTION_BY_SECTION
 
         # 現在選択されているドキュメントタイプ
-        self.current_document_type = DocumentTypeUI.PAPER
+        self.current_document_type = DocumentType.PAPER
 
         # 現在選択されているLLMタイプ
         self.current_llm_type = "openai"
@@ -418,15 +400,15 @@ class PaperPodcastApp:
                     gr.Markdown("### プロンプト設定")
 
                     document_type_radio = gr.Radio(
-                        choices=[dt.value for dt in DocumentTypeUI],
-                        value=self.current_document_type.value,
+                        choices=DocumentType.get_all_label_names(),
+                        value=self.current_document_type.label_name,
                         label="ドキュメントタイプ",
                         elem_id="document_type_radio_group",
                     )
 
                     podcast_mode_radio = gr.Radio(
-                        choices=[mode.value for mode in PodcastModeUI],
-                        value=self.get_current_podcast_mode(),
+                        choices=PodcastMode.get_all_label_names(),
+                        value=self.current_podcast_mode.label_name,
                         label="生成モード",
                         elem_id="podcast_mode_radio_group",
                     )
@@ -957,53 +939,48 @@ class PaperPodcastApp:
         ポッドキャスト生成モードを設定します。
 
         Args:
-            mode (str): '概要' または '詳細'
+            mode (str): ポッドキャストモードのラベル名
 
         Returns:
-            str: 結果メッセージとシステムログ
+            str: システムログ
         """
-        # 現在のUIで選択されているモードを記録
-        self.current_ui_mode = PodcastModeUI(mode)
+        try:
+            # ラベル名からPodcastModeを取得
+            podcast_mode = PodcastMode.from_label_name(mode)
 
-        # UIのEnumからPromptManagerのEnumに直接変換（名前が同じなので直接対応付け可能）
-        # OVERVIEW -> STANDARD, DETAILED -> SECTION_BY_SECTION
-        enum_mapping = {
-            PodcastModeUI.OVERVIEW: PodcastMode.STANDARD,
-            PodcastModeUI.DETAILED: PodcastMode.SECTION_BY_SECTION,
-        }
-        internal_mode = enum_mapping[self.current_ui_mode]
+            # 現在のモードを更新
+            self.current_podcast_mode = podcast_mode
 
-        logger.info(
-            f"UIからのモード: {self.current_ui_mode.value}, 内部モード: {internal_mode.value}"
-        )
+            # TextProcessorを使ってPodcastModeのEnumを設定
+            success = self.text_processor.set_podcast_mode(podcast_mode.value)
 
-        # TextProcessorを使ってPodcastModeのEnumを設定
-        success = self.text_processor.set_podcast_mode(internal_mode.value)
+            # ログ記録
+            mode_status = "✅" if success else "⚠️"
+            self.update_log(f"ポッドキャストモード: {mode_status} モードを '{mode}' に設定しました")
 
-        # ログ記録
-        mode_status = "✅" if success else "⚠️"
-        self.update_log(f"ポッドキャストモード: {mode_status} モードを '{mode}' に設定しました")
-        return self.system_log
+            return self.system_log
+
+        except ValueError as e:
+            self.update_log(f"ポッドキャストモード: ❌ エラー - {str(e)}")
+            return self.system_log
 
     def get_podcast_modes(self):
         """
         利用可能なポッドキャスト生成モードのリストを取得します。
 
         Returns:
-            list: 利用可能なモードのリスト
+            list: 利用可能なモードのラベル名リスト
         """
-        return [mode.value for mode in PodcastModeUI]
+        return PodcastMode.get_all_label_names()
 
     def get_current_podcast_mode(self):
         """
         現在のポッドキャスト生成モードを取得します。
 
         Returns:
-            str: 現在のポッドキャストモード
+            str: 現在のポッドキャストモードのラベル名
         """
-        if not hasattr(self, "current_ui_mode"):
-            self.current_ui_mode = PodcastModeUI.DETAILED
-        return self.current_ui_mode.value
+        return self.current_podcast_mode.label_name
 
     def update_token_usage_display(self) -> str:
         """
@@ -1056,30 +1033,30 @@ class PaperPodcastApp:
         ドキュメントタイプを設定します。
 
         Args:
-            doc_type (str): 'マニュアル'、'論文'などのUI表示名
+            doc_type (str): ドキュメントタイプのラベル名
 
         Returns:
-            tuple: (新しいポッドキャストモードのリスト, システムログ)
+            str: システムログ
         """
-        self.current_document_type = DocumentTypeUI(doc_type)
+        try:
+            # ラベル名からDocumentTypeを取得
+            document_type = DocumentType.from_label_name(doc_type)
 
-        mapping = {
-            DocumentTypeUI.PAPER: DocumentType.PAPER,
-            DocumentTypeUI.MANUAL: DocumentType.MANUAL,
-            DocumentTypeUI.MINUTES: DocumentType.MINUTES,
-            DocumentTypeUI.BLOG: DocumentType.BLOG,
-            DocumentTypeUI.GENERAL: DocumentType.GENERAL,
-        }
-        internal_doc_type = mapping[self.current_document_type]
+            # 現在のドキュメントタイプを更新
+            self.current_document_type = document_type
 
-        # TextProcessorを使ってドキュメントタイプを設定
-        success = self.text_processor.set_document_type(internal_doc_type)
+            # TextProcessorを使ってドキュメントタイプを設定
+            success = self.text_processor.set_document_type(document_type)
 
-        # ログ記録
-        status = "✅" if success else "⚠️"
-        self.update_log(f"ドキュメントタイプ: {status} '{doc_type}' に設定しました")
+            # ログ記録
+            status = "✅" if success else "⚠️"
+            self.update_log(f"ドキュメントタイプ: {status} '{doc_type}' に設定しました")
 
-        return self.system_log
+            return self.system_log
+
+        except ValueError as e:
+            self.update_log(f"ドキュメントタイプ: ❌ エラー - {str(e)}")
+            return self.system_log
 
 
 # Create and launch application instance
