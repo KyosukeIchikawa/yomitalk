@@ -201,7 +201,7 @@ class TextProcessor:
         Returns:
             DocumentType: 現在のドキュメントタイプ
         """
-        return self.prompt_manager.get_document_type()
+        return self.prompt_manager.current_document_type
 
     def get_document_type_name(self) -> str:
         """

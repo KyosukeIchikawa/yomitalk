@@ -303,14 +303,6 @@ class PromptManager:
         self.current_document_type = document_type
         return True
 
-    def get_document_type(self) -> DocumentType:
-        """Get current document type.
-
-        Returns:
-            DocumentType: Current document type.
-        """
-        return self.current_document_type
-
     def get_document_type_name(self) -> str:
         """現在のドキュメントタイプの日本語名を取得します。
 

@@ -61,9 +61,6 @@ class PaperPodcastApp:
             f"VOICEVOXステータス: {self.check_voicevox_core()}"
         )
 
-        # 現在選択されているドキュメントタイプ
-        self.current_document_type = DocumentType.PAPER
-
         # 現在選択されているLLMタイプ
         self.current_llm_type = "openai"
 
@@ -71,6 +68,11 @@ class PaperPodcastApp:
     def current_podcast_mode(self) -> PodcastMode:
         """現在選択されているポッドキャストモードを取得します。"""
         return self.text_processor.get_podcast_mode()
+
+    @property
+    def current_document_type(self) -> DocumentType:
+        """現在選択されているドキュメントタイプを取得します。"""
+        return self.text_processor.get_document_type()
 
     def set_openai_api_key(self, api_key: str) -> Tuple[str, str]:
         """
@@ -1031,9 +1033,6 @@ class PaperPodcastApp:
         try:
             # ラベル名からDocumentTypeを取得
             document_type = DocumentType.from_label_name(doc_type)
-
-            # 現在のドキュメントタイプを更新
-            self.current_document_type = document_type
 
             # TextProcessorを使ってドキュメントタイプを設定
             success = self.text_processor.set_document_type(document_type)
