@@ -61,14 +61,16 @@ class PaperPodcastApp:
             f"VOICEVOXステータス: {self.check_voicevox_core()}"
         )
 
-        # 現在選択されているポッドキャストモード
-        self.current_podcast_mode = PodcastMode.SECTION_BY_SECTION
-
         # 現在選択されているドキュメントタイプ
         self.current_document_type = DocumentType.PAPER
 
         # 現在選択されているLLMタイプ
         self.current_llm_type = "openai"
+
+    @property
+    def current_podcast_mode(self) -> PodcastMode:
+        """現在選択されているポッドキャストモードを取得します。"""
+        return self.text_processor.get_podcast_mode()
 
     def set_openai_api_key(self, api_key: str) -> Tuple[str, str]:
         """
@@ -948,9 +950,6 @@ class PaperPodcastApp:
             # ラベル名からPodcastModeを取得
             podcast_mode = PodcastMode.from_label_name(mode)
 
-            # 現在のモードを更新
-            self.current_podcast_mode = podcast_mode
-
             # TextProcessorを使ってPodcastModeのEnumを設定
             success = self.text_processor.set_podcast_mode(podcast_mode.value)
 
@@ -972,15 +971,6 @@ class PaperPodcastApp:
             list: 利用可能なモードのラベル名リスト
         """
         return PodcastMode.get_all_label_names()
-
-    def get_current_podcast_mode(self):
-        """
-        現在のポッドキャスト生成モードを取得します。
-
-        Returns:
-            str: 現在のポッドキャストモードのラベル名
-        """
-        return self.current_podcast_mode.label_name
 
     def update_token_usage_display(self) -> str:
         """

@@ -83,7 +83,7 @@ class PromptManager:
         """
         self.template_dir = Path(template_dir)
         self.current_document_type = DocumentType.PAPER
-        self.current_mode = PodcastMode.STANDARD
+        self.current_mode = PodcastMode.SECTION_BY_SECTION
 
         self.VALID_CHARACTERS = [
             "四国めたん",
