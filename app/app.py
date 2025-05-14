@@ -500,11 +500,15 @@ class PaperPodcastApp:
             with gr.Column():
                 gr.Markdown("## トーク音声の生成")
                 with gr.Column(variant="panel"):
+                    msg = """音声は下記の音源を使用して生成されます。
+                    VOICEVOX:四国めたん、VOICEVOX:ずんだもん、VOICEVOX:九州そら、VOICEVOX:中国うさぎ、VOICEVOX:中部つるぎ
+                    音声を生成するには[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。
+                    """
                     # VOICEVOX利用規約チェックボックスをここに配置
                     terms_checkbox = gr.Checkbox(
                         label="VOICEVOX 音源利用規約に同意する",
                         value=False,
-                        info="音声を生成するには[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。",
+                        info=msg,
                     )
                     generate_btn = gr.Button(
                         "音声を生成", variant="primary", interactive=False

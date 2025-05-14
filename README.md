@@ -89,3 +89,8 @@
 - VOICEVOX: [VOICEVOX CORE LICENSE](https://github.com/VOICEVOX/voicevox_core/blob/main/LICENSE)
 
 音声を生成する際には、[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。
+**重要**: VOICEVOX音源利用規約では、以下の条件が定められています：
+1. 商用・非商用問わず利用可能
+2. クレジット表記が必須（例：「VOICEVOX:ずんだもん」「VOICEVOX:四国めたん」など）
+3. アプリなどでの利用の場合は、アプリの紹介画面などに記載が必要
+4. 音源についての共通規約の遵守（公序良俗に反する利用等の禁止）
