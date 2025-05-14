@@ -205,6 +205,9 @@ test-staged: venv
 # Clean up generated files
 clean:
 	@echo "Removing generated files..."
+	if [ -d "$(VENV_DIR)" ]; then \
+		$(VENV_DIR)/bin/deactivate; \
+	fi
 	rm -rf $(VENV_DIR)
 	rm -rf $(DATA_DIRS)
 	rm -rf $(CACHE_DIRS)
