@@ -124,13 +124,13 @@ class AudioGenerator:
 
     def _convert_english_to_katakana(self, text: str) -> str:
         """
-        英単語をカタカナに変換します。
+        英単語をカタカナに変換します。カタカナに変換された部分の間の不要な空白を削除します。
 
         Args:
             text (str): 変換するテキスト
 
         Returns:
-            str: 英単語がカタカナに変換されたテキスト
+            str: 英単語がカタカナに変換され、不要な空白が削除されたテキスト
         """
         c2k = e2k.C2K()
         # 英単語と非英単語を分割するための正規表現パターン
@@ -149,7 +149,9 @@ class AudioGenerator:
                 split_parts.append(part)
 
         # 英単語をカタカナに変換
-        result = []
+        result: List[str] = []
+        last_was_katakana = False
+
         for part in split_parts:
             # 下記であればカタカナに変換し, そうでなければ変換せずにそのまま追加
             # - 2文字以上である
@@ -160,12 +162,26 @@ class AudioGenerator:
                 and re.match(r"^[A-Za-z]+$", part)
                 and not re.match(r"^[A-Z]{2,5}$", part)
             ):
-                result.append(c2k(part))
-            elif part == "-":
+                katakana_part = c2k(part)
+
+                # 前の要素もカタカナに変換されたものだった場合、空白を削除
+                if last_was_katakana and result and result[-1].isspace():
+                    result.pop()  # 空白を削除
+
+                result.append(katakana_part)
+                last_was_katakana = True
+            elif re.match(r"^-+$", part):  # 1つ以上のハイフンのみで構成されている場合
                 # ハイフンは捨てる
                 pass
             else:
-                result.append(part)
+                # 空白文字の場合、前がカタカナでかつ次もカタカナになる可能性がある場合は
+                # 一時的に追加し、次の処理で必要に応じて削除できるようにする
+                if part.isspace() and last_was_katakana:
+                    result.append(part)
+                else:
+                    result.append(part)
+                    last_was_katakana = False
+
         return "".join(result)
 
     def _create_final_audio_file(self, temp_wav_files: List[str]) -> str:
