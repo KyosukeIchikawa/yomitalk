@@ -1,7 +1,7 @@
-alkana
 autoflake
 autopep8
 black
+e2k
 ffmpeg-python
 flake8
 gradio

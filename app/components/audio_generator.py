@@ -11,7 +11,7 @@ import uuid
 from pathlib import Path
 from typing import List, Optional
 
-import alkana
+import e2k
 
 from app.utils.logger import logger
 
@@ -132,28 +132,41 @@ class AudioGenerator:
         Returns:
             str: 英単語がカタカナに変換されたテキスト
         """
-        # 英単語を検出する正規表現
-        word_pattern = re.compile(r"[a-zA-Z][a-zA-Z\'-]*[a-zA-Z]|[a-zA-Z]")
+        c2k = e2k.C2K()
+        # 英単語と非英単語を分割するための正規表現パターン
+        pattern = r"([A-Za-z]+|[^A-Za-z]+)"
+        parts = re.findall(pattern, text)
 
-        def replace_word(match: re.Match) -> str:
-            word: str = match.group(0).lower()
+        # 大文字で始まる部分を分割する
+        split_parts = []
+        for part in parts:
+            if re.match(r"^[A-Za-z]+$", part):
+                # 連続する大文字は一つの略語として扱う
+                word_parts = re.findall(r"[A-Z]{2,}|[A-Z][a-z]*|[a-z]+", part)
+                split_parts.extend(word_parts)
+            else:
+                # 非英単語はそのまま追加
+                split_parts.append(part)
 
-            # ハイフンが含まれている場合、各部分を個別に変換
-            parts = word.split("-")
-            katakana_parts = []
-
-            for part in parts:
-                if part:  # 空の部分をスキップ
-                    katakana = alkana.get_kana(part)
-                    katakana_parts.append(katakana if katakana else part)
-                else:
-                    katakana_parts.append("")
-
-            # 再結合（ハイフンは音声に必要ないため捨てる）
-            return "".join(katakana_parts)
-
-        # 英単語をカタカナに置換
-        return word_pattern.sub(replace_word, text)
+        # 英単語をカタカナに変換
+        result = []
+        for part in split_parts:
+            # 下記であればカタカナに変換し, そうでなければ変換せずにそのまま追加
+            # - 2文字以上である
+            # - アルファベットのみで構成されている
+            # - 大文字のみで2~5文字でない（頭文字で構成された略語はそのまま読むスタンスだが, 6文字以上であればカタカナ読みする確率が高そう & アルファベット読みはくどい）
+            if (
+                len(part) > 1
+                and re.match(r"^[A-Za-z]+$", part)
+                and not re.match(r"^[A-Z]{2,5}$", part)
+            ):
+                result.append(c2k(part))
+            elif part == "-":
+                # ハイフンは捨てる
+                pass
+            else:
+                result.append(part)
+        return "".join(result)
 
     def _create_final_audio_file(self, temp_wav_files: List[str]) -> str:
         """
