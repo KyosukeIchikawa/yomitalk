@@ -7,7 +7,7 @@ import math
 import os
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gradio as gr
 
@@ -627,7 +627,7 @@ class PaperPodcastApp:
             # VOICEVOX Terms checkbox - 音声生成ボタンに対してイベントハンドラを更新
             terms_checkbox.change(
                 fn=self.update_audio_button_state,
-                inputs=[terms_checkbox],
+                inputs=[terms_checkbox, podcast_text],
                 outputs=[generate_btn],
             )
 
@@ -639,6 +639,11 @@ class PaperPodcastApp:
                 # トークン使用状況をUIに反映
                 fn=self.update_token_usage_display,
                 outputs=[token_usage_info],
+            ).then(
+                # トーク原稿生成後に音声生成ボタンの状態を更新
+                fn=self.update_audio_button_state,
+                inputs=[terms_checkbox, podcast_text],
+                outputs=[generate_btn],
             )
 
             # 音声生成ボタンのイベントハンドラ
@@ -765,6 +770,13 @@ class PaperPodcastApp:
                 fn=self.set_podcast_mode,
                 inputs=[podcast_mode_radio],
                 outputs=[system_log_display],
+            )
+
+            # podcast_textの変更時にも音声生成ボタンの状態を更新
+            podcast_text.change(
+                fn=self.update_audio_button_state,
+                inputs=[terms_checkbox, podcast_text],
+                outputs=[generate_btn],
             )
 
         return app
@@ -1008,17 +1020,29 @@ class PaperPodcastApp:
         """
         return html
 
-    def update_audio_button_state(self, checked: bool) -> gr.Button:
+    def update_audio_button_state(
+        self, checked: bool, podcast_text: Optional[str] = None
+    ) -> gr.Button:
         """
-        VOICEVOX利用規約チェックボックスの状態に基づいて音声生成ボタンの有効/無効を切り替えます。
+        VOICEVOX利用規約チェックボックスの状態とトーク原稿の有無に基づいて音声生成ボタンの有効/無効を切り替えます。
 
         Args:
             checked (bool): チェックボックスの状態
+            podcast_text (Optional[str], optional): 生成されたトーク原稿
 
         Returns:
             gr.Button: 更新されたボタン
         """
-        return gr.Button(value="音声を生成", variant="primary", interactive=checked)
+        has_text = podcast_text and podcast_text.strip() != ""
+        is_enabled = checked and has_text
+
+        button_text = "音声を生成"
+        if not checked:
+            button_text = "VOICEVOX利用規約に同意してください"
+        elif not has_text:
+            button_text = "トーク原稿を生成してください"
+
+        return gr.Button(value=button_text, variant="primary", interactive=is_enabled)
 
     def set_document_type(self, doc_type: str) -> str:
         """

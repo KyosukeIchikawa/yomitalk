@@ -514,10 +514,17 @@ class TestTextProcessor(unittest.TestCase):
         """Test getting document type."""
         from app.prompt_manager import DocumentType
 
-        self.mock_prompt_manager.get_document_type.return_value = DocumentType.MANUAL
+        # モックオブジェクトの設定
+        mock_document_type = MagicMock(spec=DocumentType)
+        # TextProcessorは、prompt_manager.get_document_type()を呼び出すのではなく、
+        # prompt_manager.current_document_typeプロパティを直接参照している
+        self.mock_prompt_manager.current_document_type = mock_document_type
+
+        # メソッドを実行して結果を取得
         result = self.text_processor.get_document_type()
-        self.assertEqual(result, DocumentType.MANUAL)
-        self.mock_prompt_manager.get_document_type.assert_called_once()
+
+        # prompt_manager.get_document_typeは呼び出されないので、assertIsで結果を検証
+        self.assertIs(result, mock_document_type)
 
     def test_get_document_type_name(self):
         """Test getting document type name."""

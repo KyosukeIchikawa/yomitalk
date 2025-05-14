@@ -190,10 +190,10 @@ def verify_podcast_text_with_characters(page_with_server: Page):
 
         # テキストエリアが存在することを確認
         logger.info("Waiting for podcast text with characters to be generated...")
-        result_area.wait_for(state="attached", timeout=5000)
+        result_area.wait_for(state="attached", timeout=2000)
 
         # キャラクターを含むテキストが生成されるのを待つ効率的な方法
-        # タイムアウトを20秒に短縮し、ポーリング間隔を0.5秒に設定
+        # タイムアウトを5秒に短縮し、ポーリング間隔を0.5秒に設定
         page.wait_for_function(
             """() => {
                 const textarea = document.querySelectorAll('textarea')[1];
@@ -202,7 +202,7 @@ def verify_podcast_text_with_characters(page_with_server: Page):
                 return text && text.length > 20 && (text.includes(':') || text.includes('キャラ'));
             }""",
             polling=500,  # ミリ秒
-            timeout=20000,  # ミリ秒
+            timeout=5000,  # ミリ秒
         )
 
         generated_text = result_area.input_value()
@@ -240,15 +240,15 @@ def verify_podcast_text_with_appropriate_length(page_with_server: Page):
 
         # ポーリングの間隔を短くし、タイムアウトを設定して効率的に待機
         logger.info("Waiting for podcast text generation...")
-        result_area.wait_for(state="attached", timeout=5000)
+        result_area.wait_for(state="attached", timeout=2000)
 
         # 動的に生成されるテキストを監視する効率的な方法
         def check_text_content():
             text = result_area.input_value()
             return len(text) > 100 if text else False
 
-        # タイムアウトを20秒に短縮し、ポーリング間隔を0.5秒に設定
-        max_wait_time = 20  # 秒
+        # タイムアウトを5秒に短縮し、ポーリング間隔を0.5秒に設定
+        max_wait_time = 5  # 秒
         polling_interval = 500  # ミリ秒
 
         page.wait_for_function(

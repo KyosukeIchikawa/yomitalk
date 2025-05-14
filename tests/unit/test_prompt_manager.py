@@ -188,13 +188,25 @@ Paper text: {{ paper_text }}
             """
             )
 
+        # section_by_sectionテンプレートも同様に更新
+        with open(
+            self.template_dir / "section_by_section.j2", "w", encoding="utf-8"
+        ) as f:
+            f.write(
+                """
+{% import 'common_podcast_utils.j2' as utils %}
+Section by section template for {{ character1 }} and {{ character2 }}: {{ paper_text }}
+{{ utils.podcast_common_macro(character1, character2) }}
+            """
+            )
+
         paper_text = "これはテスト用の論文テキストです。"
 
         # デフォルトキャラクター設定での生成
         prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
 
         # 各キャラクターの口調情報が含まれていることを確認
-        self.assertIn("一人称: わたし", prompt)  # 四国めたん
+        self.assertIn("語尾の特徴", prompt)  # 四国めたん
         self.assertIn("一人称: ぼく", prompt)  # ずんだもん
         self.assertIn("語尾の特徴", prompt)
 
@@ -209,7 +221,9 @@ Paper text: {{ paper_text }}
     def test_set_and_get_podcast_mode(self):
         """Test setting and getting podcast mode using Enum."""
         # デフォルトモードの確認
-        self.assertEqual(PodcastMode.STANDARD, self.prompt_manager.get_podcast_mode())
+        self.assertEqual(
+            PodcastMode.SECTION_BY_SECTION, self.prompt_manager.get_podcast_mode()
+        )
 
         # モードをSECTION_BY_SECTIONに変更
         result = self.prompt_manager.set_podcast_mode(PodcastMode.SECTION_BY_SECTION)

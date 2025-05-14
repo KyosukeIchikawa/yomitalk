@@ -116,3 +116,10 @@ Feature: Generate podcast from research paper PDF
     Then the "音声を生成" button should be enabled
     When the user unchecks the terms of service checkbox
     Then the "音声を生成" button should be disabled
+
+  Scenario: Empty podcast text with terms agreed
+    Given the application is open with empty podcast text
+    And the user has checked the terms of service checkbox
+    Then the "音声を生成" button should be disabled
+    When podcast text has been generated
+    Then the "音声を生成" button should be enabled
