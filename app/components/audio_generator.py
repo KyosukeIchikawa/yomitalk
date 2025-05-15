@@ -6,6 +6,7 @@ Provides functionality for generating audio from text using VOICEVOX Core.
 import datetime
 import os
 import re
+import shutil
 import subprocess
 import uuid
 from pathlib import Path
@@ -371,10 +372,12 @@ class AudioGenerator:
         # 一時ファイルディレクトリが存在する場合は削除
         if self.temp_dir.exists():
             try:
-                os.rmdir(self.temp_dir)
+                # ディレクトリが空でない場合でも再帰的に削除
+                shutil.rmtree(self.temp_dir)
+                logger.debug(f"Removed temporary directory: {self.temp_dir}")
             except Exception as e:
                 logger.error(f"Error cleaning temporary files: {e}")
-                return None
+                # エラーが発生してもディレクトリを作成して処理を続行する
         # 一時ファイルディレクトリを作成
         self.temp_dir.mkdir(parents=True, exist_ok=True)
 
