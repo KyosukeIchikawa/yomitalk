@@ -15,6 +15,7 @@ from typing import List, Optional
 import e2k
 
 from app.utils.logger import logger
+from app.utils.text_utils import is_romaji_readable
 
 # VOICEVOX Core imports
 try:
@@ -157,11 +158,14 @@ class AudioGenerator:
             # 下記であればカタカナに変換し, そうでなければ変換せずにそのまま追加
             # - 2文字以上である
             # - アルファベットのみで構成されている
-            # - 大文字のみで2~5文字でない（頭文字で構成された略語はそのまま読むスタンスだが, 6文字以上であればカタカナ読みする確率が高そう & アルファベット読みはくどい）
+            # - 大文字のみでない、または大文字のみだが4文字以上かつローマ字として読める
             if (
-                len(part) > 1
+                len(part) >= 2
                 and re.match(r"^[A-Za-z]+$", part)
-                and not re.match(r"^[A-Z]{2,5}$", part)
+                and (
+                    not re.match(r"^[A-Z]+$", part)
+                    or (len(part) >= 4 and is_romaji_readable(part))
+                )
             ):
                 katakana_part = c2k(part)
 
