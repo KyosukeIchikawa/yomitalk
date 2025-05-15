@@ -375,6 +375,24 @@ class PaperPodcastApp:
                 height: auto !important;
                 min-height: 80px;
             }
+
+            /* オーディオ出力のスタイル調整 */
+            #audio_output {
+                min-height: 180px !important;
+                margin-bottom: 10px;
+            }
+
+            #audio_output.empty::before {
+                content: "音声が生成されるとここに表示されます";
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 140px;
+                color: #666;
+                font-style: italic;
+                background-color: rgba(0,0,0,0.03);
+                border-radius: 8px;
+            }
             """
             gr.HTML(f"<style>{css}</style>")
 
@@ -518,8 +536,16 @@ class PaperPodcastApp:
                         format="wav",
                         interactive=False,
                         show_download_button=True,
-                        show_label=False,
+                        show_label=True,
+                        label="生成された音声",
+                        value=None,
                         elem_id="audio_output",
+                        waveform_options=gr.WaveformOptions(
+                            show_recording_waveform=True,
+                            waveform_color="#3498db",
+                            waveform_progress_color="#27ae60",
+                        ),
+                        min_width=300,
                     )
                     download_btn = gr.Button(
                         "音声が生成されていません",
