@@ -169,8 +169,11 @@ class GeminiModel:
                 "total_tokens": approx_prompt_tokens + approx_completion_tokens,
             }
 
-            # デバッグ出力
-            logger.info(f"Generated text sample: {generated_text[:200]}...")
+            # デバッグ出力（セキュリティのため生成テキストの内容は出力しない）
+            # logger.info(f"Generated text sample: {generated_text[:200]}...")
+            logger.info(
+                f"Text generation completed. Length: {len(generated_text)} characters"
+            )
             logger.info(f"Approximate token usage: {self.last_token_usage}")
 
             return generated_text

@@ -228,8 +228,14 @@ class TextProcessor:
         # プロンプトマネージャーを使用してプロンプトを生成
         prompt = self.prompt_manager.generate_podcast_conversation(paper_text)
 
-        # プロンプトの先頭何文字かをログに記録
-        logger.info(f"生成されたプロンプト: {prompt[:100]}")
+        # プロンプトの先頭何文字かをログに記録 - セキュリティリスクのため削除
+        # logger.info(f"生成されたプロンプト: {prompt[:100]}")
+        logger.info("プロンプトを生成しました")
+
+        # 現在のポッドキャストモードをログに記録
+        current_mode = self.prompt_manager.get_podcast_mode()
+        # モード名のみログに記録し、詳細は記録しない
+        logger.info(f"現在のポッドキャストモード: {current_mode.name}")
 
         # 現在選択されているAPIに基づいてテキスト生成
         if self.current_api_type == "openai" and self.use_openai:

@@ -134,6 +134,27 @@ class TestFileUploader:
         result = self.uploader.extract_text_from_path("nonexistent_file.txt")
         assert "File not found" in result
 
+    def test_extract_text_from_custom_tmp_extension(self):
+        """Test that files with .tmp extension are properly processed if they have valid content."""
+        # create a temporary file with custom extension
+        with tempfile.NamedTemporaryFile(suffix=".tmp", delete=False) as temp_file:
+            temp_file.write(b"This is a test content in .tmp file.")
+            temp_file_path = temp_file.name
+
+        try:
+            # Verify the file exists
+            assert os.path.exists(temp_file_path)
+
+            # Call the function to extract text
+            result = self.uploader.extract_text_from_path(temp_file_path)
+
+            # Assert that the text was extracted correctly
+            assert "This is a test content in .tmp file." in result
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+
 
 def test_init():
     """Test initialization of FileUploader."""

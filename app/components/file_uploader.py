@@ -18,7 +18,7 @@ class FileUploader:
         """Initialize FileUploader."""
         self.temp_dir = Path("data/temp")
         self.temp_dir.mkdir(parents=True, exist_ok=True)
-        self.supported_text_extensions = [".txt", ".md", ".text"]
+        self.supported_text_extensions = [".txt", ".md", ".text", ".tmp"]
         self.supported_pdf_extensions = [".pdf"]
         self.supported_extensions = (
             self.supported_text_extensions + self.supported_pdf_extensions

@@ -175,11 +175,18 @@ class PaperPodcastApp:
             if isinstance(file_obj, list) and len(file_obj) > 0:
                 file_obj = file_obj[0]  # Get first element if it's a list
 
+            # セキュリティのため、オリジナルファイル名は使用せず、一意のIDを生成
+            # ただし、元のファイル拡張子は保持する
+            original_extension = ".txt"  # デフォルト拡張子
             if hasattr(file_obj, "name"):
-                filename = Path(file_obj.name).name
-            else:
-                # Generate temporary name using UUID if no name is available
-                filename = f"uploaded_{uuid.uuid4().hex}.txt"
+                # 元のファイルの拡張子を取得
+                original_extension = os.path.splitext(Path(file_obj.name).name)[1]
+                # 拡張子がない場合はデフォルト値を使用
+                if not original_extension:
+                    original_extension = ".txt"
+
+            # 安全なファイル名を生成（UUIDと元の拡張子を組み合わせる）
+            filename = f"uploaded_{uuid.uuid4().hex}{original_extension}"
 
             # Create temporary file path
             temp_path = temp_dir / filename
@@ -221,7 +228,8 @@ class PaperPodcastApp:
 
         # Extract text using FileUploader
         text = self.file_uploader.extract_text_from_path(temp_path)
-        self.update_log(f"テキスト抽出: 完了 ({len(text)} 文字)")
+        # セキュリティのため文字数のみログに記録し、内容に関する情報は出力しない
+        self.update_log("テキスト抽出: 完了")
         return text, self.system_log
 
     def check_voicevox_core(self):
@@ -242,6 +250,7 @@ class PaperPodcastApp:
     def update_log(self, message: str) -> str:
         """
         システムログにメッセージを追加します。
+        機密情報を含む可能性のある詳細（ファイルパス等）は記録しません。
 
         Args:
             message (str): 追加するメッセージ
@@ -249,12 +258,33 @@ class PaperPodcastApp:
         Returns:
             str: 更新されたログ
         """
-        self.system_log = f"{message}\n{self.system_log}"
+        # セキュリティ観点から機密情報が含まれる可能性のあるメッセージをフィルタリング
+        filtered_message = self._filter_sensitive_info(message)
+        self.system_log = f"{filtered_message}\n{self.system_log}"
         # 最大3行に制限
         lines = self.system_log.split("\n")
         if len(lines) > 3:
             self.system_log = "\n".join(lines[:3])
         return self.system_log
+
+    def _filter_sensitive_info(self, message: str) -> str:
+        """
+        メッセージから機密情報をフィルタリングします。
+
+        Args:
+            message (str): フィルタリングするメッセージ
+
+        Returns:
+            str: フィルタリングされたメッセージ
+        """
+        import re
+
+        # ファイルパスをマスク
+        message = re.sub(r"(\/[\/\w\.-]+)+\.\w+", "[ファイルパス]", message)
+        # APIキーやその一部をマスク
+        message = re.sub(r"sk-[A-Za-z0-9]{5,}", "[APIキー]", message)
+        message = re.sub(r"AIza[A-Za-z0-9]{5,}", "[APIキー]", message)
+        return message
 
     def generate_podcast_text(self, text: str):
         """
@@ -321,8 +351,10 @@ class PaperPodcastApp:
             if audio_path:
                 # 絶対パスを取得
                 abs_path = str(Path(audio_path).absolute())
-                self.update_log(f"音声生成: ✅ 完了 ({abs_path})")
-                logger.info(f"Generated audio file: {abs_path}")
+                # パス情報をログに含めない
+                self.update_log("音声生成: ✅ 完了")
+                # セキュリティのためファイルパスはログに出力しない
+                logger.info("音声ファイルを生成しました")
                 return abs_path, self.system_log
             else:
                 logger.error("Audio generation failed: No audio path returned")

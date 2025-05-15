@@ -200,10 +200,12 @@ class AudioGenerator:
 
         # 日付付きの最終的な出力ファイル名を生成
         now = datetime.datetime.now()
+        # セキュリティのため、一意のIDを使用する（日時とUUIDを組み合わせる）
         date_str = now.strftime("%Y%m%d_%H%M%S")
+        file_id = uuid.uuid4().hex[:8]
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = str(self.output_dir / f"podcast_{date_str}.wav")
+        output_file = str(self.output_dir / f"audio_{date_str}_{file_id}.wav")
 
         # 単一ファイルならそのまま使用
         if len(temp_wav_files) == 1:
@@ -374,9 +376,10 @@ class AudioGenerator:
             try:
                 # ディレクトリが空でない場合でも再帰的に削除
                 shutil.rmtree(self.temp_dir)
-                logger.debug(f"Removed temporary directory: {self.temp_dir}")
-            except Exception as e:
-                logger.error(f"Error cleaning temporary files: {e}")
+                logger.debug("一時ディレクトリを削除しました")
+            except Exception:
+                # セキュリティのためファイルパスやスタックトレースは記録しない
+                logger.error("一時ファイル削除中にエラーが発生しました")
                 # エラーが発生してもディレクトリを作成して処理を続行する
         # 一時ファイルディレクトリを作成
         self.temp_dir.mkdir(parents=True, exist_ok=True)
@@ -487,16 +490,16 @@ class AudioGenerator:
                         with open(temp_file, "wb") as f:
                             f.write(wav_data)
                         chunk_wavs.append(temp_file)
-                        logger.debug(f"Saved chunk to {temp_file}")
+                        # セキュリティのため詳細なパスを記録しない
+                        logger.debug(f"チャンク {j} を保存しました")
 
                 # Combine chunks for this part
                 if chunk_wavs:
                     if len(chunk_wavs) > 1:
                         part_file = str(self.temp_dir / f"part_{i}.wav")
                         self._combine_audio_files(chunk_wavs, part_file)
-                        logger.debug(
-                            f"Combining {len(chunk_wavs)} chunks into {part_file}"
-                        )
+                        # セキュリティのためファイルパスを記録しない
+                        logger.debug(f"{len(chunk_wavs)}個のチャンクを結合しました")
                         temp_wav_files.append(part_file)
 
                         # Clean up chunk files
@@ -504,7 +507,9 @@ class AudioGenerator:
                             os.unlink(chunk_wav)
                     else:
                         # Only one chunk, no need to combine
-                        logger.debug(f"Using single chunk file: {chunk_wavs[0]}")
+                        # logger.debug(f"Using single chunk file: {chunk_wavs[0]}")
+                        # セキュリティのためファイルパスをログに記録しない
+                        logger.debug("単一チャンクファイルを使用します")
                         temp_wav_files.append(chunk_wavs[0])
 
             # Combine all parts to create the final audio file
@@ -513,7 +518,7 @@ class AudioGenerator:
                     f"Combining {len(temp_wav_files)} audio parts into final file"
                 )
                 final_path = self._create_final_audio_file(temp_wav_files)
-                logger.info(f"Final audio saved to: {final_path}")
+                logger.info("音声ファイルを生成しました")
                 return final_path
             else:
                 logger.error("No audio parts were generated")
@@ -658,3 +663,198 @@ class AudioGenerator:
 
         # Join the fixed lines
         return "\n".join(final_lines)
+
+    def update_log(self, message: str) -> None:
+        """
+        Update the system log with a new message.
+
+        Args:
+            message (str): The message to add to the system log
+        """
+        # Implementation of update_log method
+        pass
+
+    def system_log(self) -> str:
+        """
+        Get the system log as a string.
+
+        Returns:
+            str: The system log
+        """
+        # Implementation of system_log method
+        return ""
+
+    def generate_audio(self, podcast_text: str) -> Optional[str]:
+        """
+        Generate audio for a podcast from podcast text.
+
+        Args:
+            podcast_text (str): Podcast text with character dialogue lines
+
+        Returns:
+            str: Path to the generated audio file or None if failed
+        """
+        if not VOICEVOX_CORE_AVAILABLE or not self.core_initialized:
+            logger.error("VOICEVOX Core is not available or not properly initialized.")
+            return None
+
+        if not podcast_text or podcast_text.strip() == "":
+            logger.error("Podcast text is empty")
+            return None
+
+        # 一時ファイルディレクトリが存在する場合は削除
+        if self.temp_dir.exists():
+            try:
+                # ディレクトリが空でない場合でも再帰的に削除
+                shutil.rmtree(self.temp_dir)
+                logger.debug("一時ディレクトリを削除しました")
+            except Exception:
+                # セキュリティのためファイルパスやスタックトレースは記録しない
+                logger.error("一時ファイル削除中にエラーが発生しました")
+                # エラーが発生してもディレクトリを作成して処理を続行する
+        # 一時ファイルディレクトリを作成
+        self.temp_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # 英語をカタカナに変換
+            podcast_text = self._convert_english_to_katakana(podcast_text)
+            logger.info("Converted English words in podcast text to katakana")
+
+            # Split the podcast text into lines
+            lines = podcast_text.strip().split("\n")
+            conversation_parts = []
+
+            # サポートされるキャラクター名とそのパターン
+            character_patterns = {
+                "ずんだもん": ["ずんだもん:", "ずんだもん："],
+                "四国めたん": ["四国めたん:", "四国めたん："],
+                "九州そら": ["九州そら:", "九州そら："],
+            }
+
+            # 複数行のセリフを処理するために現在の話者と発言を記録
+            current_speaker = None
+            current_speech = ""
+
+            # Process each line of the text
+            logger.info(f"Processing {len(lines)} lines of text")
+            for line in lines:
+                line = line.strip()
+
+                # 新しい話者の行かチェック
+                found_new_speaker = False
+                for character, patterns in character_patterns.items():
+                    for pattern in patterns:
+                        if line.startswith(pattern):
+                            # 前の話者の発言があれば追加
+                            if current_speaker and current_speech:
+                                conversation_parts.append(
+                                    (current_speaker, current_speech)
+                                )
+
+                            # 新しい話者と発言を設定
+                            current_speaker = character
+                            current_speech = line.replace(pattern, "", 1).strip()
+                            found_new_speaker = True
+                            break
+                    if found_new_speaker:
+                        break
+
+                # 話者の切り替えがなく、現在の話者が存在する場合、行を現在の発言に追加
+                if not found_new_speaker and current_speaker:
+                    if line:  # 行に内容がある場合
+                        # すでに発言内容があれば改行を追加
+                        if current_speech:
+                            current_speech += "\n" + line
+                        else:
+                            current_speech = line
+                    else:  # 空行の場合
+                        # 空行も保持（改行として追加）
+                        if current_speech:
+                            current_speech += "\n"
+
+            # 最後の話者の発言があれば追加
+            if current_speaker and current_speech:
+                conversation_parts.append((current_speaker, current_speech))
+
+            logger.info(f"Identified {len(conversation_parts)} conversation parts")
+
+            # If no valid parts were found, try to fix the format
+            if not conversation_parts:
+                logger.warning(
+                    "No valid conversation parts found. Attempting to reformat..."
+                )
+                fixed_text = self._fix_conversation_format(podcast_text)
+                # Try again with fixed text
+                if fixed_text != podcast_text:
+                    return self.generate_audio(fixed_text)
+                else:
+                    logger.error("Could not parse any valid conversation parts")
+                    return None
+
+            # Generate audio for each conversation part
+            temp_wav_files = []
+            for i, (speaker, text) in enumerate(conversation_parts):
+                style_id = self.core_style_ids.get(
+                    speaker, 3
+                )  # Default to Zundamon if not found
+                logger.info(f"Generating audio for {speaker} (style_id: {style_id})")
+
+                # Split text into chunks if it's too long
+                text_chunks = self._split_text(text, max_length=100)
+                chunk_wavs = []
+                logger.info(f"Split into {len(text_chunks)} chunks")
+
+                # Generate audio for each chunk
+                for j, chunk in enumerate(text_chunks):
+                    if not chunk.strip():
+                        logger.warning(
+                            f"Empty chunk detected (part {i}, chunk {j}), skipping..."
+                        )
+                        continue
+
+                    # Generate audio using core
+                    if self.core_synthesizer is not None:  # Type check for mypy
+                        wav_data = self.core_synthesizer.tts(chunk, style_id)
+
+                        # Save to temporary file
+                        temp_file = str(self.temp_dir / f"part_{i}_chunk_{j}.wav")
+                        with open(temp_file, "wb") as f:
+                            f.write(wav_data)
+                        chunk_wavs.append(temp_file)
+                        # セキュリティのため詳細なパスを記録しない
+                        logger.debug(f"チャンク {j} を保存しました")
+
+                # Combine chunks for this part
+                if chunk_wavs:
+                    if len(chunk_wavs) > 1:
+                        part_file = str(self.temp_dir / f"part_{i}.wav")
+                        self._combine_audio_files(chunk_wavs, part_file)
+                        # セキュリティのためファイルパスを記録しない
+                        logger.debug(f"{len(chunk_wavs)}個のチャンクを結合しました")
+                        temp_wav_files.append(part_file)
+
+                        # Clean up chunk files
+                        for chunk_wav in chunk_wavs:
+                            os.unlink(chunk_wav)
+                    else:
+                        # Only one chunk, no need to combine
+                        # logger.debug(f"Using single chunk file: {chunk_wavs[0]}")
+                        # セキュリティのためファイルパスをログに記録しない
+                        logger.debug("単一チャンクファイルを使用します")
+                        temp_wav_files.append(chunk_wavs[0])
+
+            # Combine all parts to create the final audio file
+            if temp_wav_files:
+                logger.info(
+                    f"Combining {len(temp_wav_files)} audio parts into final file"
+                )
+                final_path = self._create_final_audio_file(temp_wav_files)
+                logger.info("音声ファイルを生成しました")
+                return final_path
+            else:
+                logger.error("No audio parts were generated")
+                return None
+
+        except Exception as e:
+            logger.error(f"Podcast audio generation error: {e}")
+            return None
