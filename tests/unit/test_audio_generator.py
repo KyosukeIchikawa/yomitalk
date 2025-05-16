@@ -310,16 +310,12 @@ class TestAudioGenerator(unittest.TestCase):
             # モックコンバーターの設定
             mock_converter.side_effect = lambda word, *args, **kwargs: f"{word}カタカナ"
 
-            # 変換オーバーライド
-            conversion_override = {"this": "ディス", "to": "トゥ"}
-
             # テスト1: BE_VERB のケース - 前の単語から継続（空白を入れない）
             result_list: List[str] = []
             self.audio_generator._process_english_word(
                 part="is",
                 next_part="",
                 next_is_english=False,
-                conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
@@ -335,7 +331,6 @@ class TestAudioGenerator(unittest.TestCase):
                 part="hello",
                 next_part="",
                 next_is_english=False,
-                conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
@@ -351,7 +346,6 @@ class TestAudioGenerator(unittest.TestCase):
                 part="this",
                 next_part="",
                 next_is_english=False,
-                conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
@@ -367,7 +361,6 @@ class TestAudioGenerator(unittest.TestCase):
                 part="functionality",
                 next_part="",
                 next_is_english=False,
-                conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=31,  # 30文字以上経過
@@ -383,7 +376,6 @@ class TestAudioGenerator(unittest.TestCase):
                 part="house",
                 next_part="",
                 next_is_english=False,
-                conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
@@ -399,7 +391,6 @@ class TestAudioGenerator(unittest.TestCase):
                 part="i",
                 next_part="am",
                 next_is_english=True,
-                conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
@@ -415,7 +406,6 @@ class TestAudioGenerator(unittest.TestCase):
                 part="to",
                 next_part="be",
                 next_is_english=True,
-                conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,

@@ -121,6 +121,8 @@ class AudioGenerator:
         "while",
     ]
 
+    CONVERSION_OVERRIDE = {"this": "ディス", "to": "トゥ", "a": "ア"}
+
     def __init__(self) -> None:
         """Initialize AudioGenerator."""
         self.output_dir = Path("data/output")
@@ -222,23 +224,6 @@ class AudioGenerator:
         Returns:
             str: 英単語がカタカナに変換され、自然な息継ぎを考慮して空白が制御されたテキスト
         """
-        c2k = e2k.C2K()
-        return self._process_text_conversion(text, c2k)
-
-    def _process_text_conversion(self, text: str, converter: e2k.C2K) -> str:
-        """
-        テキスト変換処理の主要部分を担当します。
-
-        Args:
-            text (str): 変換するテキスト
-            converter: カタカナ変換ユーティリティ
-
-        Returns:
-            str: 処理されたテキスト
-        """
-        # 変換オーバーライド（指定された単語は固定の変換を使用）
-        conversion_override = {"this": "ディス", "to": "トゥ", "a": "ア"}
-
         # 英単語と非英単語を分割するための正規表現パターン
         pattern = r"([A-Za-z]+|[^A-Za-z]+)"
         parts = re.findall(pattern, text)
@@ -247,9 +232,7 @@ class AudioGenerator:
         split_parts = self._split_capitalized_parts(parts)
 
         # 英単語をカタカナに変換し、自然な息継ぎのための空白を制御
-        return self._convert_parts_to_katakana(
-            split_parts, conversion_override, converter
-        )
+        return self._convert_parts_to_katakana(parts=split_parts, converter=e2k.C2K())
 
     def _split_capitalized_parts(self, parts: List[str]) -> List[str]:
         """大文字で始まる部分を適切に分割します。"""
@@ -267,7 +250,6 @@ class AudioGenerator:
     def _convert_parts_to_katakana(
         self,
         parts: List[str],
-        conversion_override: dict,
         converter: e2k.C2K,
     ) -> str:
         """分割された部分をカタカナに変換し、適切な空白を制御します。"""
@@ -279,15 +261,11 @@ class AudioGenerator:
 
         for i, part in enumerate(parts):
             # 英単語かどうかを判定
-            is_english_word = self._is_english_word(part, conversion_override)
+            is_english_word = self._is_english_word(part)
 
             # 次の部分を確認（あれば）
             next_part = parts[i + 1] if i + 1 < len(parts) else ""
-            next_is_english = (
-                self._is_english_word(next_part, conversion_override)
-                if next_part
-                else False
-            )
+            next_is_english = self._is_english_word(next_part) if next_part else False
 
             # 英単語の場合の処理
             if is_english_word:
@@ -295,7 +273,6 @@ class AudioGenerator:
                     part,
                     next_part,
                     next_is_english,
-                    conversion_override,
                     converter,
                     result,
                     chars_since_break,
@@ -354,13 +331,13 @@ class AudioGenerator:
 
         return "".join(result)
 
-    def _is_english_word(self, part: str, conversion_override: dict) -> bool:
+    def _is_english_word(self, part: str) -> bool:
         """文字列が変換対象の英単語かどうかを判定します。"""
         if not part:
             return False
 
         return bool(
-            part.lower() in conversion_override
+            part.lower() in self.CONVERSION_OVERRIDE
             or len(part) >= 2
             and re.match(r"^[A-Za-z]+$", part)
             and (
@@ -374,7 +351,6 @@ class AudioGenerator:
         part: str,
         next_part: str,
         next_is_english: bool,
-        conversion_override: dict,
         converter: e2k.C2K,
         result: List[str],
         chars_since_break: int,
@@ -391,9 +367,8 @@ class AudioGenerator:
         is_conjunction = word_lower in self.CONJUNCTIONS
 
         # カタカナに変換（オーバーライドがあれば使用）
-        if word_lower in conversion_override:
-            katakana_part = conversion_override[word_lower]
-        else:
+        katakana_part = self.CONVERSION_OVERRIDE.get(word_lower)
+        if katakana_part is None:
             katakana_part = converter(part)
 
         # 息継ぎ（空白）を入れるかどうかの判定
