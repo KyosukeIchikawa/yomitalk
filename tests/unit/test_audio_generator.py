@@ -1,4 +1,5 @@
 import unittest
+from typing import List
 from unittest.mock import MagicMock, patch
 
 from app.components.audio_generator import AudioGenerator
@@ -297,6 +298,156 @@ class TestAudioGenerator(unittest.TestCase):
         if len(result) > 50:
             space_count = result.count(" ")
             self.assertGreaterEqual(space_count, 1)
+
+    def test_process_english_word(self):
+        """_process_english_wordメソッドの各条件のテスト"""
+        from app.components.audio_generator import WordType
+
+        # 必要なパラメータの初期化
+        with patch("app.components.audio_generator.e2k.C2K") as mock_c2k_class:
+            # モックインスタンスの作成
+            mock_converter = MagicMock()
+            mock_c2k_class.return_value = mock_converter
+
+            # モックコンバーターの設定
+            mock_converter.side_effect = lambda word, *args, **kwargs: f"{word}カタカナ"
+
+            # 単語タイプの辞書
+            word_types = {
+                WordType.BE_VERB: ["is", "am", "are", "be"],
+                WordType.PREPOSITION: ["in", "on", "at", "to"],
+                WordType.CONJUNCTION: ["and", "but", "or", "if"],
+                WordType.OTHER: [],
+            }
+
+            # 変換オーバーライド
+            conversion_override = {"this": "ディス", "to": "トゥ"}
+
+            # テスト1: BE_VERB のケース - 前の単語から継続（空白を入れない）
+            result_list: List[str] = []
+            self.audio_generator._process_english_word(
+                part="is",
+                next_part="",
+                next_is_english=False,
+                word_types=word_types,
+                conversion_override=conversion_override,
+                converter=mock_converter,
+                result=result_list,
+                chars_since_break=10,
+                last_was_katakana=True,
+                last_word_type=WordType.OTHER,
+                next_word_no_space=True,
+            )
+            # 空白が追加されずに単語だけが追加されたことを確認
+            self.assertEqual(result_list, ["isカタカナ"])
+
+            # テスト2: 通常の単語のケース - 前の単語からの区切り（空白を入れる）
+            result_list = []
+            self.audio_generator._process_english_word(
+                part="hello",
+                next_part="",
+                next_is_english=False,
+                word_types=word_types,
+                conversion_override=conversion_override,
+                converter=mock_converter,
+                result=result_list,
+                chars_since_break=10,
+                last_was_katakana=True,
+                last_word_type=WordType.OTHER,
+                next_word_no_space=False,
+            )
+            # 空白が追加され、その後に単語が追加されたことを確認
+            self.assertEqual(result_list, [" ", "helloカタカナ"])
+
+            # テスト3: オーバーライドされた単語のケース
+            result_list = []
+            self.audio_generator._process_english_word(
+                part="this",
+                next_part="",
+                next_is_english=False,
+                word_types=word_types,
+                conversion_override=conversion_override,
+                converter=mock_converter,
+                result=result_list,
+                chars_since_break=10,
+                last_was_katakana=True,
+                last_word_type=WordType.OTHER,
+                next_word_no_space=False,
+            )
+            # 空白が追加され、その後にオーバーライドされた値が追加されたことを確認
+            self.assertEqual(result_list, [" ", "ディス"])
+
+            # テスト4: 長いテキストでの息継ぎケース
+            result_list = []
+            self.audio_generator._process_english_word(
+                part="functionality",
+                next_part="",
+                next_is_english=False,
+                word_types=word_types,
+                conversion_override=conversion_override,
+                converter=mock_converter,
+                result=result_list,
+                chars_since_break=31,  # 30文字以上経過
+                last_was_katakana=True,
+                last_word_type=WordType.OTHER,
+                next_word_no_space=False,
+            )
+            # 空白が追加され、その後に単語が追加されたことを確認（文字数による息継ぎ）
+            self.assertEqual(result_list, [" ", "functionalityカタカナ"])
+
+            # テスト5: 前置詞の後の単語
+            result_list = []
+            self.audio_generator._process_english_word(
+                part="house",
+                next_part="",
+                next_is_english=False,
+                word_types=word_types,
+                conversion_override=conversion_override,
+                converter=mock_converter,
+                result=result_list,
+                chars_since_break=10,
+                last_was_katakana=True,
+                last_word_type=WordType.PREPOSITION,
+                next_word_no_space=True,
+            )
+            # 空白が追加されずに単語だけが追加されたことを確認（前置詞の後）
+            self.assertEqual(result_list, ["houseカタカナ"])
+
+            # テスト6: BE動詞の前の単語
+            result_list = []
+            self.audio_generator._process_english_word(
+                part="i",
+                next_part="am",
+                next_is_english=True,
+                word_types=word_types,
+                conversion_override=conversion_override,
+                converter=mock_converter,
+                result=result_list,
+                chars_since_break=10,
+                last_was_katakana=True,
+                last_word_type=WordType.OTHER,
+                next_word_no_space=False,
+            )
+            # 空白が追加されずに単語だけが追加されたことを確認（BE動詞の前）
+            self.assertEqual(result_list, ["iカタカナ"])
+
+            # テスト7: 既に空白がある場合に空白が削除されるケース
+            result_list = [" "]
+            self.audio_generator._process_english_word(
+                part="to",
+                next_part="be",
+                next_is_english=True,
+                word_types=word_types,
+                conversion_override=conversion_override,
+                converter=mock_converter,
+                result=result_list,
+                chars_since_break=10,
+                last_was_katakana=True,
+                last_word_type=WordType.OTHER,
+                next_word_no_space=False,
+            )
+            # 既存の空白が削除され、オーバーライドされた値が追加されたことを確認
+            self.assertEqual(result_list, ["トゥ"])
 
 
 if __name__ == "__main__":
