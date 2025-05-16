@@ -380,6 +380,9 @@ class PaperPodcastApp:
 
         with app:
             gr.Markdown("""# Yomitalk""")
+            gr.Markdown(
+                """**免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。"""
+            )
 
             # カスタムCSSスタイルを追加
             css = """
