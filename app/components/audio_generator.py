@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import uuid
+from enum import Enum, auto
 from pathlib import Path
 from typing import List, Optional
 
@@ -32,6 +33,16 @@ except ImportError as e:
     logger.warning("VOICEVOX Core installation is required for audio generation.")
     logger.warning("Run 'make download-voicevox-core' to set up VOICEVOX.")
     VOICEVOX_CORE_AVAILABLE = False
+
+
+# 単語タイプを表すEnum
+class WordType(Enum):
+    """単語タイプを表す列挙型"""
+
+    BE_VERB = auto()
+    PREPOSITION = auto()
+    CONJUNCTION = auto()
+    OTHER = auto()
 
 
 class AudioGenerator:
@@ -146,85 +157,108 @@ class AudioGenerator:
             str: 英単語がカタカナに変換され、自然な息継ぎを考慮して空白が制御されたテキスト
         """
         c2k = e2k.C2K()
+        return self._process_text_conversion(text, c2k)
+
+    def _process_text_conversion(self, text: str, converter: e2k.C2K) -> str:
+        """
+        テキスト変換処理の主要部分を担当します。
+
+        Args:
+            text (str): 変換するテキスト
+            converter: カタカナ変換ユーティリティ
+
+        Returns:
+            str: 処理されたテキスト
+        """
+        # 単語タイプの定義
+        word_types = self._get_word_types()
 
         # 変換オーバーライド（指定された単語は固定の変換を使用）
         conversion_override = {"this": "ディス", "to": "トゥ", "a": "ア"}
-
-        # be動詞のリスト
-        be_verbs = ["am", "is", "are", "was", "were", "be", "been", "being"]
-
-        # 一般的な前置詞のリスト
-        prepositions = [
-            "about",
-            "above",
-            "across",
-            "after",
-            "against",
-            "along",
-            "among",
-            "around",
-            "at",
-            "before",
-            "behind",
-            "below",
-            "beneath",
-            "beside",
-            "between",
-            "beyond",
-            "by",
-            "down",
-            "during",
-            "except",
-            "for",
-            "from",
-            "in",
-            "inside",
-            "into",
-            "like",
-            "near",
-            "of",
-            "off",
-            "on",
-            "onto",
-            "out",
-            "outside",
-            "over",
-            "through",
-            "to",
-            "toward",
-            "towards",
-            "under",
-            "underneath",
-            "until",
-            "up",
-            "upon",
-            "with",
-            "within",
-            "without",
-        ]
-
-        # 接続詞のリスト
-        conjunctions = [
-            "and",
-            "but",
-            "or",
-            "nor",
-            "for",
-            "yet",
-            "so",
-            "because",
-            "if",
-            "when",
-            "although",
-            "since",
-            "while",
-        ]
 
         # 英単語と非英単語を分割するための正規表現パターン
         pattern = r"([A-Za-z]+|[^A-Za-z]+)"
         parts = re.findall(pattern, text)
 
         # 大文字で始まる部分を分割する
+        split_parts = self._split_capitalized_parts(parts)
+
+        # 英単語をカタカナに変換し、自然な息継ぎのための空白を制御
+        return self._convert_parts_to_katakana(
+            split_parts, word_types, conversion_override, converter
+        )
+
+    def _get_word_types(self) -> dict:
+        """単語タイプの定義を返します。"""
+        return {
+            WordType.BE_VERB: ["am", "is", "are", "was", "were", "be", "been", "being"],
+            WordType.PREPOSITION: [
+                "about",
+                "above",
+                "across",
+                "after",
+                "against",
+                "along",
+                "among",
+                "around",
+                "at",
+                "before",
+                "behind",
+                "below",
+                "beneath",
+                "beside",
+                "between",
+                "beyond",
+                "by",
+                "down",
+                "during",
+                "except",
+                "for",
+                "from",
+                "in",
+                "inside",
+                "into",
+                "like",
+                "near",
+                "of",
+                "off",
+                "on",
+                "onto",
+                "out",
+                "outside",
+                "over",
+                "through",
+                "to",
+                "toward",
+                "towards",
+                "under",
+                "underneath",
+                "until",
+                "up",
+                "upon",
+                "with",
+                "within",
+                "without",
+            ],
+            WordType.CONJUNCTION: [
+                "and",
+                "but",
+                "or",
+                "nor",
+                "for",
+                "yet",
+                "so",
+                "because",
+                "if",
+                "when",
+                "although",
+                "since",
+                "while",
+            ],
+        }
+
+    def _split_capitalized_parts(self, parts: List[str]) -> List[str]:
+        """大文字で始まる部分を適切に分割します。"""
         split_parts = []
         for part in parts:
             if re.match(r"^[A-Za-z]+$", part):
@@ -234,101 +268,65 @@ class AudioGenerator:
             else:
                 # 非英単語はそのまま追加
                 split_parts.append(part)
+        return split_parts
 
-        # 英単語をカタカナに変換し、自然な息継ぎのための空白を制御
+    def _convert_parts_to_katakana(
+        self,
+        parts: List[str],
+        word_types: dict,
+        conversion_override: dict,
+        converter: e2k.C2K,
+    ) -> str:
+        """分割された部分をカタカナに変換し、適切な空白を制御します。"""
         result: List[str] = []
         chars_since_break = 0  # 最後の息継ぎからの文字数をカウント
         last_was_katakana = False
         last_word_type = None  # 前の単語のタイプ（前置詞、be動詞、その他）
         next_word_no_space = False  # 次の単語の前に空白を入れないフラグ
 
-        for i, part in enumerate(split_parts):
+        for i, part in enumerate(parts):
             # 英単語かどうかを判定
-            is_english_word = (
-                part.lower() in conversion_override
-                or len(part) >= 2
-                and re.match(r"^[A-Za-z]+$", part)
-                and (
-                    not re.match(r"^[A-Z]+$", part)
-                    or (len(part) >= 4 and is_romaji_readable(part))
-                )
-            )
+            is_english_word = self._is_english_word(part, conversion_override)
 
             # 次の部分を確認（あれば）
-            next_part = split_parts[i + 1] if i + 1 < len(split_parts) else ""
+            next_part = parts[i + 1] if i + 1 < len(parts) else ""
             next_is_english = (
-                len(next_part) >= 2
-                and re.match(r"^[A-Za-z]+$", next_part)
-                and (
-                    not re.match(r"^[A-Z]+$", next_part)
-                    or (len(next_part) >= 4 and is_romaji_readable(next_part))
-                )
+                self._is_english_word(next_part, conversion_override)
+                if next_part
+                else False
             )
 
             # 英単語の場合の処理
             if is_english_word:
-                # 小文字に変換して比較
-                word_lower = part.lower()
-
-                # 単語のタイプを判定
-                is_be_verb = word_lower in be_verbs
-                is_preposition = word_lower in prepositions
-                is_conjunction = word_lower in conjunctions
-
-                # カタカナに変換（オーバーライドがあれば使用）
-                if word_lower in conversion_override:
-                    katakana_part = conversion_override[word_lower]
-                else:
-                    katakana_part = c2k(part)
-
-                # 息継ぎ（空白）を入れるかどうかの判定
-                add_space = True
-
-                # 前置詞の後、次の単語の前には空白を入れない
-                if next_word_no_space:
-                    add_space = False
-                    next_word_no_space = False
-                # be動詞の前には空白を入れない
-                elif next_is_english and next_part.lower() in be_verbs:
-                    add_space = False
-                # 前置詞の前にも空白を入れない
-                elif next_is_english and next_part.lower() in prepositions:
-                    add_space = False
-                # 接続詞の前にも空白を入れない場合が多い
-                elif next_is_english and next_part.lower() in conjunctions:
-                    add_space = False
-
-                # 前置詞や接続詞の場合は、その後の単語の前に空白を入れないフラグを立てる
-                if is_preposition or is_conjunction:
-                    next_word_no_space = True
-
-                # 最後の息継ぎから30文字以上経過し、自然な区切りの場合は息継ぎを入れる
-                if (
-                    chars_since_break > 30
-                    and not is_be_verb
-                    and not is_preposition
-                    and not is_conjunction
-                ):
-                    chars_since_break = 0
-                    add_space = True
-
-                # 前の要素もカタカナだった場合、判定に従って空白を追加または削除
-                if last_was_katakana and result and result[-1].isspace():
-                    if not add_space:
-                        result.pop()  # 空白を削除
-                elif last_was_katakana and add_space:
-                    result.append(" ")  # 空白を追加
-
-                result.append(katakana_part)
-                chars_since_break += len(katakana_part)
-                last_was_katakana = True
-                last_word_type = (
-                    "be_verb"
-                    if is_be_verb
-                    else "preposition"
-                    if is_preposition
-                    else "other"
+                self._process_english_word(
+                    part,
+                    next_part,
+                    next_is_english,
+                    word_types,
+                    conversion_override,
+                    converter,
+                    result,
+                    chars_since_break,
+                    last_was_katakana,
+                    last_word_type,
+                    next_word_no_space,
                 )
+                chars_since_break = result[-1] and len(result[-1]) or 0
+                last_was_katakana = True
+
+                # 単語のタイプを判定して更新
+                word_lower = part.lower()
+                if word_lower in word_types[WordType.BE_VERB]:
+                    last_word_type = WordType.BE_VERB
+                elif word_lower in word_types[WordType.PREPOSITION]:
+                    last_word_type = WordType.PREPOSITION
+                    next_word_no_space = True
+                elif word_lower in word_types[WordType.CONJUNCTION]:
+                    last_word_type = WordType.CONJUNCTION
+                    next_word_no_space = True
+                else:
+                    last_word_type = WordType.OTHER
+                    next_word_no_space = False
 
             elif re.match(r"^-+$", part):  # 1つ以上のハイフンのみで構成されている場合
                 # ハイフンは捨てる
@@ -345,10 +343,10 @@ class AudioGenerator:
                         # 次の単語の種類によって空白を入れるかどうかを判断
                         next_word_lower = next_part.lower()
                         if (
-                            next_word_lower in be_verbs
-                            or next_word_lower in prepositions
-                            or last_word_type == "preposition"
-                            or next_word_lower in conjunctions
+                            next_word_lower in word_types[WordType.BE_VERB]
+                            or next_word_lower in word_types[WordType.PREPOSITION]
+                            or last_word_type == WordType.PREPOSITION
+                            or next_word_lower in word_types[WordType.CONJUNCTION]
                         ):
                             # 空白を追加しない
                             pass
@@ -364,6 +362,84 @@ class AudioGenerator:
                     last_word_type = None
 
         return "".join(result)
+
+    def _is_english_word(self, part: str, conversion_override: dict) -> bool:
+        """文字列が変換対象の英単語かどうかを判定します。"""
+        if not part:
+            return False
+
+        return bool(
+            part.lower() in conversion_override
+            or len(part) >= 2
+            and re.match(r"^[A-Za-z]+$", part)
+            and (
+                not re.match(r"^[A-Z]+$", part)
+                or (len(part) >= 4 and is_romaji_readable(part))
+            )
+        )
+
+    def _process_english_word(
+        self,
+        part: str,
+        next_part: str,
+        next_is_english: bool,
+        word_types: dict,
+        conversion_override: dict,
+        converter: e2k.C2K,
+        result: List[str],
+        chars_since_break: int,
+        last_was_katakana: bool,
+        last_word_type: Optional[object],
+        next_word_no_space: bool,
+    ) -> None:
+        """英単語をカタカナに変換し、適切な空白制御を行います。"""
+        # 小文字に変換して比較
+        word_lower = part.lower()
+
+        # 単語のタイプを判定
+        is_be_verb = word_lower in word_types[WordType.BE_VERB]
+        is_preposition = word_lower in word_types[WordType.PREPOSITION]
+        is_conjunction = word_lower in word_types[WordType.CONJUNCTION]
+
+        # カタカナに変換（オーバーライドがあれば使用）
+        if word_lower in conversion_override:
+            katakana_part = conversion_override[word_lower]
+        else:
+            katakana_part = converter(part)
+
+        # 息継ぎ（空白）を入れるかどうかの判定
+        add_space = True
+
+        # 前置詞の後、次の単語の前には空白を入れない
+        if next_word_no_space:
+            add_space = False
+        # be動詞の前には空白を入れない
+        elif next_is_english and next_part.lower() in word_types[WordType.BE_VERB]:
+            add_space = False
+        # 前置詞の前にも空白を入れない
+        elif next_is_english and next_part.lower() in word_types[WordType.PREPOSITION]:
+            add_space = False
+        # 接続詞の前にも空白を入れない場合が多い
+        elif next_is_english and next_part.lower() in word_types[WordType.CONJUNCTION]:
+            add_space = False
+
+        # 最後の息継ぎから30文字以上経過し、自然な区切りの場合は息継ぎを入れる
+        if (
+            chars_since_break > 30
+            and not is_be_verb
+            and not is_preposition
+            and not is_conjunction
+        ):
+            add_space = True
+
+        # 前の要素もカタカナだった場合、判定に従って空白を追加または削除
+        if last_was_katakana and result and result[-1].isspace():
+            if not add_space:
+                result.pop()  # 空白を削除
+        elif last_was_katakana and add_space:
+            result.append(" ")  # 空白を追加
+
+        result.append(katakana_part)
 
     def _create_final_audio_file(self, temp_wav_files: List[str]) -> str:
         """
