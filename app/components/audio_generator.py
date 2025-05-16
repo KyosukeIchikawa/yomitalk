@@ -126,15 +126,100 @@ class AudioGenerator:
 
     def _convert_english_to_katakana(self, text: str) -> str:
         """
-        英単語をカタカナに変換します。カタカナに変換された部分の間の不要な空白を削除します。
+        英単語をカタカナに変換し、自然な息継ぎのタイミングで空白を制御します。
+
+        以下のルールに基づいて空白を制御します：
+        1. be動詞の前では息継ぎしない（空白を入れない）
+        2. 前置詞の前後では息継ぎしない
+        3. 一定文字数（約30字）経過した場所で、自然な区切りがあれば息継ぎを入れる
+        4. 句読点の後には通常息継ぎを入れる
+
+        変換例：
+        - "this" → "ディス"（正：ディス、誤：シス）
+        - "to" → "トゥ"（正：トゥ、誤：トー）
+        - "welcome" → 「ウエルカム」または「ウェルカム」（どちらでも可）
 
         Args:
             text (str): 変換するテキスト
 
         Returns:
-            str: 英単語がカタカナに変換され、不要な空白が削除されたテキスト
+            str: 英単語がカタカナに変換され、自然な息継ぎを考慮して空白が制御されたテキスト
         """
         c2k = e2k.C2K()
+
+        # 変換オーバーライド（指定された単語は固定の変換を使用）
+        conversion_override = {"this": "ディス", "to": "トゥ", "a": "ア"}
+
+        # be動詞のリスト
+        be_verbs = ["am", "is", "are", "was", "were", "be", "been", "being"]
+
+        # 一般的な前置詞のリスト
+        prepositions = [
+            "about",
+            "above",
+            "across",
+            "after",
+            "against",
+            "along",
+            "among",
+            "around",
+            "at",
+            "before",
+            "behind",
+            "below",
+            "beneath",
+            "beside",
+            "between",
+            "beyond",
+            "by",
+            "down",
+            "during",
+            "except",
+            "for",
+            "from",
+            "in",
+            "inside",
+            "into",
+            "like",
+            "near",
+            "of",
+            "off",
+            "on",
+            "onto",
+            "out",
+            "outside",
+            "over",
+            "through",
+            "to",
+            "toward",
+            "towards",
+            "under",
+            "underneath",
+            "until",
+            "up",
+            "upon",
+            "with",
+            "within",
+            "without",
+        ]
+
+        # 接続詞のリスト
+        conjunctions = [
+            "and",
+            "but",
+            "or",
+            "nor",
+            "for",
+            "yet",
+            "so",
+            "because",
+            "if",
+            "when",
+            "although",
+            "since",
+            "while",
+        ]
+
         # 英単語と非英単語を分割するための正規表現パターン
         pattern = r"([A-Za-z]+|[^A-Za-z]+)"
         parts = re.findall(pattern, text)
@@ -150,42 +235,133 @@ class AudioGenerator:
                 # 非英単語はそのまま追加
                 split_parts.append(part)
 
-        # 英単語をカタカナに変換
+        # 英単語をカタカナに変換し、自然な息継ぎのための空白を制御
         result: List[str] = []
+        chars_since_break = 0  # 最後の息継ぎからの文字数をカウント
         last_was_katakana = False
+        last_word_type = None  # 前の単語のタイプ（前置詞、be動詞、その他）
+        next_word_no_space = False  # 次の単語の前に空白を入れないフラグ
 
-        for part in split_parts:
-            # 下記であればカタカナに変換し, そうでなければ変換せずにそのまま追加
-            # - 2文字以上である
-            # - アルファベットのみで構成されている
-            # - 大文字のみでない、または大文字のみだが4文字以上かつローマ字として読める
-            if (
-                len(part) >= 2
+        for i, part in enumerate(split_parts):
+            # 英単語かどうかを判定
+            is_english_word = (
+                part.lower() in conversion_override
+                or len(part) >= 2
                 and re.match(r"^[A-Za-z]+$", part)
                 and (
                     not re.match(r"^[A-Z]+$", part)
                     or (len(part) >= 4 and is_romaji_readable(part))
                 )
-            ):
-                katakana_part = c2k(part)
+            )
 
-                # 前の要素もカタカナに変換されたものだった場合、空白を削除
+            # 次の部分を確認（あれば）
+            next_part = split_parts[i + 1] if i + 1 < len(split_parts) else ""
+            next_is_english = (
+                len(next_part) >= 2
+                and re.match(r"^[A-Za-z]+$", next_part)
+                and (
+                    not re.match(r"^[A-Z]+$", next_part)
+                    or (len(next_part) >= 4 and is_romaji_readable(next_part))
+                )
+            )
+
+            # 英単語の場合の処理
+            if is_english_word:
+                # 小文字に変換して比較
+                word_lower = part.lower()
+
+                # 単語のタイプを判定
+                is_be_verb = word_lower in be_verbs
+                is_preposition = word_lower in prepositions
+                is_conjunction = word_lower in conjunctions
+
+                # カタカナに変換（オーバーライドがあれば使用）
+                if word_lower in conversion_override:
+                    katakana_part = conversion_override[word_lower]
+                else:
+                    katakana_part = c2k(part)
+
+                # 息継ぎ（空白）を入れるかどうかの判定
+                add_space = True
+
+                # 前置詞の後、次の単語の前には空白を入れない
+                if next_word_no_space:
+                    add_space = False
+                    next_word_no_space = False
+                # be動詞の前には空白を入れない
+                elif next_is_english and next_part.lower() in be_verbs:
+                    add_space = False
+                # 前置詞の前にも空白を入れない
+                elif next_is_english and next_part.lower() in prepositions:
+                    add_space = False
+                # 接続詞の前にも空白を入れない場合が多い
+                elif next_is_english and next_part.lower() in conjunctions:
+                    add_space = False
+
+                # 前置詞や接続詞の場合は、その後の単語の前に空白を入れないフラグを立てる
+                if is_preposition or is_conjunction:
+                    next_word_no_space = True
+
+                # 最後の息継ぎから30文字以上経過し、自然な区切りの場合は息継ぎを入れる
+                if (
+                    chars_since_break > 30
+                    and not is_be_verb
+                    and not is_preposition
+                    and not is_conjunction
+                ):
+                    chars_since_break = 0
+                    add_space = True
+
+                # 前の要素もカタカナだった場合、判定に従って空白を追加または削除
                 if last_was_katakana and result and result[-1].isspace():
-                    result.pop()  # 空白を削除
+                    if not add_space:
+                        result.pop()  # 空白を削除
+                elif last_was_katakana and add_space:
+                    result.append(" ")  # 空白を追加
 
                 result.append(katakana_part)
+                chars_since_break += len(katakana_part)
                 last_was_katakana = True
+                last_word_type = (
+                    "be_verb"
+                    if is_be_verb
+                    else "preposition"
+                    if is_preposition
+                    else "other"
+                )
+
             elif re.match(r"^-+$", part):  # 1つ以上のハイフンのみで構成されている場合
                 # ハイフンは捨てる
                 pass
             else:
-                # 空白文字の場合、前がカタカナでかつ次もカタカナになる可能性がある場合は
-                # 一時的に追加し、次の処理で必要に応じて削除できるようにする
-                if part.isspace() and last_was_katakana:
-                    result.append(part)
+                # 句読点や改行の処理
+                if re.search(r"[。．.、，,!！?？\n]", part):
+                    chars_since_break = 0  # 句読点の後は文字カウントをリセット
+
+                # 空白文字の場合の処理
+                if part.isspace():
+                    # 前がカタカナで、次もカタカナになる可能性がある場合は判断を保留
+                    if last_was_katakana and next_is_english:
+                        # 次の単語の種類によって空白を入れるかどうかを判断
+                        next_word_lower = next_part.lower()
+                        if (
+                            next_word_lower in be_verbs
+                            or next_word_lower in prepositions
+                            or last_word_type == "preposition"
+                            or next_word_lower in conjunctions
+                        ):
+                            # 空白を追加しない
+                            pass
+                        else:
+                            result.append(part)
+                    else:
+                        result.append(part)
+                        chars_since_break += 1
                 else:
                     result.append(part)
+                    chars_since_break += len(part)
                     last_was_katakana = False
+                    last_word_type = None
 
         return "".join(result)
 
