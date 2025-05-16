@@ -301,8 +301,6 @@ class TestAudioGenerator(unittest.TestCase):
 
     def test_process_english_word(self):
         """_process_english_wordメソッドの各条件のテスト"""
-        from app.components.audio_generator import WordType
-
         # 必要なパラメータの初期化
         with patch("app.components.audio_generator.e2k.C2K") as mock_c2k_class:
             # モックインスタンスの作成
@@ -311,14 +309,6 @@ class TestAudioGenerator(unittest.TestCase):
 
             # モックコンバーターの設定
             mock_converter.side_effect = lambda word, *args, **kwargs: f"{word}カタカナ"
-
-            # 単語タイプの辞書
-            word_types = {
-                WordType.BE_VERB: ["is", "am", "are", "be"],
-                WordType.PREPOSITION: ["in", "on", "at", "to"],
-                WordType.CONJUNCTION: ["and", "but", "or", "if"],
-                WordType.OTHER: [],
-            }
 
             # 変換オーバーライド
             conversion_override = {"this": "ディス", "to": "トゥ"}
@@ -329,13 +319,11 @@ class TestAudioGenerator(unittest.TestCase):
                 part="is",
                 next_part="",
                 next_is_english=False,
-                word_types=word_types,
                 conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
                 last_was_katakana=True,
-                last_word_type=WordType.OTHER,
                 next_word_no_space=True,
             )
             # 空白が追加されずに単語だけが追加されたことを確認
@@ -347,13 +335,11 @@ class TestAudioGenerator(unittest.TestCase):
                 part="hello",
                 next_part="",
                 next_is_english=False,
-                word_types=word_types,
                 conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
                 last_was_katakana=True,
-                last_word_type=WordType.OTHER,
                 next_word_no_space=False,
             )
             # 空白が追加され、その後に単語が追加されたことを確認
@@ -365,13 +351,11 @@ class TestAudioGenerator(unittest.TestCase):
                 part="this",
                 next_part="",
                 next_is_english=False,
-                word_types=word_types,
                 conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
                 last_was_katakana=True,
-                last_word_type=WordType.OTHER,
                 next_word_no_space=False,
             )
             # 空白が追加され、その後にオーバーライドされた値が追加されたことを確認
@@ -383,13 +367,11 @@ class TestAudioGenerator(unittest.TestCase):
                 part="functionality",
                 next_part="",
                 next_is_english=False,
-                word_types=word_types,
                 conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=31,  # 30文字以上経過
                 last_was_katakana=True,
-                last_word_type=WordType.OTHER,
                 next_word_no_space=False,
             )
             # 空白が追加され、その後に単語が追加されたことを確認（文字数による息継ぎ）
@@ -401,13 +383,11 @@ class TestAudioGenerator(unittest.TestCase):
                 part="house",
                 next_part="",
                 next_is_english=False,
-                word_types=word_types,
                 conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
                 last_was_katakana=True,
-                last_word_type=WordType.PREPOSITION,
                 next_word_no_space=True,
             )
             # 空白が追加されずに単語だけが追加されたことを確認（前置詞の後）
@@ -419,13 +399,11 @@ class TestAudioGenerator(unittest.TestCase):
                 part="i",
                 next_part="am",
                 next_is_english=True,
-                word_types=word_types,
                 conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
                 last_was_katakana=True,
-                last_word_type=WordType.OTHER,
                 next_word_no_space=False,
             )
             # 空白が追加されずに単語だけが追加されたことを確認（BE動詞の前）
@@ -437,13 +415,11 @@ class TestAudioGenerator(unittest.TestCase):
                 part="to",
                 next_part="be",
                 next_is_english=True,
-                word_types=word_types,
                 conversion_override=conversion_override,
                 converter=mock_converter,
                 result=result_list,
                 chars_since_break=10,
                 last_was_katakana=True,
-                last_word_type=WordType.OTHER,
                 next_word_no_space=False,
             )
             # 既存の空白が削除され、オーバーライドされた値が追加されたことを確認

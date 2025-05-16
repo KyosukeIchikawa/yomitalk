@@ -55,6 +55,72 @@ class AudioGenerator:
     VOICEVOX_DICT_PATH = VOICEVOX_BASE_PATH / "dict/open_jtalk_dic_utf_8-1.11"
     VOICEVOX_LIB_PATH = VOICEVOX_BASE_PATH / "onnxruntime/lib"
 
+    # 単語タイプのリスト
+    BE_VERBS = ["am", "is", "are", "was", "were", "be", "been", "being"]
+    PREPOSITIONS = [
+        "about",
+        "above",
+        "across",
+        "after",
+        "against",
+        "along",
+        "among",
+        "around",
+        "at",
+        "before",
+        "behind",
+        "below",
+        "beneath",
+        "beside",
+        "between",
+        "beyond",
+        "by",
+        "down",
+        "during",
+        "except",
+        "for",
+        "from",
+        "in",
+        "inside",
+        "into",
+        "like",
+        "near",
+        "of",
+        "off",
+        "on",
+        "onto",
+        "out",
+        "outside",
+        "over",
+        "through",
+        "to",
+        "toward",
+        "towards",
+        "under",
+        "underneath",
+        "until",
+        "up",
+        "upon",
+        "with",
+        "within",
+        "without",
+    ]
+    CONJUNCTIONS = [
+        "and",
+        "but",
+        "or",
+        "nor",
+        "for",
+        "yet",
+        "so",
+        "because",
+        "if",
+        "when",
+        "although",
+        "since",
+        "while",
+    ]
+
     def __init__(self) -> None:
         """Initialize AudioGenerator."""
         self.output_dir = Path("data/output")
@@ -170,9 +236,6 @@ class AudioGenerator:
         Returns:
             str: 処理されたテキスト
         """
-        # 単語タイプの定義
-        word_types = self._get_word_types()
-
         # 変換オーバーライド（指定された単語は固定の変換を使用）
         conversion_override = {"this": "ディス", "to": "トゥ", "a": "ア"}
 
@@ -185,77 +248,8 @@ class AudioGenerator:
 
         # 英単語をカタカナに変換し、自然な息継ぎのための空白を制御
         return self._convert_parts_to_katakana(
-            split_parts, word_types, conversion_override, converter
+            split_parts, conversion_override, converter
         )
-
-    def _get_word_types(self) -> dict:
-        """単語タイプの定義を返します。"""
-        return {
-            WordType.BE_VERB: ["am", "is", "are", "was", "were", "be", "been", "being"],
-            WordType.PREPOSITION: [
-                "about",
-                "above",
-                "across",
-                "after",
-                "against",
-                "along",
-                "among",
-                "around",
-                "at",
-                "before",
-                "behind",
-                "below",
-                "beneath",
-                "beside",
-                "between",
-                "beyond",
-                "by",
-                "down",
-                "during",
-                "except",
-                "for",
-                "from",
-                "in",
-                "inside",
-                "into",
-                "like",
-                "near",
-                "of",
-                "off",
-                "on",
-                "onto",
-                "out",
-                "outside",
-                "over",
-                "through",
-                "to",
-                "toward",
-                "towards",
-                "under",
-                "underneath",
-                "until",
-                "up",
-                "upon",
-                "with",
-                "within",
-                "without",
-            ],
-            WordType.CONJUNCTION: [
-                "and",
-                "but",
-                "or",
-                "nor",
-                "for",
-                "yet",
-                "so",
-                "because",
-                "if",
-                "when",
-                "although",
-                "since",
-                "while",
-            ],
-        }
 
     def _split_capitalized_parts(self, parts: List[str]) -> List[str]:
         """大文字で始まる部分を適切に分割します。"""
@@ -273,7 +267,6 @@ class AudioGenerator:
     def _convert_parts_to_katakana(
         self,
         parts: List[str],
-        word_types: dict,
         conversion_override: dict,
         converter: e2k.C2K,
     ) -> str:
@@ -302,13 +295,11 @@ class AudioGenerator:
                     part,
                     next_part,
                     next_is_english,
-                    word_types,
                     conversion_override,
                     converter,
                     result,
                     chars_since_break,
                     last_was_katakana,
-                    last_word_type,
                     next_word_no_space,
                 )
                 chars_since_break = result[-1] and len(result[-1]) or 0
@@ -316,12 +307,12 @@ class AudioGenerator:
 
                 # 単語のタイプを判定して更新
                 word_lower = part.lower()
-                if word_lower in word_types[WordType.BE_VERB]:
+                if word_lower in self.BE_VERBS:
                     last_word_type = WordType.BE_VERB
-                elif word_lower in word_types[WordType.PREPOSITION]:
+                elif word_lower in self.PREPOSITIONS:
                     last_word_type = WordType.PREPOSITION
                     next_word_no_space = True
-                elif word_lower in word_types[WordType.CONJUNCTION]:
+                elif word_lower in self.CONJUNCTIONS:
                     last_word_type = WordType.CONJUNCTION
                     next_word_no_space = True
                 else:
@@ -343,10 +334,10 @@ class AudioGenerator:
                         # 次の単語の種類によって空白を入れるかどうかを判断
                         next_word_lower = next_part.lower()
                         if (
-                            next_word_lower in word_types[WordType.BE_VERB]
-                            or next_word_lower in word_types[WordType.PREPOSITION]
-                            or last_word_type == WordType.PREPOSITION
-                            or next_word_lower in word_types[WordType.CONJUNCTION]
+                            next_word_lower in self.BE_VERBS
+                            or next_word_lower in self.PREPOSITIONS
+                            or last_word_type is WordType.PREPOSITION
+                            or next_word_lower in self.CONJUNCTIONS
                         ):
                             # 空白を追加しない
                             pass
@@ -383,13 +374,11 @@ class AudioGenerator:
         part: str,
         next_part: str,
         next_is_english: bool,
-        word_types: dict,
         conversion_override: dict,
         converter: e2k.C2K,
         result: List[str],
         chars_since_break: int,
         last_was_katakana: bool,
-        last_word_type: Optional[object],
         next_word_no_space: bool,
     ) -> None:
         """英単語をカタカナに変換し、適切な空白制御を行います。"""
@@ -397,9 +386,9 @@ class AudioGenerator:
         word_lower = part.lower()
 
         # 単語のタイプを判定
-        is_be_verb = word_lower in word_types[WordType.BE_VERB]
-        is_preposition = word_lower in word_types[WordType.PREPOSITION]
-        is_conjunction = word_lower in word_types[WordType.CONJUNCTION]
+        is_be_verb = word_lower in self.BE_VERBS
+        is_preposition = word_lower in self.PREPOSITIONS
+        is_conjunction = word_lower in self.CONJUNCTIONS
 
         # カタカナに変換（オーバーライドがあれば使用）
         if word_lower in conversion_override:
@@ -414,13 +403,13 @@ class AudioGenerator:
         if next_word_no_space:
             add_space = False
         # be動詞の前には空白を入れない
-        elif next_is_english and next_part.lower() in word_types[WordType.BE_VERB]:
+        elif next_is_english and next_part.lower() in self.BE_VERBS:
             add_space = False
         # 前置詞の前にも空白を入れない
-        elif next_is_english and next_part.lower() in word_types[WordType.PREPOSITION]:
+        elif next_is_english and next_part.lower() in self.PREPOSITIONS:
             add_space = False
         # 接続詞の前にも空白を入れない場合が多い
-        elif next_is_english and next_part.lower() in word_types[WordType.CONJUNCTION]:
+        elif next_is_english and next_part.lower() in self.CONJUNCTIONS:
             add_space = False
 
         # 最後の息継ぎから30文字以上経過し、自然な区切りの場合は息継ぎを入れる
