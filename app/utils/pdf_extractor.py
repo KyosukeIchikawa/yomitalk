@@ -34,6 +34,8 @@ class PDFExtractor:
             logger.debug(f"Processing PDF file: {file_path}")
             result: DocumentConverterResult = self.markdown_converter.convert(file_path)
             # DocumentConverterResultからテキスト内容を取得
+            # NOTE: 縦書きの場合に1文字以下の行が続く場合がある.
+            #       それを検知して整えたいが, 縦書きが上から下に書かれているのか, 下から上に書かれているのかをコスパ良く判定するのが難しいため一旦保留とする.
             markdown_content: str = result.text_content
             logger.debug("PDF successfully converted to Markdown")
             return markdown_content
