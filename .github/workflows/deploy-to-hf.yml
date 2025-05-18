@@ -1,0 +1,102 @@
+name: Deploy to Hugging Face Space
+
+on:
+  workflow_dispatch:  # 手動デプロイボタン
+
+jobs:
+  check-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI status
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              branch: 'main',
+              status: 'success',
+              per_page: 1
+            });
+
+            if (runs.total_count === 0) {
+              core.setFailed('CIが成功していません。デプロイする前にCIを実行して成功させてください。');
+            }
+
+  deploy:
+    needs: check-ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Hugging Face Hub CLI
+        run: pip install huggingface_hub
+
+      - name: Login to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: huggingface-cli login --token $HF_TOKEN
+
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_SPACE_ID: Kyosuke0/yomitalk
+        run: |
+          # 必要なファイルをスペースにプッシュ
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "GitHub Actions"
+
+          # huggingface_hubを使用して直接アップロード
+          python -c "
+          from huggingface_hub import HfApi
+          import os
+          import glob
+
+          api = HfApi()
+          space_id = os.environ.get('HF_SPACE_ID')
+
+          # すべての必要なファイルをアップロード
+          files_to_upload = [
+              'app.py',
+              'requirements.txt',
+              'pyproject.toml',
+              'LICENSE',
+              'README.md',
+          ]
+
+          # ディレクトリ全体をアップロード
+          dirs_to_upload = ['yomitalk', 'assets', 'docs']
+
+          # 個々のファイルをアップロード
+          for file in files_to_upload:
+              if os.path.exists(file):
+                  print(f'Uploading {file}')
+                  api.upload_file(
+                      path_or_fileobj=file,
+                      path_in_repo=file,
+                      repo_id=space_id,
+                      repo_type='space',
+                  )
+
+          # ディレクトリ内のファイルをアップロード
+          for dir_path in dirs_to_upload:
+              if os.path.exists(dir_path):
+                  for root, _, files in os.walk(dir_path):
+                      for file in files:
+                          file_path = os.path.join(root, file)
+                          # 不要なファイルをスキップ
+                          if '__pycache__' in file_path or '.git' in file_path:
+                              continue
+                          print(f'Uploading {file_path}')
+                          api.upload_file(
+                              path_or_fileobj=file_path,
+                              path_in_repo=file_path,
+                              repo_id=space_id,
+                              repo_type='space',
+                          )
+          "
