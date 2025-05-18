@@ -4,8 +4,8 @@ import os
 import tempfile
 from unittest.mock import mock_open, patch
 
-from app.components.file_uploader import FileUploader
-from app.utils.pdf_extractor import PDFExtractor
+from yomitalk.components.file_uploader import FileUploader
+from yomitalk.utils.pdf_extractor import PDFExtractor
 
 
 class TestFileUploader:

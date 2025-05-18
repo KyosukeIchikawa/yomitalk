@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Main application module.
 
 Builds the Paper Podcast Generator application using Gradio.
@@ -11,11 +13,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import gradio as gr
 
-from app.components.audio_generator import VOICEVOX_CORE_AVAILABLE, AudioGenerator
-from app.components.file_uploader import FileUploader
-from app.components.text_processor import TextProcessor
-from app.prompt_manager import DocumentType, PodcastMode
-from app.utils.logger import logger
+from yomitalk.components.audio_generator import VOICEVOX_CORE_AVAILABLE, AudioGenerator
+from yomitalk.components.file_uploader import FileUploader
+from yomitalk.components.text_processor import TextProcessor
+from yomitalk.prompt_manager import DocumentType, PodcastMode
+from yomitalk.utils.logger import logger
 
 # Check for temporary file directories
 os.makedirs("data/temp", exist_ok=True)

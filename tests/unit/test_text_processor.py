@@ -3,8 +3,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from app.components.text_processor import TextProcessor
-from app.prompt_manager import DocumentType, PodcastMode
+from yomitalk.components.text_processor import TextProcessor
+from yomitalk.prompt_manager import DocumentType, PodcastMode
 
 
 class TestTextProcessor(unittest.TestCase):
@@ -13,21 +13,23 @@ class TestTextProcessor(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures, if any."""
         # TextProcessorをパッチして作成
-        with patch("app.prompt_manager.PromptManager") as mock_prompt_manager_class:
+        with patch(
+            "yomitalk.prompt_manager.PromptManager"
+        ) as mock_prompt_manager_class:
             # PromptManagerのモックを設定
             self.mock_prompt_manager = MagicMock()
             mock_prompt_manager_class.return_value = self.mock_prompt_manager
 
             # OpenAIModelのモックを設定
             with patch(
-                "app.models.openai_model.OpenAIModel"
+                "yomitalk.models.openai_model.OpenAIModel"
             ) as mock_openai_model_class:
                 self.mock_openai_model = MagicMock()
                 mock_openai_model_class.return_value = self.mock_openai_model
 
                 # GeminiModelのモックを設定
                 with patch(
-                    "app.models.gemini_model.GeminiModel"
+                    "yomitalk.models.gemini_model.GeminiModel"
                 ) as mock_gemini_model_class:
                     self.mock_gemini_model = MagicMock()
                     mock_gemini_model_class.return_value = self.mock_gemini_model
@@ -512,7 +514,7 @@ class TestTextProcessor(unittest.TestCase):
 
     def test_get_document_type(self):
         """Test getting document type."""
-        from app.prompt_manager import DocumentType
+        from yomitalk.prompt_manager import DocumentType
 
         # モックオブジェクトの設定
         mock_document_type = MagicMock(spec=DocumentType)

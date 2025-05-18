@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.utils.text_utils import is_romaji_readable
+from yomitalk.utils.text_utils import is_romaji_readable
 
 
 class TestIsRomajiReadable:

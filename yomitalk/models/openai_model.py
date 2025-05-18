@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 import httpx
 from openai import OpenAI
 
-from app.utils.logger import logger
+from yomitalk.utils.logger import logger
 
 
 class OpenAIModel:

@@ -7,8 +7,8 @@ import os
 from pathlib import Path
 from typing import List
 
-from app.utils.logger import logger
-from app.utils.pdf_extractor import PDFExtractor
+from yomitalk.utils.logger import logger
+from yomitalk.utils.pdf_extractor import PDFExtractor
 
 
 class FileUploader:

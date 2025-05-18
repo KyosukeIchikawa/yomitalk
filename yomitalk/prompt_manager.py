@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 import jinja2
 
-from app.utils.logger import logger
+from yomitalk.utils.logger import logger
 
 
 class DocumentType(Enum):

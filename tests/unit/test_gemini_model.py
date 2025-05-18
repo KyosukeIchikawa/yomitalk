@@ -6,7 +6,7 @@ This module tests the Google Gemini text generation functionality.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from app.models.gemini_model import GeminiModel
+from yomitalk.models.gemini_model import GeminiModel
 
 
 class TestGeminiModel(unittest.TestCase):

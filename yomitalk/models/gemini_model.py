@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 import google.generativeai as genai
 
-from app.utils.logger import logger
+from yomitalk.utils.logger import logger
 
 
 class GeminiModel:

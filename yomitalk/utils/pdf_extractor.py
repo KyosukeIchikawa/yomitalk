@@ -9,7 +9,7 @@ import sys
 
 from markitdown import DocumentConverterResult, MarkItDown
 
-from app.utils.logger import logger
+from yomitalk.utils.logger import logger
 
 
 class PDFExtractor:

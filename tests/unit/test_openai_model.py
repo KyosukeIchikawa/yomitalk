@@ -6,7 +6,7 @@ This module tests the OpenAI text generation functionality.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from app.models.openai_model import OpenAIModel
+from yomitalk.models.openai_model import OpenAIModel
 
 
 class TestOpenAIModel(unittest.TestCase):
@@ -80,7 +80,7 @@ class TestOpenAIModel(unittest.TestCase):
         self.model.max_tokens = 2000
         self.assertEqual(2000, self.model.get_max_tokens())
 
-    @patch("app.models.openai_model.OpenAI")
+    @patch("yomitalk.models.openai_model.OpenAI")
     def test_generate_text(self, mock_openai):
         """Test generating text with OpenAI API."""
         # モックの設定

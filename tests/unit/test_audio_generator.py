@@ -2,7 +2,7 @@ import unittest
 from typing import List
 from unittest.mock import MagicMock, patch
 
-from app.components.audio_generator import AudioGenerator
+from yomitalk.components.audio_generator import AudioGenerator
 
 
 class TestAudioGenerator(unittest.TestCase):
@@ -11,12 +11,14 @@ class TestAudioGenerator(unittest.TestCase):
     def setUp(self):
         """テスト実行前のセットアップ"""
         # VOICEVOXの初期化をモック
-        with patch("app.components.audio_generator.VOICEVOX_CORE_AVAILABLE", False):
+        with patch(
+            "yomitalk.components.audio_generator.VOICEVOX_CORE_AVAILABLE", False
+        ):
             # e2kのモックを作成
             with patch(
-                "app.components.audio_generator.e2k.C2K"
+                "yomitalk.components.audio_generator.e2k.C2K"
             ) as mock_c2k_class, patch(
-                "app.components.audio_generator.e2k.NGram"
+                "yomitalk.components.audio_generator.e2k.NGram"
             ) as mock_ngram_class:
                 # モックインスタンスの作成
                 self.mock_c2k = MagicMock()
@@ -302,7 +304,7 @@ class TestAudioGenerator(unittest.TestCase):
     def test_process_english_word(self):
         """_process_english_wordメソッドの各条件のテスト"""
         # 必要なパラメータの初期化
-        with patch("app.components.audio_generator.e2k.C2K") as mock_c2k_class:
+        with patch("yomitalk.components.audio_generator.e2k.C2K") as mock_c2k_class:
             # モックインスタンスの作成
             mock_converter = MagicMock()
             mock_c2k_class.return_value = mock_converter

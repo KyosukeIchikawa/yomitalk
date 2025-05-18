@@ -45,7 +45,7 @@ strict_optional = true
 
 # 新規ファイルでは常に厳格に型チェック
 [[tool.mypy.overrides]]
-module = ["app.components.audio_generator", "app.components.pdf_uploader"]
+module = ["yomitalk.components.audio_generator", "yomitalk.components.pdf_uploader"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 

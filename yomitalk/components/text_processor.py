@@ -5,10 +5,10 @@ This module provides text preprocessing and API integrations.
 
 from typing import Dict, List
 
-from app.models.gemini_model import GeminiModel
-from app.models.openai_model import OpenAIModel
-from app.prompt_manager import DocumentType, PodcastMode, PromptManager
-from app.utils.logger import logger
+from yomitalk.models.gemini_model import GeminiModel
+from yomitalk.models.openai_model import OpenAIModel
+from yomitalk.prompt_manager import DocumentType, PodcastMode, PromptManager
+from yomitalk.utils.logger import logger
 
 
 class TextProcessor:

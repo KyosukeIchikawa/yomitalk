@@ -15,8 +15,8 @@ from typing import List, Optional
 
 import e2k
 
-from app.utils.logger import logger
-from app.utils.text_utils import is_romaji_readable
+from yomitalk.utils.logger import logger
+from yomitalk.utils.text_utils import is_romaji_readable
 
 # VOICEVOX Core imports
 try:

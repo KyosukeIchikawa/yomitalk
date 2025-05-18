@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from app.utils.pdf_extractor import PDFExtractor
+from yomitalk.utils.pdf_extractor import PDFExtractor
 
 
 class TestPDFExtractor:
@@ -49,7 +49,7 @@ class TestPDFExtractor:
         test_path = "/path/to/test.pdf"
 
         # Call the method being tested and expect it to raise an exception
-        with patch("app.utils.pdf_extractor.logger") as mock_logger:
+        with patch("yomitalk.utils.pdf_extractor.logger") as mock_logger:
             try:
                 self.extractor.extract_from_pdf(test_path)
                 assert False, "Expected an exception to be raised"

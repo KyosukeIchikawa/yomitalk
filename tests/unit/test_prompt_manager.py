@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.prompt_manager import PodcastMode, PromptManager
+from yomitalk.prompt_manager import PodcastMode, PromptManager
 
 
 class TestPromptManager(unittest.TestCase):
