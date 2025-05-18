@@ -63,6 +63,8 @@ jobs:
     environment:
       name: huggingface-production
       url: https://huggingface.co/spaces/${{ env.HF_SPACE }}
+      # 手動承認が必要なように設定
+      required: true
     steps:
       - uses: actions/checkout@v3
         with:
