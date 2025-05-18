@@ -54,3 +54,22 @@ jobs:
     - name: Run E2E tests
       run: |
         $VENV_PATH/bin/python -m pytest tests/e2e/ -v -s
+
+  deploy-to-hf-spaces:
+    runs-on: ubuntu-latest
+    needs: e2e-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Push to Hugging Face Space
+      uses: huggingface/huggingface-push-to-spaces-action@main
+      with:
+        space-id: "Kyosuke0/yomitalk"
+        hf-token: ${{ secrets.HF_TOKEN }}
+        # リポジトリのすべてのファイルをSpaceにプッシュします
+        source-directory: "."
+        commit-message: "Update Space via GitHub Actions"
