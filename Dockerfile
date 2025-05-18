@@ -17,7 +17,7 @@ RUN apt-get update \
 COPY . /app/
 
 # 自動ダウンロードをCIモードで行う
-RUN make download-voicevox-core-ci
+RUN make download-voicevox-core
 
 # Python依存関係のインストール
 RUN make install-python-packages
