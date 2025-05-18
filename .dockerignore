@@ -1,0 +1,22 @@
+# Files to ignore when building Docker image
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+venv/
+ENV/
+env/
+data/output/*
+data/temp/*
+!data/output/.gitkeep
+!data/temp/.gitkeep
+.git
+.gitignore
+.github
+docs/
+tests/
+.pytest_cache/
+*.log
