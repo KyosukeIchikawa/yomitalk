@@ -114,7 +114,7 @@ download-voicevox-core: venv
 		echo "Downloading VOICEVOX Core components..."; \
 		if [ "$(VOICEVOX_ACCEPT_AGREEMENT)" = "true" ]; then \
 			echo "Auto-accepting license agreement (VOICEVOX_ACCEPT_AGREEMENT=true)"; \
-			echo "y" | cd $(VOICEVOX_DIR) && ./download --devices cpu; \
+			cd $(VOICEVOX_DIR) && echo y | ./download --devices cpu; \
 		else \
 			cd $(VOICEVOX_DIR) && ./download --devices cpu; \
 		fi; \
