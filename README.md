@@ -1,3 +1,15 @@
+---
+title: Yomitalk
+emoji: 💬
+colorFrom: purple
+colorTo: blue
+sdk: docker
+python_version: 3.11
+pinned: false
+license: mit
+short_description: ドキュメントからポッドキャスト風の解説音声を生成するアプリケーション
+---
+
 # Yomitalk
 
 ドキュメントからポッドキャスト風の解説音声を生成するアプリケーション
@@ -49,7 +61,7 @@
 
 1. アプリケーションを起動:
    ```
-   python main.py
+   python app.py
    ```
 
 2. ブラウザで `http://localhost:7860` にアクセス
