@@ -1,4 +1,4 @@
-name: CI
+name: CI and Deploy
 
 on:
   push:
@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy to Hugging Face Spaces'
+        required: false
+        type: boolean
+        default: false
 
 env:
   VENV_PATH: ./venv
@@ -66,3 +72,29 @@ jobs:
         uses: ActionsDesk/lfs-warning@v2.0
         with:
           filesizelimit: 10485760 # 10MB limit for HF Spaces
+
+  deploy-to-hf:
+    runs-on: ubuntu-latest
+    needs: [e2e-tests]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 1000
+          git config --global http.lowSpeedTime 300
+
+      - name: Deploy to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          echo "Starting deployment to Hugging Face Spaces..."
+          git push https://Kyosuke0:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE main
+          echo "Deployment completed successfully!"
