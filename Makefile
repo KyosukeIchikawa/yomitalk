@@ -1,4 +1,4 @@
-.PHONY: setup venv install setup-lint clean run test test-unit test-e2e test-staged create-sample-pdf help lint format pre-commit-install pre-commit-run download-voicevox-core check-voicevox-core install-voicevox-core-module install-system-deps install-python-packages install-python-packages-lint requirements test-e2e-parallel
+.PHONY: setup venv install setup-lint clean run test test-unit test-e2e test-staged create-sample-pdf help lint format pre-commit-install pre-commit-run download-voicevox-core install-voicevox-core-module install-system-deps install-python-packages install-python-packages-lint requirements test-e2e-parallel
 
 #--------------------------------------------------------------
 # Variables and Configuration
@@ -56,7 +56,6 @@ help:
 	@echo "  make test-staged  - Run unit tests for staged files only"
 	@echo "【VOICEVOX】"
 	@echo "  make download-voicevox-core - Download and setup VOICEVOX Core"
-	@echo "  make check-voicevox-core - Check VOICEVOX Core existence and download if needed"
 	@echo "  make install-voicevox-core-module - Install VOICEVOX Core Python module"
 	@echo "【Cleanup】"
 	@echo "  make clean        - Remove virtual environment and generated files"
@@ -65,7 +64,7 @@ help:
 install-system-deps:
 	@echo "Installing system dependencies..."
 	sudo apt-get update
-	$(MAKE) check-voicevox-core
+	$(MAKE) download-voicevox-core
 	@echo "System dependencies installation completed!"
 
 venv:
@@ -99,28 +98,23 @@ setup: install-system-deps venv install-python-packages-lint install-python-pack
 #--------------------------------------------------------------
 # VOICEVOX Related
 #--------------------------------------------------------------
-# Check and download VOICEVOX Core if needed
-check-voicevox-core:
+# Download and setup VOICEVOX Core
+download-voicevox-core: venv
 	@echo "Checking for VOICEVOX Core..."
 	@if [ "$(VOICEVOX_SKIP_DOWNLOAD)" = "true" ]; then \
 		echo "VOICEVOX Core download skipped (VOICEVOX_SKIP_DOWNLOAD=true)."; \
 	elif [ ! -d "$(VOICEVOX_DIR)" ] || [ -z "$(shell find $(VOICEVOX_DIR) -name "*.so" -o -name "*.dll" -o -name "*.dylib" | head -1)" ]; then \
 		echo "VOICEVOX Core not found or missing necessary library files. Starting download..."; \
-		$(MAKE) download-voicevox-core; \
+		mkdir -p $(VOICEVOX_DIR); \
+		echo "Downloading VOICEVOX Core downloader version $(VOICEVOX_VERSION)..."; \
+		curl -L -o $(VOICEVOX_DIR)/download https://github.com/VOICEVOX/voicevox_core/releases/download/$(VOICEVOX_VERSION)/download-linux-x64; \
+		chmod +x $(VOICEVOX_DIR)/download; \
+		echo "Downloading VOICEVOX Core components..."; \
+		cd $(VOICEVOX_DIR) && ./download --devices cpu; \
+		echo "VOICEVOX Core files downloaded!"; \
 	else \
 		echo "VOICEVOX Core files exist, checking Python module installation..."; \
 	fi
-
-# Download and setup VOICEVOX Core
-download-voicevox-core: venv
-	@echo "Downloading and setting up VOICEVOX Core..."
-	@mkdir -p $(VOICEVOX_DIR)
-	@echo "Downloading VOICEVOX Core downloader version $(VOICEVOX_VERSION)..."
-	curl -L -o $(VOICEVOX_DIR)/download https://github.com/VOICEVOX/voicevox_core/releases/download/$(VOICEVOX_VERSION)/download-linux-x64; \
-	chmod +x $(VOICEVOX_DIR)/download;
-	@echo "Downloading VOICEVOX Core components..."
-	@cd $(VOICEVOX_DIR) && ./download --devices cpu
-	@echo "VOICEVOX Core files downloaded!"
 
 # Install VOICEVOX Core Python module
 install-voicevox-core-module: venv
