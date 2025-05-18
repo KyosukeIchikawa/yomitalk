@@ -43,13 +43,13 @@ if not os.path.exists(TEST_TEXT_PATH):
         # サンプルテキストファイルを作成
         with open(TEST_TEXT_PATH, "w", encoding="utf-8") as f:
             f.write(
-                """# YomiTalk サンプルテキスト
+                """# Yomitalk サンプルテキスト
 
-このテキストファイルは、YomiTalkのテキストファイル読み込み機能をテストするためのサンプルです。
+このテキストファイルは、Yomitalkのテキストファイル読み込み機能をテストするためのサンプルです。
 
 ## 機能概要
 
-YomiTalkは以下の機能を備えています:
+Yomitalkは以下の機能を備えています:
 
 1. PDFファイルからのテキスト抽出
 2. テキストファイル（.txt, .md）からの読み込み
