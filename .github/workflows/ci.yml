@@ -6,12 +6,6 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      deploy:
-        description: 'Deploy to Hugging Face Spaces'
-        required: false
-        type: boolean
-        default: false
 
 env:
   VENV_PATH: ./venv
@@ -65,7 +59,10 @@ jobs:
   deploy-to-hf:
     runs-on: ubuntu-latest
     needs: e2e-tests
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    environment:
+      name: huggingface-production
+      url: https://huggingface.co/spaces/${{ env.HF_SPACE }}
     steps:
       - uses: actions/checkout@v3
         with:
