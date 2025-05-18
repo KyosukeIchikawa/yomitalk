@@ -27,14 +27,6 @@ Feature: Document Type and Podcast Mode Selection
         Then the document type is changed to "ブログ記事"
         And the podcast mode is changed to "詳細解説"
 
-    Scenario: Document type selection affects system log
-        When the user selects "議事録" as the document type
-        Then the system log shows the document type has been set to "議事録"
-
-    Scenario: Podcast mode selection affects system log
-        When the user selects "詳細解説" as the podcast mode
-        Then the system log shows the podcast mode has been set to "詳細解説"
-
     Scenario: All document types are available
         Then the following document types are available
             | 論文     |

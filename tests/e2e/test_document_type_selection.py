@@ -42,26 +42,6 @@ def test_changing_both_document_type_and_podcast_mode():
 
 @pytest.mark.e2e
 @scenario(
-    "features/document_type_selection.feature",
-    "Document type selection affects system log",
-)
-def test_document_type_selection_affects_system_log():
-    """Test that document type selection is reflected in system log."""
-    pass
-
-
-@pytest.mark.e2e
-@scenario(
-    "features/document_type_selection.feature",
-    "Podcast mode selection affects system log",
-)
-def test_podcast_mode_selection_affects_system_log():
-    """Test that podcast mode selection is reflected in system log."""
-    pass
-
-
-@pytest.mark.e2e
-@scenario(
     "features/document_type_selection.feature", "All document types are available"
 )
 def test_all_document_types_are_available():

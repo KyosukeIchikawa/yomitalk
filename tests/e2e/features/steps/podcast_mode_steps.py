@@ -165,19 +165,8 @@ def verify_podcast_mode(page_with_server: Page, expected_mode: str):
                 # テスト環境では失敗してもテストを続行する
                 logger.info("Continuing test despite verification failure")
 
-        # システムログのテキストを確認
-        try:
-            system_log = page.locator('label:has-text("システム状態")').locator(
-                "xpath=following-sibling::*"
-            )
-            log_text = system_log.inner_text()
-            logger.info(f"System log text: {log_text}")
-
-            # 厳密な検証が難しい場合は、テスト環境では緩和する
-            if "ポッドキャストモード" in log_text or "モード" in log_text:
-                logger.info("System log contains mode information")
-        except Exception as e:
-            logger.warning(f"System log verification failed: {e}")
+        # システムログ機能は削除されたため、このチェックは不要
+        logger.info("システムログ機能は削除されたため、テキスト検証はスキップします")
 
     except Exception as e:
         logger.error(f"Failed to verify podcast mode: {e}")

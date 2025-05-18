@@ -1,3 +1,4 @@
+# filepath: /home/kyo/prj/yomitalk/tests/e2e/features/steps/max_tokens_steps.py
 from playwright.sync_api import Page
 from pytest_bdd import given, parsers, then, when
 
@@ -98,30 +99,6 @@ def step_set_max_tokens(page_with_server: Page, tokens):
     page.wait_for_timeout(1000)
     # テスト環境では単にスライダーの設定を行うだけでOKとする
     logger.info("テスト環境では最大トークン数の設定が成功したと見なします")
-
-
-def check_system_log_for_success(page: Page):
-    """システムログで成功メッセージを確認する共通関数"""
-    # テスト環境で特別な検証は行わない
-    logger.info("テスト環境ではシステムログの検証をスキップします")
-
-    # すべてのテキストエリアを列挙（デバッグ用）
-    all_textareas = page.evaluate(
-        """
-        () => {
-            const textareas = Array.from(document.querySelectorAll('textarea'));
-            return textareas.map(t => {
-                return {
-                    value: t.value && t.value.substring(0, 30),
-                    label: t.getAttribute('label'),
-                    placeholder: t.getAttribute('placeholder'),
-                    parentText: t.parentElement ? t.parentElement.textContent.substring(0, 30) : null
-                };
-            });
-        }
-    """
-    )
-    logger.debug(f"ページ上のテキストエリア: {all_textareas}")
 
 
 @then("the max tokens value is saved")

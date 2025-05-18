@@ -9,7 +9,7 @@ import math
 import os
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import gradio as gr
 
@@ -48,21 +48,6 @@ class PaperPodcastApp:
             VOICEVOX_CORE_AVAILABLE and self.audio_generator.core_initialized
         )
 
-        # APIキーの状態を確認
-        openai_api_key_status = (
-            "✅ 設定済み" if self.text_processor.openai_model.api_key else "❌ 未設定"
-        )
-        gemini_api_key_status = (
-            "✅ 設定済み" if self.text_processor.gemini_model.api_key else "❌ 未設定"
-        )
-
-        # システムログの初期化
-        self.system_log = (
-            f"OpenAI API: {openai_api_key_status}\n"
-            f"Gemini API: {gemini_api_key_status}\n"
-            f"VOICEVOXステータス: {self.check_voicevox_core()}"
-        )
-
         # 現在選択されているLLMタイプ
         self.current_llm_type = "openai"
 
@@ -76,7 +61,7 @@ class PaperPodcastApp:
         """現在選択されているドキュメントタイプを取得します。"""
         return self.text_processor.get_document_type()
 
-    def set_openai_api_key(self, api_key: str) -> Tuple[str, str]:
+    def set_openai_api_key(self, api_key: str) -> str:
         """
         Set the OpenAI API key and returns a result message based on the outcome.
 
@@ -84,25 +69,24 @@ class PaperPodcastApp:
             api_key (str): OpenAI API key
 
         Returns:
-            tuple: (status_message, system_log)
+            str: status_message
         """
         # APIキーが空白や空文字の場合は処理しない
         if not api_key or api_key.strip() == "":
-            result = "❌ APIキーが空です。有効なAPIキーを入力してください"
-            self.update_log(f"OpenAI API: {result}")
-            return result, self.system_log
+            logger.warning("OpenAI API key is empty")
+            return "❌ APIキーが空です。有効なAPIキーを入力してください"
 
         success = self.text_processor.set_openai_api_key(api_key)
         result = "✅ APIキーが正常に設定されました" if success else "❌ APIキーの設定に失敗しました"
-        self.update_log(f"OpenAI API: {result}")
+        logger.debug(f"OpenAI API key set: {success}")
 
         # OpenAIがアクティブになった場合、LLMタイプも更新
         if success:
             self.current_llm_type = "openai"
 
-        return result, self.system_log
+        return result
 
-    def set_gemini_api_key(self, api_key: str) -> Tuple[str, str]:
+    def set_gemini_api_key(self, api_key: str) -> str:
         """
         Set the Google Gemini API key and returns a result message based on the outcome.
 
@@ -110,48 +94,42 @@ class PaperPodcastApp:
             api_key (str): Google API key
 
         Returns:
-            tuple: (status_message, system_log)
+            str: status_message
         """
         # APIキーが空白や空文字の場合は処理しない
         if not api_key or api_key.strip() == "":
-            result = "❌ APIキーが空です。有効なAPIキーを入力してください"
-            self.update_log(f"Gemini API: {result}")
-            return result, self.system_log
+            logger.warning("Gemini API key is empty")
+            return "❌ APIキーが空です。有効なAPIキーを入力してください"
 
         success = self.text_processor.set_gemini_api_key(api_key)
         result = "✅ APIキーが正常に設定されました" if success else "❌ APIキーの設定に失敗しました"
-        self.update_log(f"Gemini API: {result}")
+        logger.debug(f"Gemini API key set: {success}")
 
         # Geminiがアクティブになった場合、LLMタイプも更新
         if success:
             self.current_llm_type = "gemini"
 
-        return result, self.system_log
+        return result
 
-    def switch_llm_type(self, llm_type: str) -> str:
+    def switch_llm_type(self, llm_type: str) -> None:
         """
         LLMタイプを切り替えます。
 
         Args:
             llm_type (str): "openai" または "gemini"
-
-        Returns:
-            str: システムログ
         """
         if llm_type not in ["openai", "gemini"]:
-            self.update_log(f"LLM切替: ❌ 無効なLLMタイプ '{llm_type}'")
-            return self.system_log
+            logger.warning(f"Invalid LLM type: {llm_type}")
+            return
 
         success = self.text_processor.set_api_type(llm_type)
         if success:
             self.current_llm_type = llm_type
             api_name = "OpenAI" if llm_type == "openai" else "Google Gemini"
-            self.update_log(f"LLM切替: ✅ {api_name}に切り替えました")
+            logger.debug(f"LLM type switched to {api_name}")
         else:
             api_name = "OpenAI" if llm_type == "openai" else "Google Gemini"
-            self.update_log(f"LLM切替: ❌ {api_name}のAPIキーが設定されていません")
-
-        return self.system_log
+            logger.warning(f"{api_name} API key not set")
 
     def handle_file_upload(self, file_obj):
         """
@@ -208,7 +186,7 @@ class PaperPodcastApp:
             logger.error(f"File processing error: {e}")
             return None
 
-    def extract_file_text(self, file_obj) -> Tuple[str, str]:
+    def extract_file_text(self, file_obj) -> str:
         """
         Extract text from a file.
 
@@ -216,23 +194,22 @@ class PaperPodcastApp:
             file_obj: Uploaded file object
 
         Returns:
-            tuple: (extracted_text, system_log)
+            str: extracted_text
         """
         if file_obj is None:
-            self.update_log("ファイルアップロード: ファイルが選択されていません")
-            return "Please upload a file.", self.system_log
+            logger.warning("No file selected for extraction")
+            return "Please upload a file."
 
         # Save file locally
         temp_path = self.handle_file_upload(file_obj)
         if not temp_path:
-            self.update_log("ファイルアップロード: ファイル処理に失敗しました")
-            return "Failed to process the file.", self.system_log
+            logger.error("Failed to process the file")
+            return "Failed to process the file."
 
         # Extract text using FileUploader
         text = self.file_uploader.extract_text_from_path(temp_path)
-        # セキュリティのため文字数のみログに記録し、内容に関する情報は出力しない
-        self.update_log("テキスト抽出: 完了")
-        return text, self.system_log
+        logger.debug("Text extraction completed")
+        return text
 
     def check_voicevox_core(self):
         """
@@ -249,46 +226,7 @@ class PaperPodcastApp:
 
         return "✅ VOICEVOX Coreは使用可能です。"
 
-    def update_log(self, message: str) -> str:
-        """
-        システムログにメッセージを追加します。
-        機密情報を含む可能性のある詳細（ファイルパス等）は記録しません。
-
-        Args:
-            message (str): 追加するメッセージ
-
-        Returns:
-            str: 更新されたログ
-        """
-        # セキュリティ観点から機密情報が含まれる可能性のあるメッセージをフィルタリング
-        filtered_message = self._filter_sensitive_info(message)
-        self.system_log = f"{filtered_message}\n{self.system_log}"
-        # 最大3行に制限
-        lines = self.system_log.split("\n")
-        if len(lines) > 3:
-            self.system_log = "\n".join(lines[:3])
-        return self.system_log
-
-    def _filter_sensitive_info(self, message: str) -> str:
-        """
-        メッセージから機密情報をフィルタリングします。
-
-        Args:
-            message (str): フィルタリングするメッセージ
-
-        Returns:
-            str: フィルタリングされたメッセージ
-        """
-        import re
-
-        # ファイルパスをマスク
-        message = re.sub(r"(\/[\/\w\.-]+)+\.\w+", "[ファイルパス]", message)
-        # APIキーやその一部をマスク
-        message = re.sub(r"sk-[A-Za-z0-9]{5,}", "[APIキー]", message)
-        message = re.sub(r"AIza[A-Za-z0-9]{5,}", "[APIキー]", message)
-        return message
-
-    def generate_podcast_text(self, text: str):
+    def generate_podcast_text(self, text: str) -> str:
         """
         Generate podcast-style text from input text.
 
@@ -296,19 +234,25 @@ class PaperPodcastApp:
             text (str): Input text from file
 
         Returns:
-            tuple: (generated_podcast_text, system_log)
+            str: generated_podcast_text
         """
         if not text:
-            self.update_log("ポッドキャストテキスト生成: ❌ 入力テキストが空です")
-            return "Please upload a file and extract text first.", self.system_log
+            logger.warning("Podcast text generation: Input text is empty")
+            return "Please upload a file and extract text first."
 
         # Check if API key is set
-        if not self.text_processor.openai_model.api_key:
-            self.update_log("ポッドキャストテキスト生成: ❌ OpenAI APIキーが設定されていません")
-            return (
-                "OpenAI API key is not set. Please configure it in the Settings tab.",
-                self.system_log,
-            )
+        if (
+            self.current_llm_type == "openai"
+            and not self.text_processor.openai_model.api_key
+        ):
+            logger.warning("Podcast text generation: OpenAI API key not set")
+            return "OpenAI API key is not set. Please configure it in the Settings tab."
+        elif (
+            self.current_llm_type == "gemini"
+            and not self.text_processor.gemini_model.api_key
+        ):
+            logger.warning("Podcast text generation: Gemini API key not set")
+            return "Google Gemini API key is not set. Please configure it in the Settings tab."
 
         try:
             # Generate podcast text
@@ -317,18 +261,17 @@ class PaperPodcastApp:
             # トークン使用状況を取得してログに追加
             token_usage = self.text_processor.get_token_usage()
             if token_usage:
-                usage_msg = f"トークン使用: 入力 {token_usage.get('prompt_tokens', 0)}、出力 {token_usage.get('completion_tokens', 0)}、合計 {token_usage.get('total_tokens', 0)}"
-                self.update_log(usage_msg)
+                usage_msg = f"Token usage: input {token_usage.get('prompt_tokens', 0)}, output {token_usage.get('completion_tokens', 0)}, total {token_usage.get('total_tokens', 0)}"
+                logger.debug(usage_msg)
 
-            self.update_log("ポッドキャストテキスト生成: ✅ 完了")
-            return podcast_text, self.system_log
+            logger.debug("Podcast text generation completed")
+            return podcast_text
         except Exception as e:
-            error_msg = f"ポッドキャストテキスト生成: ❌ エラー - {str(e)}"
-            self.update_log(error_msg)
-            logger.error(f"Podcast text generation error: {str(e)}")
-            return f"Error: {str(e)}", self.system_log
+            error_msg = f"Podcast text generation error: {str(e)}"
+            logger.error(error_msg)
+            return f"Error: {str(e)}"
 
-    def generate_podcast_audio(self, text: str):
+    def generate_podcast_audio(self, text: str) -> Optional[str]:
         """
         Generate audio from podcast text.
 
@@ -336,16 +279,16 @@ class PaperPodcastApp:
             text (str): Generated podcast text
 
         Returns:
-            tuple: (audio_path or None, system_log)
+            Optional[str]: audio_path or None
         """
         if not text:
-            self.update_log("音声生成: ❌ テキストが空です")
-            return None, self.system_log
+            logger.warning("Audio generation: Text is empty")
+            return None
 
         # Check if VOICEVOX Core is available
         if not self.voicevox_core_available:
-            self.update_log("音声生成: ❌ VOICEVOX Coreが利用できません")
-            return None, self.system_log
+            logger.error("Audio generation: VOICEVOX Core is not available")
+            return None
 
         try:
             # Generate audio from text
@@ -353,19 +296,14 @@ class PaperPodcastApp:
             if audio_path:
                 # 絶対パスを取得
                 abs_path = str(Path(audio_path).absolute())
-                # パス情報をログに含めない
-                self.update_log("音声生成: ✅ 完了")
-                # セキュリティのためファイルパスはログに出力しない
-                logger.info("音声ファイルを生成しました")
-                return abs_path, self.system_log
+                logger.debug("Audio file generated successfully")
+                return abs_path
             else:
                 logger.error("Audio generation failed: No audio path returned")
-                self.update_log("音声生成: ❌ 音声生成に失敗しました")
-                return None, self.system_log
+                return None
         except Exception as e:
             logger.error(f"Audio generation exception: {str(e)}")
-            self.update_log(f"音声生成: ❌ エラー - {str(e)}")
-            return None, self.system_log
+            return None
 
     def ui(self) -> gr.Blocks:
         """
@@ -401,11 +339,6 @@ class PaperPodcastApp:
 
             # カスタムCSSスタイルを追加
             css = """
-            /* メインコンテンツエリアにボトムパディングを追加して、固定システムログの高さ分の空間を確保 */
-            .gradio-container {
-                padding-bottom: 110px !important;
-            }
-
             /* ロゴ画像のスタイル調整 */
             .gradio-image {
                 margin: 0 !important;
@@ -444,26 +377,6 @@ class PaperPodcastApp:
             #disclaimer-text p {
                 margin: 0 !important;
                 padding-bottom: 5px !important;
-            }
-
-            #system_log_container {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                z-index: 1000;
-                background-color: white;
-                padding: 10px;
-                border-top: 1px solid #ddd;
-                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-                max-height: 100px;
-                overflow: auto;
-            }
-
-            /* システムログのテキストエリアのスタイル調整 */
-            #system_log_container .wrap {
-                height: auto !important;
-                min-height: 80px;
             }
 
             /* オーディオ出力のスタイル調整 */
@@ -644,15 +557,6 @@ class PaperPodcastApp:
                         variant="secondary",
                     )
 
-            # システムログ表示エリア（VOICEVOXステータスを含む）
-            with gr.Row(elem_id="system_log_container"):
-                system_log_display = gr.Textbox(
-                    label="システム状態",
-                    value=self.system_log,
-                    interactive=False,
-                    show_label=False,
-                )
-
             # Set up event handlers
             # ファイルがアップロードされたらボタンを有効化
             file_input.change(
@@ -664,7 +568,7 @@ class PaperPodcastApp:
             extract_btn.click(
                 fn=self.extract_file_text,
                 inputs=[file_input],
-                outputs=[extracted_text, system_log_display],
+                outputs=[extracted_text],
             ).then(
                 fn=self.update_process_button_state,
                 inputs=[extracted_text],
@@ -675,7 +579,7 @@ class PaperPodcastApp:
             openai_api_key_input.change(
                 fn=self.set_openai_api_key,
                 inputs=[openai_api_key_input],
-                outputs=[system_log_display],
+                outputs=[],
             ).then(
                 fn=self.update_process_button_state,
                 inputs=[extracted_text],
@@ -686,7 +590,7 @@ class PaperPodcastApp:
             gemini_api_key_input.change(
                 fn=self.set_gemini_api_key,
                 inputs=[gemini_api_key_input],
-                outputs=[system_log_display],
+                outputs=[],
             ).then(
                 fn=self.update_process_button_state,
                 inputs=[extracted_text],
@@ -696,52 +600,52 @@ class PaperPodcastApp:
             # タブ切り替え時のLLMタイプ変更
             openai_tab.select(
                 fn=lambda: self.switch_llm_type("openai"),
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             gemini_tab.select(
                 fn=lambda: self.switch_llm_type("gemini"),
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             # OpenAI Model selection
             openai_model_dropdown.change(
                 fn=self.set_openai_model_name,
                 inputs=[openai_model_dropdown],
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             # Gemini Model selection
             gemini_model_dropdown.change(
                 fn=self.set_gemini_model_name,
                 inputs=[gemini_model_dropdown],
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             # OpenAI Max tokens selection
             openai_max_tokens_slider.change(
                 fn=self.set_openai_max_tokens,
                 inputs=[openai_max_tokens_slider],
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             # Gemini Max tokens selection
             gemini_max_tokens_slider.change(
                 fn=self.set_gemini_max_tokens,
                 inputs=[gemini_max_tokens_slider],
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             character1_dropdown.change(
                 fn=self.set_character_mapping,
                 inputs=[character1_dropdown, character2_dropdown],
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             character2_dropdown.change(
                 fn=self.set_character_mapping,
                 inputs=[character1_dropdown, character2_dropdown],
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             # VOICEVOX Terms checkbox - 音声生成ボタンに対してイベントハンドラを更新
@@ -754,7 +658,7 @@ class PaperPodcastApp:
             process_btn.click(
                 fn=self.generate_podcast_text,
                 inputs=[extracted_text],
-                outputs=[podcast_text, system_log_display],
+                outputs=[podcast_text],
             ).then(
                 # トークン使用状況をUIに反映
                 fn=self.update_token_usage_display,
@@ -770,7 +674,7 @@ class PaperPodcastApp:
             generate_btn.click(
                 fn=self.generate_podcast_audio,
                 inputs=[podcast_text],
-                outputs=[audio_output, system_log_display],
+                outputs=[audio_output],
             ).then(
                 # Gradio 5.xでは、Button.updateではなくUpdateクラスを使用
                 fn=lambda x: gr.update(
@@ -795,14 +699,9 @@ class PaperPodcastApp:
 
             # ダウンロードボタンの実装
             download_btn.click(
-                fn=lambda x: (
-                    x,
-                    self.update_log("音声ファイル: ダウンロード処理中")
-                    if x
-                    else self.update_log("音声ファイル: ダウンロードできません"),
-                ),
+                fn=lambda x: x,
                 inputs=[audio_output],
-                outputs=[audio_output, system_log_display],
+                outputs=[audio_output],
             ).then(
                 lambda x: x,
                 inputs=[audio_output],
@@ -882,14 +781,14 @@ class PaperPodcastApp:
             document_type_radio.change(
                 fn=self.set_document_type,
                 inputs=[document_type_radio],
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             # ポッドキャストモード選択のイベントハンドラ
             podcast_mode_radio.change(
                 fn=self.set_podcast_mode,
                 inputs=[podcast_mode_radio],
-                outputs=[system_log_display],
+                outputs=[],
             )
 
             # podcast_textの変更時にも音声生成ボタンの状態を更新
@@ -937,35 +836,25 @@ class PaperPodcastApp:
         """
         return self.text_processor.gemini_model.model_name
 
-    def set_openai_model_name(self, model_name: str) -> str:
+    def set_openai_model_name(self, model_name: str) -> None:
         """
         OpenAIモデル名を設定します。
 
         Args:
             model_name (str): 使用するモデル名
-
-        Returns:
-            str: システムログ
         """
         success = self.text_processor.openai_model.set_model_name(model_name)
-        result = "✅ モデルが正常に設定されました" if success else "❌ モデル設定に失敗しました"
-        self.update_log(f"OpenAI モデル: {result} ({model_name})")
-        return self.system_log
+        logger.debug(f"OpenAI model set to {model_name}: {success}")
 
-    def set_gemini_model_name(self, model_name: str) -> str:
+    def set_gemini_model_name(self, model_name: str) -> None:
         """
         Geminiモデル名を設定します。
 
         Args:
             model_name (str): 使用するモデル名
-
-        Returns:
-            str: システムログ
         """
         success = self.text_processor.gemini_model.set_model_name(model_name)
-        result = "✅ モデルが正常に設定されました" if success else "❌ モデル設定に失敗しました"
-        self.update_log(f"Gemini モデル: {result} ({model_name})")
-        return self.system_log
+        logger.debug(f"Gemini model set to {model_name}: {success}")
 
     def get_openai_max_tokens(self) -> int:
         """
@@ -985,35 +874,25 @@ class PaperPodcastApp:
         """
         return self.text_processor.gemini_model.get_max_tokens()
 
-    def set_openai_max_tokens(self, max_tokens: int) -> str:
+    def set_openai_max_tokens(self, max_tokens: int) -> None:
         """
         OpenAIの最大トークン数を設定します。
 
         Args:
             max_tokens (int): 設定する最大トークン数
-
-        Returns:
-            str: システムログ
         """
         success = self.text_processor.openai_model.set_max_tokens(max_tokens)
-        result = "✅ 最大トークン数が正常に設定されました" if success else "❌ 最大トークン数の設定に失敗しました"
-        self.update_log(f"OpenAI 最大トークン数: {result} ({max_tokens})")
-        return self.system_log
+        logger.debug(f"OpenAI max tokens set to {max_tokens}: {success}")
 
-    def set_gemini_max_tokens(self, max_tokens: int) -> str:
+    def set_gemini_max_tokens(self, max_tokens: int) -> None:
         """
         Geminiの最大トークン数を設定します。
 
         Args:
             max_tokens (int): 設定する最大トークン数
-
-        Returns:
-            str: システムログ
         """
         success = self.text_processor.gemini_model.set_max_tokens(max_tokens)
-        result = "✅ 最大トークン数が正常に設定されました" if success else "❌ 最大トークン数の設定に失敗しました"
-        self.update_log(f"Gemini 最大トークン数: {result} ({max_tokens})")
-        return self.system_log
+        logger.debug(f"Gemini max tokens set to {max_tokens}: {success}")
 
     def get_available_characters(self) -> List[str]:
         """
@@ -1024,23 +903,16 @@ class PaperPodcastApp:
         """
         return self.text_processor.get_valid_characters()
 
-    def set_character_mapping(
-        self, character1: str, character2: str
-    ) -> Tuple[str, str]:
+    def set_character_mapping(self, character1: str, character2: str) -> None:
         """
         キャラクターマッピングを設定します。
 
         Args:
             character1 (str): Character1に割り当てるキャラクター名
             character2 (str): Character2に割り当てるキャラクター名
-
-        Returns:
-            tuple: (status_message, system_log)
         """
         success = self.text_processor.set_character_mapping(character1, character2)
-        result = "✅ キャラクター設定が完了しました" if success else "❌ キャラクター設定に失敗しました"
-        self.update_log(f"キャラクター設定: {result}")
-        return result, self.system_log
+        logger.debug(f"Character mapping set: {character1}, {character2}: {success}")
 
     def update_process_button_state(self, extracted_text: str) -> Dict[str, Any]:
         """
@@ -1059,7 +931,12 @@ class PaperPodcastApp:
             and extracted_text
             not in ["Please upload a file.", "Failed to process the file."]
         )
-        has_api_key = bool(self.text_processor.openai_model.api_key)
+        has_api_key = False
+
+        if self.current_llm_type == "openai":
+            has_api_key = bool(self.text_processor.openai_model.api_key)
+        elif self.current_llm_type == "gemini":
+            has_api_key = bool(self.text_processor.gemini_model.api_key)
 
         is_enabled = has_text and has_api_key
 
@@ -1070,15 +947,12 @@ class PaperPodcastApp:
         )
         return result  # type: ignore
 
-    def set_podcast_mode(self, mode: str) -> str:
+    def set_podcast_mode(self, mode: str) -> None:
         """
         ポッドキャスト生成モードを設定します。
 
         Args:
             mode (str): ポッドキャストモードのラベル名
-
-        Returns:
-            str: システムログ
         """
         try:
             # ラベル名からPodcastModeを取得
@@ -1087,15 +961,10 @@ class PaperPodcastApp:
             # TextProcessorを使ってPodcastModeのEnumを設定
             success = self.text_processor.set_podcast_mode(podcast_mode.value)
 
-            # ログ記録
-            mode_status = "✅" if success else "⚠️"
-            self.update_log(f"ポッドキャストモード: {mode_status} モードを '{mode}' に設定しました")
-
-            return self.system_log
+            logger.debug(f"Podcast mode set to {mode}: {success}")
 
         except ValueError as e:
-            self.update_log(f"ポッドキャストモード: ❌ エラー - {str(e)}")
-            return self.system_log
+            logger.error(f"Error setting podcast mode: {str(e)}")
 
     def get_podcast_modes(self):
         """
@@ -1164,15 +1033,12 @@ class PaperPodcastApp:
 
         return gr.Button(value=button_text, variant="primary", interactive=is_enabled)
 
-    def set_document_type(self, doc_type: str) -> str:
+    def set_document_type(self, doc_type: str) -> None:
         """
         ドキュメントタイプを設定します。
 
         Args:
             doc_type (str): ドキュメントタイプのラベル名
-
-        Returns:
-            str: システムログ
         """
         try:
             # ラベル名からDocumentTypeを取得
@@ -1181,15 +1047,10 @@ class PaperPodcastApp:
             # TextProcessorを使ってドキュメントタイプを設定
             success = self.text_processor.set_document_type(document_type)
 
-            # ログ記録
-            status = "✅" if success else "⚠️"
-            self.update_log(f"ドキュメントタイプ: {status} '{doc_type}' に設定しました")
-
-            return self.system_log
+            logger.debug(f"Document type set to {doc_type}: {success}")
 
         except ValueError as e:
-            self.update_log(f"ドキュメントタイプ: ❌ エラー - {str(e)}")
-            return self.system_log
+            logger.error(f"Error setting document type: {str(e)}")
 
 
 # Create and launch application instance
