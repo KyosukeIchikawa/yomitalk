@@ -381,16 +381,69 @@ class PaperPodcastApp:
         )
 
         with app:
-            gr.Markdown("""# Yomitalk""")
-            gr.Markdown(
-                """**免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。"""
-            )
+            # ヘッダー部分をロゴと免責事項を含むレイアウトに変更
+            with gr.Row(equal_height=True, variant="panel", elem_classes="header-row"):
+                with gr.Column(scale=1, min_width=200, elem_classes="logo-column"):
+                    gr.Image(
+                        "assets/images/logo.png",
+                        show_label=False,
+                        show_download_button=False,
+                        show_fullscreen_button=False,
+                        container=False,
+                        scale=1,
+                    )
+                with gr.Column(scale=3, elem_classes="disclaimer-column"):
+                    with gr.Row(elem_id="disclaimer-container"):
+                        gr.Markdown(
+                            """**免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。""",
+                            elem_id="disclaimer-text",
+                        )
 
             # カスタムCSSスタイルを追加
             css = """
             /* メインコンテンツエリアにボトムパディングを追加して、固定システムログの高さ分の空間を確保 */
             .gradio-container {
                 padding-bottom: 110px !important;
+            }
+
+            /* ロゴ画像のスタイル調整 */
+            .gradio-image {
+                margin: 0 !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: flex-end !important;
+            }
+
+            /* ロゴ画像コンテナの左余白を削除 */
+            .gradio-column:has(> .gradio-image) {
+                padding-left: 0 !important;
+            }
+
+            /* ヘッダー行のスタイル調整 */
+            .header-row {
+                display: flex !important;
+                align-items: flex-end !important;
+                margin-bottom: 16px !important;
+            }
+
+            /* 免責事項の列のスタイル調整 */
+            .disclaimer-column {
+                display: flex !important;
+                align-items: flex-end !important;
+            }
+
+            /* 免責事項のコンテナスタイル */
+            #disclaimer-container {
+                display: flex !important;
+                align-items: flex-end !important;
+                height: 100% !important;
+                margin-bottom: 0 !important;
+            }
+
+            /* 免責事項のテキストスタイル */
+            #disclaimer-text p {
+                margin: 0 !important;
+                padding-bottom: 5px !important;
             }
 
             #system_log_container {
