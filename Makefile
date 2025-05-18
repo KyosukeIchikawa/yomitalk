@@ -20,7 +20,7 @@ VOICEVOX_CHECK_MODULE = $(VENV_PYTHON) -c "import voicevox_core" 2>/dev/null
 PARALLEL ?= 2  # Default to 2 parallel processes for E2E tests (more stable)
 
 # Source code related
-SRC_DIRS = app tests main.py
+SRC_DIRS = app tests app.py
 CACHE_DIRS = __pycache__ app/__pycache__ app/components/__pycache__ app/utils/__pycache__ \
              tests/__pycache__ tests/unit/__pycache__ tests/e2e/__pycache__ tests/data/__pycache__ \
              .pytest_cache

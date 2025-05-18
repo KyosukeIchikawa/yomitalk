@@ -92,7 +92,7 @@
 - CIパイプラインでのテスト自動実行
 
 ## デプロイメント
-- ローカル開発環境での実行: `python main.py` または `python -m app.app`
+- ローカル開発環境での実行: `python app.py` または `python -m app.app`
 - 必要なパッケージ: requirements.txtに記載
 - VOICEVOX Core: `make download-voicevox-core` でセットアップ
 - OpenAI API / Google Gemini API: APIキー設定が必要
