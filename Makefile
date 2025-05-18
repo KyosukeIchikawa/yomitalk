@@ -13,6 +13,7 @@ VENV_PRECOMMIT = $(VENV_DIR)/bin/pre-commit
 # VOICEVOX related
 VOICEVOX_VERSION = 0.16.0
 VOICEVOX_SKIP_DOWNLOAD ?= false
+VOICEVOX_ACCEPT_AGREEMENT ?= false
 VOICEVOX_DIR = voicevox_core
 VOICEVOX_CHECK_MODULE = $(VENV_PYTHON) -c "import voicevox_core" 2>/dev/null
 
@@ -57,6 +58,7 @@ help:
 	@echo "【VOICEVOX】"
 	@echo "  make download-voicevox-core - Download and setup VOICEVOX Core"
 	@echo "  make install-voicevox-core-module - Install VOICEVOX Core Python module"
+	@echo "  VOICEVOX_ACCEPT_AGREEMENT=true - Set to auto-accept VOICEVOX license agreement"
 	@echo "【Cleanup】"
 	@echo "  make clean        - Remove virtual environment and generated files"
 	@echo ""
@@ -110,7 +112,12 @@ download-voicevox-core: venv
 		curl -L -o $(VOICEVOX_DIR)/download https://github.com/VOICEVOX/voicevox_core/releases/download/$(VOICEVOX_VERSION)/download-linux-x64; \
 		chmod +x $(VOICEVOX_DIR)/download; \
 		echo "Downloading VOICEVOX Core components..."; \
-		cd $(VOICEVOX_DIR) && ./download --devices cpu; \
+		if [ "$(VOICEVOX_ACCEPT_AGREEMENT)" = "true" ]; then \
+			echo "Auto-accepting license agreement (VOICEVOX_ACCEPT_AGREEMENT=true)"; \
+			echo "y" | cd $(VOICEVOX_DIR) && ./download --devices cpu; \
+		else \
+			cd $(VOICEVOX_DIR) && ./download --devices cpu; \
+		fi; \
 		echo "VOICEVOX Core files downloaded!"; \
 	else \
 		echo "VOICEVOX Core files exist, checking Python module installation..."; \
