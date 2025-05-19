@@ -135,6 +135,8 @@ class AudioGenerator:
             "ずんだもん": 3,  # Zundamon (sweet)
             "四国めたん": 2,  # Shikoku Metan (normal)
             "九州そら": 16,  # Kyushu Sora (normal)
+            "中国うさぎ": 61,  # Chugoku Usagi (normal)
+            "中部つるぎ": 94,  # Chubu Tsurugi (normal)
         }
 
         # Initialize VOICEVOX Core if available
