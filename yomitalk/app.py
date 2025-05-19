@@ -7,7 +7,6 @@ Builds the Paper Podcast Generator application using Gradio.
 
 import math
 import os
-import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -18,8 +17,9 @@ from yomitalk.components.file_uploader import FileUploader
 from yomitalk.components.text_processor import TextProcessor
 from yomitalk.prompt_manager import DocumentType, PodcastMode
 from yomitalk.utils.logger import logger
+from yomitalk.utils.session_manager import SessionManager
 
-# Check for temporary file directories
+# Check for base directories
 os.makedirs("data/temp", exist_ok=True)
 os.makedirs("data/output", exist_ok=True)
 
@@ -39,9 +39,19 @@ class PaperPodcastApp:
 
         Creates instances of FileUploader, TextProcessor, and AudioGenerator.
         """
-        self.file_uploader = FileUploader()
+        # セッション管理の初期化
+        self.session_manager = SessionManager()
+        logger.info(
+            f"Initializing app with session ID: {self.session_manager.get_session_id()}"
+        )
+
+        # 各コンポーネントにセッション固有のディレクトリを渡す
+        self.file_uploader = FileUploader(temp_dir=self.session_manager.get_temp_dir())
         self.text_processor = TextProcessor()
-        self.audio_generator = AudioGenerator()
+        self.audio_generator = AudioGenerator(
+            session_output_dir=self.session_manager.get_output_dir(),
+            session_temp_dir=self.session_manager.get_talk_temp_dir(),
+        )
 
         # Check if VOICEVOX Core is available
         self.voicevox_core_available = (
@@ -136,6 +146,7 @@ class PaperPodcastApp:
         Process file uploads.
 
         Properly handles file objects from Gradio's file upload component.
+        This is now a wrapper around FileUploader's handle_file_upload method.
 
         Args:
             file_obj: Gradio's file object
@@ -146,45 +157,8 @@ class PaperPodcastApp:
         if file_obj is None:
             return None
 
-        try:
-            # Temporary directory path
-            temp_dir = Path("data/temp")
-            temp_dir.mkdir(parents=True, exist_ok=True)
-
-            # Get filename
-            if isinstance(file_obj, list) and len(file_obj) > 0:
-                file_obj = file_obj[0]  # Get first element if it's a list
-
-            # セキュリティのため、オリジナルファイル名は使用せず、一意のIDを生成
-            # ただし、元のファイル拡張子は保持する
-            original_extension = ".txt"  # デフォルト拡張子
-            if hasattr(file_obj, "name"):
-                # 元のファイルの拡張子を取得
-                original_extension = os.path.splitext(Path(file_obj.name).name)[1]
-                # 拡張子がない場合はデフォルト値を使用
-                if not original_extension:
-                    original_extension = ".txt"
-
-            # 安全なファイル名を生成（UUIDと元の拡張子を組み合わせる）
-            filename = f"uploaded_{uuid.uuid4().hex}{original_extension}"
-
-            # Create temporary file path
-            temp_path = temp_dir / filename
-
-            # Get and save file data
-            if hasattr(file_obj, "read") and callable(file_obj.read):
-                with open(temp_path, "wb") as f:
-                    f.write(file_obj.read())
-            elif hasattr(file_obj, "name"):
-                with open(temp_path, "wb") as f:
-                    with open(file_obj.name, "rb") as source:
-                        f.write(source.read())
-
-            return str(temp_path)
-
-        except Exception as e:
-            logger.error(f"File processing error: {e}")
-            return None
+        # FileUploaderのhandle_file_uploadメソッドを使用
+        return self.file_uploader.handle_file_upload(file_obj)
 
     def extract_file_text(self, file_obj) -> str:
         """

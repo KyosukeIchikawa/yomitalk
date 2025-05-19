@@ -123,10 +123,31 @@ class AudioGenerator:
 
     CONVERSION_OVERRIDE = {"this": "ディス", "to": "トゥ", "a": "ア"}
 
-    def __init__(self) -> None:
-        """Initialize AudioGenerator."""
-        self.output_dir = Path("data/output")
-        self.temp_dir = Path("data/temp/talks")
+    def __init__(
+        self,
+        session_output_dir: Optional[Path] = None,
+        session_temp_dir: Optional[Path] = None,
+    ) -> None:
+        """
+        Initialize AudioGenerator.
+
+        Args:
+            session_output_dir (Optional[Path]): Session-specific output directory.
+                If not provided, defaults to "data/output"
+            session_temp_dir (Optional[Path]): Session-specific temporary directory.
+                If not provided, defaults to "data/temp/talks"
+        """
+        # Use session-specific directories if provided
+        self.output_dir = (
+            session_output_dir if session_output_dir else Path("data/output")
+        )
+        self.temp_dir = (
+            session_temp_dir if session_temp_dir else Path("data/temp/talks")
+        )
+
+        # Make sure directories exist
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_dir.mkdir(parents=True, exist_ok=True)
 
         # VOICEVOX Core
         self.core_initialized = False
