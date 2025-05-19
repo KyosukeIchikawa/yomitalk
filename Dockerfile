@@ -17,7 +17,8 @@ RUN apt-get update \
 COPY . /app/
 
 # 自動ダウンロードをCIモードで行う
-RUN make download-voicevox-core
+# シェルのセットオプション -e を使用して、コマンドが失敗したら即座にDockerビルドを失敗させる
+RUN set -e && make download-voicevox-core
 
 # Python依存関係のインストール
 RUN make install-python-packages
