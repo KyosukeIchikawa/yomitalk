@@ -10,7 +10,7 @@ license: mit
 short_description: ドキュメントからポッドキャスト風の解説音声を生成するアプリケーション
 ---
 
-# Yomitalk
+# Yomitalk <img src="assets/favicon.ico" alt="Yomitalk favicon" width="32" height="32" style="vertical-align: top;">
 
 ドキュメントからポッドキャスト風の解説音声を生成するアプリケーション
 
