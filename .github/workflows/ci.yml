@@ -46,7 +46,7 @@ jobs:
 
     - name: Install dependencies and setup
       run: |
-        make setup
+        VOICEVOX_ACCEPT_AGREEMENT=true make setup
 
     - name: Install Playwright browsers
       run: |
