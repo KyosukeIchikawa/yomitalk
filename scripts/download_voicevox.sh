@@ -9,6 +9,8 @@ VOICEVOX_VERSION="0.16.0"
 VOICEVOX_DIR="voicevox_core"
 SKIP_IF_EXISTS=false
 ACCEPT_AGREEMENT=false
+MAX_RETRIES=5
+RETRY_DELAY=120
 
 # Help message
 show_help() {
@@ -100,16 +102,58 @@ download_voicevox_core() {
   echo "Downloading VOICEVOX Core components..."
   cd "$voicevox_dir" || { echo "Error: Failed to change directory to $voicevox_dir"; return 1; }
 
+  # Set GitHub token from environment variable if available
+  local github_env=""
+  if [ -n "${GITHUB_TOKEN}" ]; then
+    echo "Using GitHub token from environment variable"
+    github_env="GITHUB_TOKEN=${GITHUB_TOKEN}"
+  fi
+
+  # Function to run download with retry logic
+  run_download_with_retry() {
+    local cmd="$1"
+    local attempt=1
+    local success=false
+
+    while [ $attempt -le $MAX_RETRIES ] && [ "$success" = false ]; do
+      echo "Download attempt $attempt of $MAX_RETRIES"
+
+      if eval "$cmd"; then
+        success=true
+      else
+        local exit_code=$?
+        # Check if it might be a rate limit issue (429)
+        if [ $exit_code -eq 22 ] || [ $exit_code -eq 6 ] || [ $exit_code -eq 7 ] || [ $exit_code -eq 28 ]; then
+          if [ $attempt -lt $MAX_RETRIES ]; then
+            echo "Download failed, possibly due to rate limiting (HTTP 429). Waiting $RETRY_DELAY seconds before retry..."
+            sleep $RETRY_DELAY
+          else
+            echo "Maximum retry attempts reached. Download failed."
+            return 1
+          fi
+        else
+          echo "Download failed with exit code $exit_code, not retrying."
+          return $exit_code
+        fi
+      fi
+      attempt=$((attempt + 1))
+    done
+
+    if [ "$success" = true ]; then
+      return 0
+    else
+      return 1
+    fi
+  }
+
   if [ "$accept_agreement" = true ]; then
     echo "Auto-accepting license agreement"
-    echo "y" | ./download --devices cpu
-    if [ $? -ne 0 ]; then
+    if ! run_download_with_retry "env $github_env echo y | ./download --devices cpu"; then
       echo "Error: Failed to download VOICEVOX Core components"
       return 1
     fi
   else
-    ./download --devices cpu
-    if [ $? -ne 0 ]; then
+    if ! run_download_with_retry "env $github_env ./download --devices cpu"; then
       echo "Error: Failed to download VOICEVOX Core components"
       return 1
     fi
