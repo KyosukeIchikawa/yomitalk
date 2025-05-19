@@ -24,13 +24,12 @@ class GeminiModel:
 
         # 利用可能なモデルのリスト
         self._available_models = [
-            "gemini-2.0-flash",
             "gemini-2.5-flash-preview-04-17",
             "gemini-2.5-pro-preview-05-06",
         ]
 
         # デフォルトの最大トークン数
-        self.max_tokens: int = 8192
+        self.max_tokens: int = 65536
 
         # トークン使用状況の初期化
         self.last_token_usage: Dict[str, int] = {}
@@ -81,7 +80,7 @@ class GeminiModel:
             max_tokens_int = int(max_tokens)
             if max_tokens_int < 100:
                 return False
-            if max_tokens_int > 30720:  # Geminiの最大値
+            if max_tokens_int > 65536:  # Geminiの最大値
                 return False
 
             self.max_tokens = max_tokens_int

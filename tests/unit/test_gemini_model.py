@@ -21,7 +21,7 @@ class TestGeminiModel(unittest.TestCase):
         """Test model initialization."""
         self.assertIsNotNone(self.model)
         self.assertEqual(self.model.model_name, "gemini-2.5-flash-preview-04-17")
-        self.assertEqual(self.model.max_tokens, 8192)
+        self.assertEqual(self.model.max_tokens, 65536)
         self.assertDictEqual(self.model.last_token_usage, {})
 
     def test_set_api_key(self):
@@ -42,7 +42,7 @@ class TestGeminiModel(unittest.TestCase):
         """Test getting available models."""
         models = self.model.get_available_models()
         self.assertIsInstance(models, list)
-        self.assertIn("gemini-2.0-flash", models)
+        self.assertIn("gemini-2.5-pro-preview-05-06", models)
         self.assertIn("gemini-2.5-flash-preview-04-17", models)
         self.assertIn("gemini-2.5-pro-preview-05-06", models)
 
@@ -79,7 +79,7 @@ class TestGeminiModel(unittest.TestCase):
         self.assertFalse(result)
         self.assertEqual(1000, self.model.max_tokens)  # 変更されない
 
-        result = self.model.set_max_tokens(40000)
+        result = self.model.set_max_tokens(80000)
         self.assertFalse(result)
         self.assertEqual(1000, self.model.max_tokens)  # 変更されない
 

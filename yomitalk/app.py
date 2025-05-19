@@ -503,7 +503,7 @@ class PaperPodcastApp:
                             with gr.Row():
                                 gemini_max_tokens_slider = gr.Slider(
                                     minimum=100,
-                                    maximum=30720,
+                                    maximum=65536,
                                     value=self.get_gemini_max_tokens(),
                                     step=100,
                                     label="最大トークン数",
