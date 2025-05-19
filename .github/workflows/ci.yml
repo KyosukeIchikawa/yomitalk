@@ -82,5 +82,5 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           echo "Starting deployment to Hugging Face Spaces..."
-          git push https://Kyosuke0:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE main
+          git push -f https://Kyosuke0:$HF_TOKEN@huggingface.co/spaces/$HF_SPACE main
           echo "Deployment completed successfully!"
