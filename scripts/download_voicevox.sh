@@ -39,10 +39,6 @@ while [[ $# -gt 0 ]]; do
       SKIP_IF_EXISTS=true
       shift
       ;;
-    --skip-download)  # 以前のフラグもサポート（互換性のため）
-      SKIP_IF_EXISTS=true
-      shift
-      ;;
     --accept-agreement)
       ACCEPT_AGREEMENT=true
       shift
