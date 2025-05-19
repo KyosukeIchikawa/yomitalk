@@ -333,7 +333,7 @@ class PaperPodcastApp:
                 with gr.Column(scale=3, elem_classes="disclaimer-column"):
                     with gr.Row(elem_id="disclaimer-container"):
                         gr.Markdown(
-                            """**免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。当アプリケーションの使用により生じたいかなる損害についても責任を負いません。""",
+                            """**免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。当アプリケーションの使用により生じた、いかなる損害についても責任を負いません。""",
                             elem_id="disclaimer-text",
                         )
 
