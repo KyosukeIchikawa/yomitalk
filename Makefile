@@ -12,7 +12,7 @@ VENV_PRECOMMIT = $(VENV_DIR)/bin/pre-commit
 
 # VOICEVOX related
 VOICEVOX_VERSION = 0.16.0
-VOICEVOX_SKIP_DOWNLOAD ?= false
+VOICEVOX_SKIP_IF_EXISTS ?= true
 VOICEVOX_ACCEPT_AGREEMENT ?= false
 VOICEVOX_DIR = voicevox_core
 VOICEVOX_CHECK_MODULE = $(VENV_PYTHON) -c "import voicevox_core" 2>/dev/null
@@ -102,25 +102,15 @@ setup: install-system-deps venv install-python-packages-lint install-python-pack
 #--------------------------------------------------------------
 # Download and setup VOICEVOX Core
 download-voicevox-core: venv
-	@echo "Checking for VOICEVOX Core..."
-	@if [ "$(VOICEVOX_SKIP_DOWNLOAD)" = "true" ]; then \
-		echo "VOICEVOX Core download skipped (VOICEVOX_SKIP_DOWNLOAD=true)."; \
-	elif [ ! -d "$(VOICEVOX_DIR)" ] || [ -z "$(shell find $(VOICEVOX_DIR) -name "*.so" -o -name "*.dll" -o -name "*.dylib" | head -1)" ]; then \
-		echo "VOICEVOX Core not found or missing necessary library files. Starting download..."; \
-		mkdir -p $(VOICEVOX_DIR); \
-		echo "Downloading VOICEVOX Core downloader version $(VOICEVOX_VERSION)..."; \
-		curl -L -o $(VOICEVOX_DIR)/download https://github.com/VOICEVOX/voicevox_core/releases/download/$(VOICEVOX_VERSION)/download-linux-x64; \
-		chmod +x $(VOICEVOX_DIR)/download; \
-		echo "Downloading VOICEVOX Core components..."; \
-		if [ "$(VOICEVOX_ACCEPT_AGREEMENT)" = "true" ]; then \
-			echo "Auto-accepting license agreement (VOICEVOX_ACCEPT_AGREEMENT=true)"; \
-			cd $(VOICEVOX_DIR) && echo y | ./download --devices cpu; \
-		else \
-			cd $(VOICEVOX_DIR) && ./download --devices cpu; \
-		fi; \
-		echo "VOICEVOX Core files downloaded!"; \
-	else \
-		echo "VOICEVOX Core files exist, checking Python module installation..."; \
+	@echo "Running VOICEVOX Core download script..."
+	@scripts/download_voicevox.sh \
+		--version $(VOICEVOX_VERSION) \
+		--dir $(VOICEVOX_DIR) \
+		$(if $(filter true, $(VOICEVOX_SKIP_IF_EXISTS)), --skip-if-exists) \
+		$(if $(filter true, $(VOICEVOX_ACCEPT_AGREEMENT)), --accept-agreement)
+	@if [ $$? -ne 0 ]; then \
+		echo "Error: Failed to download VOICEVOX Core. Check logs for details."; \
+		exit 1; \
 	fi
 
 # Install VOICEVOX Core Python module
