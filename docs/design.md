@@ -17,7 +17,7 @@
 - playwright: ブラウザ自動化によるE2Eテスト
 
 ## フォルダ構成
-- app/ - メインアプリケーションコード
+- yomitalk/ - メインアプリケーションコード
   - components/ - Gradioコンポーネント
     - audio_generator.py - 音声生成機能
     - file_uploader.py - ファイル処理機能
@@ -32,19 +32,22 @@
     - common_podcast_utils.j2 - 共通のポッドキャスト生成ユーティリティ
     - paper_to_podcast.j2 - 論文解説用テンプレート
     - section_by_section.j2 - セクションごとの詳細解説用テンプレート
-- assets/ - 静的アセット（画像、音声サンプルなど）
+- app.py - ルートレベルのエントリーポイント
+- assets/ - 静的アセット
+  - images/ - 画像ファイル
+  - favicon.ico - ファビコン
 - data/ - 一時データ保存用
   - temp/ - アップロードされたファイルの一時保存
   - output/ - 生成された音声ファイル
+  - logs/ - ログファイル保存用
 - tests/ - テストコード
   - data/ - テスト用データ
   - unit/ - ユニットテスト
-  - integration/ - 統合テスト
   - e2e/ - エンドツーエンドテスト
-    - features/ - BDDシナリオ定義
-    - steps/ - BDDステップ実装
+  - utils/ - テスト用ユーティリティ
 - docs/ - ドキュメント
 - voicevox_core/ - VOICEVOXコアライブラリとモデル
+- scripts/ - 開発用スクリプト
 
 ## 機能要件
 1. ファイルアップロード機能
@@ -76,23 +79,45 @@
 
 ## コーディング規則
 - PEP 8準拠のPythonコード
+  - black、isort、flake8による自動フォーマットとリンティング
+  - pre-commitフックによる自動検証
 - 型ヒントの積極的な活用（mypy対応）
+  - 新規ファイルでは厳格な型チェックを適用
+  - 既存コードにも段階的に型アノテーションを追加
+- テスト駆動開発（TDD）の実践
+  - トランクベース開発（main branchへの直接コミット）
+  - 小さな変更単位での開発と統合
 - 関数・クラスには適切なドキュメンテーション（docstring）を付ける
+- コードレビューとCI通過を統合の条件とする
 - 例外処理の適切な実装
 - 長いテキスト処理のチャンク分割処理
 - 音声ファイル生成時のFFmpeg活用
 - ソースコード内のメッセージ・ログは全て英語で記述する
 - ドキュメント（README.md, design.md等）は日本語のまま維持する
+- カスタムトークンやprintステートメントの検出と警告
 
 ## テスト規則
 - BDDフレームワーク（pytest-bdd）を使用したE2Eテスト
-- ユニットテストによる各コンポーネントの検証
-- モックを使用したAPIのテスト
-- テスト用のサンプルPDFを用意した自動テスト
-- CIパイプラインでのテスト自動実行
+  - テストシナリオは `tests/e2e/features/` ディレクトリに `.feature` ファイルとして記述
+  - ステップ実装は `tests/e2e/features/steps/` ディレクトリに配置
+- Playwrightによるブラウザテスト
+- ユニットテストによる各コンポーネントの個別検証
+  - テストファイルは `tests/unit/` ディレクトリに配置
+  - 各クラス・モジュールごとに独立したテストファイルを作成
+- モックを使用したAPIのテスト（OpenAI API、Gemini API）
+- テスト用のサンプルPDFおよびテキストデータを用意した自動テスト
+- GitHubワークフローによるCI自動実行
+  - 静的解析（pre-commit）
+  - E2Eテストの自動実行
+  - 自動デプロイ（Hugging Faceへ）
 
 ## デプロイメント
-- ローカル開発環境での実行: `python app.py` または `python -m app.app`
-- 必要なパッケージ: requirements.txtに記載
+- ローカル開発環境での実行: `python app.py` または `python -m yomitalk.app`
+- セットアップ: `make setup` コマンドで環境構築
+- 必要なパッケージ: requirements.txtに記載（requirements.inから生成）
 - VOICEVOX Core: `make download-voicevox-core` でセットアップ
+  - VOICEVOXのライセンス規約に同意する必要あり
 - OpenAI API / Google Gemini API: APIキー設定が必要
+- Docker: `Dockerfile` を使用してコンテナ化可能
+- CI/CD: GitHub Actions による自動テスト・デプロイ
+  - Hugging Face Spaces へ自動デプロイ
