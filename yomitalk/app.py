@@ -333,7 +333,7 @@ class PaperPodcastApp:
                 with gr.Column(scale=3, elem_classes="disclaimer-column"):
                     with gr.Row(elem_id="disclaimer-container"):
                         gr.Markdown(
-                            """**免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。""",
+                            """**免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。当アプリケーションの使用により生じたいかなる損害についても責任を負いません。""",
                             elem_id="disclaimer-text",
                         )
 
@@ -357,6 +357,7 @@ class PaperPodcastApp:
                 display: flex !important;
                 align-items: flex-end !important;
                 margin-bottom: 16px !important;
+                min-height: 80px !important;
             }
 
             /* 免責事項の列のスタイル調整 */
@@ -371,12 +372,17 @@ class PaperPodcastApp:
                 align-items: flex-end !important;
                 height: 100% !important;
                 margin-bottom: 0 !important;
+                padding: 5px 0 !important;
+                width: 100% !important;
             }
 
             /* 免責事項のテキストスタイル */
             #disclaimer-text p {
                 margin: 0 !important;
                 padding-bottom: 5px !important;
+                font-size: 0.9em !important;
+                line-height: 1.4 !important;
+                max-width: 100% !important;
             }
 
             /* オーディオ出力のスタイル調整 */
