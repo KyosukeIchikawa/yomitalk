@@ -24,8 +24,7 @@ RUN set -e && make download-voicevox-core
 RUN make install-python-packages
 
 # パーミッション問題を解決するため、dataディレクトリの権限を設定
-RUN mkdir -p /app/data/temp /app/data/output /app/data/logs \
-    && chmod -R 777 /app/data
+RUN mkdir -p /app/data/temp /app/data/output && chmod -R 777 /app/data
 
 # ポート設定
 ENV PORT=7860
