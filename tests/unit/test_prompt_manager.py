@@ -22,7 +22,7 @@ class TestPromptManager(unittest.TestCase):
         self.template_dir.mkdir(exist_ok=True)
 
         # オリジナルのテンプレートディレクトリを参照
-        self.original_template_dir = Path("app/templates")
+        self.original_template_dir = Path("yomitalk/templates")
 
         # デフォルトのプロンプトテンプレートをテスト用ディレクトリにコピー
         if (self.original_template_dir / "paper_to_podcast.j2").exists():

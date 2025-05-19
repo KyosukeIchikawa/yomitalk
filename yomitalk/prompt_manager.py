@@ -71,7 +71,7 @@ class PromptManager:
 
     def __init__(
         self,
-        template_dir: str = "app/templates",
+        template_dir: str = "yomitalk/templates",
         char_mapping: Optional[Dict[str, str]] = None,
     ):
         """Initialize the PromptManager.
