@@ -1,16 +1,16 @@
-"""Test module for the file uploader."""
+"""Test module for the content extractor."""
 
 from unittest.mock import MagicMock, patch
 
-from yomitalk.components.file_uploader import FileUploader
+from yomitalk.components.content_extractor import ContentExtractor
 
 
-class TestFileUploader:
-    """Test class for the FileUploader."""
+class TestContentExtractor:
+    """Test class for the ContentExtractor."""
 
     def setup_method(self):
         """Set up test environment before each test method."""
-        self.uploader = FileUploader()
+        self.uploader = ContentExtractor()
 
     def test_init(self):
         """Test FileUploader initialization."""

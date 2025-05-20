@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 import gradio as gr
 
 from yomitalk.components.audio_generator import VOICEVOX_CORE_AVAILABLE, AudioGenerator
-from yomitalk.components.file_uploader import FileUploader
+from yomitalk.components.content_extractor import ContentExtractor
 from yomitalk.components.text_processor import TextProcessor
 from yomitalk.prompt_manager import DocumentType, PodcastMode
 from yomitalk.utils.logger import logger
@@ -45,7 +45,7 @@ class PaperPodcastApp:
             f"Initializing app with session ID: {self.session_manager.get_session_id()}"
         )
 
-        self.file_uploader = FileUploader()
+        self.content_extractor = ContentExtractor()
         self.text_processor = TextProcessor()
         self.audio_generator = AudioGenerator(
             session_output_dir=self.session_manager.get_output_dir(),
@@ -155,7 +155,7 @@ class PaperPodcastApp:
             return "Please upload a file."
 
         # メモリ上でテキスト抽出を行う
-        text = self.file_uploader.extract_text(file_obj)
+        text = self.content_extractor.extract_text(file_obj)
         logger.debug("Text extraction completed (memory-based)")
         return text
 
@@ -360,7 +360,9 @@ class PaperPodcastApp:
                 gr.Markdown("""## トーク原稿の生成""")
                 with gr.Column(variant="panel"):
                     # サポートしているファイル形式の拡張子を取得
-                    supported_extensions = self.file_uploader.get_supported_extensions()
+                    supported_extensions = (
+                        self.content_extractor.get_supported_extensions()
+                    )
 
                     # ファイルをアップロードするコンポーネント
                     file_input = gr.File(

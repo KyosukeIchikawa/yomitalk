@@ -1,6 +1,7 @@
-"""Module providing file text extraction functionality.
+"""Module providing content extraction functionality.
 
-Provides text extraction functionality for the Paper Podcast Generator application.
+Provides content extraction functionality for the Paper Podcast Generator application.
+Supports extracting text content from various sources including files (PDF, text) and URLs.
 """
 
 import io
@@ -13,12 +14,12 @@ from markitdown import MarkItDown, StreamInfo
 from yomitalk.utils.logger import logger
 
 
-class FileUploader:
-    """Class for uploading files and extracting text."""
+class ContentExtractor:
+    """Class for extracting text content from various sources."""
 
     def __init__(self) -> None:
         """
-        Initialize FileUploader.
+        Initialize ContentExtractor.
         """
         self.supported_text_extensions = [".txt", ".md", ".text", ".tmp"]
         self.supported_pdf_extensions = [".pdf"]
