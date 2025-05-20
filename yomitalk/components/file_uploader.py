@@ -3,142 +3,172 @@
 Provides text extraction functionality for the Paper Podcast Generator application.
 """
 
+import io
 import os
-from typing import List
+from pathlib import Path
+from typing import Any, List, Optional, Tuple
+
+from markitdown import MarkItDown, StreamInfo
 
 from yomitalk.utils.logger import logger
-from yomitalk.utils.pdf_extractor import PDFExtractor
 
 
 class FileUploader:
     """Class for uploading files and extracting text."""
 
-    def __init__(self, temp_dir=None) -> None:
+    def __init__(self) -> None:
         """
         Initialize FileUploader.
-
-        Args:
-            temp_dir (Optional[Path]): Session-specific temporary directory path.
-                If not provided, defaults to "data/temp"
         """
         self.supported_text_extensions = [".txt", ".md", ".text", ".tmp"]
         self.supported_pdf_extensions = [".pdf"]
         self.supported_extensions = (
             self.supported_text_extensions + self.supported_pdf_extensions
         )
-        self.pdf_extractor = PDFExtractor()
+        self.markdown_converter = MarkItDown()
 
-        # Set temporary directory
-        from pathlib import Path
-
-        self.temp_dir = Path(temp_dir) if temp_dir else Path("data/temp")
-        self.temp_dir.mkdir(parents=True, exist_ok=True)
-
-    def extract_text_from_path(self, file_path: str) -> str:
+    def extract_file_content(
+        self, file_obj: Any
+    ) -> Tuple[Optional[str], Optional[bytes]]:
         """
-        Extract text from a file based on its extension.
+        メモリ上でファイルコンテンツを抽出します。
 
         Args:
-            file_path (str): Path to the file
+            file_obj: Gradioのファイルオブジェクト
 
         Returns:
-            str: Extracted text or error message
-        """
-        if not file_path or not os.path.exists(file_path):
-            return "File not found."
-
-        file_ext = os.path.splitext(file_path)[1].lower()
-
-        # Check if this is a text file
-        if file_ext in self.supported_text_extensions:
-            return self._extract_from_text_file(file_path)
-        # Check if this is a PDF file
-        elif file_ext in self.supported_pdf_extensions:
-            return self.pdf_extractor.extract_from_pdf(file_path)
-        else:
-            return f"Unsupported file type: {file_ext}. Supported types: {', '.join(self.supported_extensions)}"
-
-    def _extract_from_text_file(self, file_path: str) -> str:
-        """
-        Extract text from a text file.
-
-        Args:
-            file_path (str): Path to the text file
-
-        Returns:
-            str: Extracted text
-        """
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            return content
-        except UnicodeDecodeError:
-            # UTF-8で開けない場合はSJIS等の日本語エンコーディングを試す
-            try:
-                with open(file_path, "r", encoding="shift_jis") as f:
-                    content = f.read()
-                return content
-            except Exception as e:
-                logger.error(f"Text file reading error: {e}")
-                return f"Text file reading failed: {str(e)}"
-        except Exception as e:
-            logger.error(f"Text file reading error: {e}")
-            return f"Text file reading failed: {str(e)}"
-
-    def handle_file_upload(self, file_obj):
-        """
-        Process file uploads.
-
-        Properly handles file objects from Gradio's file upload component.
-
-        Args:
-            file_obj: Gradio's file object
-
-        Returns:
-            str: Path to the temporary file
+            tuple: (ファイル拡張子, ファイルコンテンツのバイト列)
         """
         if file_obj is None:
-            return None
+            return None, None
 
         try:
-            # Get filename
+            # リスト形式の場合は最初の要素を取得
             if isinstance(file_obj, list) and len(file_obj) > 0:
-                file_obj = file_obj[0]  # Get first element if it's a list
+                file_obj = file_obj[0]
 
-            # セキュリティのため、オリジナルファイル名は使用せず、一意のIDを生成
-            # ただし、元のファイル拡張子は保持する
-            import os
-            import uuid
-            from pathlib import Path
-
+            # ファイル拡張子を取得
             original_extension = ".txt"  # デフォルト拡張子
             if hasattr(file_obj, "name"):
                 # 元のファイルの拡張子を取得
-                original_extension = os.path.splitext(Path(file_obj.name).name)[1]
+                original_extension = os.path.splitext(Path(file_obj.name).name)[
+                    1
+                ].lower()
                 # 拡張子がない場合はデフォルト値を使用
                 if not original_extension:
                     original_extension = ".txt"
 
-            # 安全なファイル名を生成（UUIDと元の拡張子を組み合わせる）
-            filename = f"uploaded_{uuid.uuid4().hex}{original_extension}"
-
-            # セッション固有のtemp_dirを使用
-            temp_path = self.temp_dir / filename
-
-            # Get and save file data
+            # ファイル内容を読み込む
+            file_content = None
             if hasattr(file_obj, "read") and callable(file_obj.read):
-                with open(temp_path, "wb") as f:
-                    f.write(file_obj.read())
-            elif hasattr(file_obj, "name"):
-                with open(temp_path, "wb") as f:
-                    with open(file_obj.name, "rb") as source:
-                        f.write(source.read())
+                # 現在位置を記録
+                if hasattr(file_obj, "tell") and callable(file_obj.tell):
+                    pos = file_obj.tell()
+                else:
+                    pos = 0
 
-            return str(temp_path)
+                # コンテンツを読み込み
+                file_content = file_obj.read()
+
+                # 位置を戻す（ファイルを再利用可能にする）
+                if hasattr(file_obj, "seek") and callable(file_obj.seek):
+                    file_obj.seek(pos)
+            elif hasattr(file_obj, "name") and os.path.exists(file_obj.name):
+                # ファイルパスからコンテンツを読み込み
+                with open(file_obj.name, "rb") as source:
+                    file_content = source.read()
+
+            return original_extension, file_content
+
+        except Exception as e:
+            logger.error(f"File content extraction error: {e}")
+            return None, None
+
+    def extract_text(self, file_obj: Any) -> str:
+        """
+        メモリ上でファイルからテキストを抽出します。
+        ファイルをディスクに保存せずに直接処理します。
+
+        Args:
+            file_obj: Gradioのファイルオブジェクト
+
+        Returns:
+            str: 抽出されたテキスト
+        """
+        if file_obj is None:
+            return "Please upload a file."
+
+        try:
+            # ファイルコンテンツを取得
+            result = self.extract_file_content(file_obj)
+            file_ext, file_content = result
+
+            if file_content is None or file_ext is None:
+                return "Failed to read file."
+
+            # ファイルの種類に応じて処理
+            if isinstance(file_ext, str):
+                return self.extract_from_bytes(file_content, file_ext)
 
         except Exception as e:
             logger.error(f"File processing error: {e}")
-            return None
+            return f"Error processing file: {str(e)}"
+
+    def extract_from_bytes(self, file_content: bytes, file_ext: str) -> str:
+        """
+        Extract text from file content in memory.
+
+        Args:
+            file_content (bytes): File content as bytes
+            file_ext (str): File extension (e.g., ".pdf", ".txt")
+
+        Returns:
+            str: Extracted text content
+        """
+        # テキストファイル
+        if file_ext in self.supported_text_extensions:
+            # テキストの解読を試みる
+            try:
+                # UTF-8で試みる
+                return file_content.decode("utf-8")
+            except UnicodeDecodeError:
+                # Shift-JISで試みる
+                try:
+                    return file_content.decode("shift_jis")
+                except Exception:
+                    # その他のエンコーディングで試みる
+                    try:
+                        # CP932（Windows日本語）
+                        return file_content.decode("cp932")
+                    except Exception as e:
+                        logger.error(f"Text decoding error: {e}")
+                        return f"Text file decoding failed: {str(e)}"
+
+        # PDFファイル
+        elif file_ext in self.supported_pdf_extensions:
+            try:
+                # BytesIOオブジェクトとしてバイト列をラップする
+                pdf_stream = io.BytesIO(file_content)
+
+                # StreamInfoを作成して、これがPDFであることを明示する
+                stream_info = StreamInfo(extension=".pdf", mimetype="application/pdf")
+
+                # メモリ上のPDFストリームを直接変換
+                logger.debug("Processing PDF from memory stream")
+                result = self.markdown_converter.convert(
+                    pdf_stream, stream_info=stream_info
+                )
+
+                # 変換結果からテキストコンテンツを取得
+                markdown_content = result.text_content
+                logger.debug("PDF memory stream successfully converted to Markdown")
+                return markdown_content or ""
+            except Exception as e:
+                # エラーが発生した場合はログに記録して再度発生させる
+                logger.error(f"PDF memory stream to Markdown conversion failed: {e}")
+                return f"PDF conversion error: {str(e)}"
+        else:
+            return f"Unsupported file type: {file_ext}. Supported types: {', '.join(self.supported_extensions)}"
 
     def get_supported_extensions(self) -> List[str]:
         """

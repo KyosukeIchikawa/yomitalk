@@ -273,6 +273,17 @@ def upload_pdf_file(page_with_server: Page, sample_pdf_path: str):
         file_chooser = fc_info.value
         file_chooser.set_files(sample_pdf_path)
 
+        # テキストの自動抽出を待つ
+        page.wait_for_function(
+            """() => {
+                const textarea = document.querySelector('textarea');
+                return textarea && textarea.value && textarea.value.length > 10;
+            }""",
+            polling=500,
+            timeout=15000,
+        )
+        logger.info("Text extraction completed automatically after file upload")
+
         # アップロード完了を確認するための待機（プログレスバーや成功メッセージなど）
         page.wait_for_function(
             """() => {
@@ -316,6 +327,17 @@ def upload_text_file(page_with_server: Page):
         file_input = page.locator("input[type='file']").first
         file_input.set_input_files(TEST_TEXT_PATH)
         logger.info("Text file uploaded successfully")
+
+        # テキストの自動抽出を待つ
+        page.wait_for_function(
+            """() => {
+                const textarea = document.querySelector('textarea');
+                return textarea && textarea.value && textarea.value.length > 10;
+            }""",
+            polling=500,
+            timeout=15000,
+        )
+        logger.info("Text extraction completed automatically after file upload")
     except Exception as e:
         pytest.fail(f"Failed to upload text file: {e}")
 
@@ -576,11 +598,8 @@ def verify_extracted_text(page_with_server: Page):
 def file_text_extracted(page_with_server: Page):
     """ファイルからテキストを抽出する"""
     try:
-        # ファイルをアップロード
+        # ファイルをアップロード（自動でテキストが抽出される）
         upload_file(page_with_server)
-
-        # テキスト抽出ボタンをクリック
-        click_extract_text_button(page_with_server)
 
         # テキストが抽出されたことを検証
         return verify_extracted_text(page_with_server)

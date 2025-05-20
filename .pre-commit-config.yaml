@@ -48,6 +48,16 @@ repos:
     -   id: mypy
         additional_dependencies: [types-requests]
 
+-   repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+    -   id: autoflake
+        args: [
+            --remove-all-unused-imports,
+            --in-place,
+            --recursive
+        ]
+
 -   repo: local
     hooks:
     -   id: run-staged-tests

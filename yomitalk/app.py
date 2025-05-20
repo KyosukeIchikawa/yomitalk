@@ -45,8 +45,7 @@ class PaperPodcastApp:
             f"Initializing app with session ID: {self.session_manager.get_session_id()}"
         )
 
-        # 各コンポーネントにセッション固有のディレクトリを渡す
-        self.file_uploader = FileUploader(temp_dir=self.session_manager.get_temp_dir())
+        self.file_uploader = FileUploader()
         self.text_processor = TextProcessor()
         self.audio_generator = AudioGenerator(
             session_output_dir=self.session_manager.get_output_dir(),
@@ -141,25 +140,6 @@ class PaperPodcastApp:
             api_name = "OpenAI" if llm_type == "openai" else "Google Gemini"
             logger.warning(f"{api_name} API key not set")
 
-    def handle_file_upload(self, file_obj):
-        """
-        Process file uploads.
-
-        Properly handles file objects from Gradio's file upload component.
-        This is now a wrapper around FileUploader's handle_file_upload method.
-
-        Args:
-            file_obj: Gradio's file object
-
-        Returns:
-            str: Path to the temporary file
-        """
-        if file_obj is None:
-            return None
-
-        # FileUploaderのhandle_file_uploadメソッドを使用
-        return self.file_uploader.handle_file_upload(file_obj)
-
     def extract_file_text(self, file_obj) -> str:
         """
         Extract text from a file.
@@ -174,15 +154,9 @@ class PaperPodcastApp:
             logger.warning("No file selected for extraction")
             return "Please upload a file."
 
-        # Save file locally
-        temp_path = self.handle_file_upload(file_obj)
-        if not temp_path:
-            logger.error("Failed to process the file")
-            return "Failed to process the file."
-
-        # Extract text using FileUploader
-        text = self.file_uploader.extract_text_from_path(temp_path)
-        logger.debug("Text extraction completed")
+        # メモリ上でテキスト抽出を行う
+        text = self.file_uploader.extract_text(file_obj)
+        logger.debug("Text extraction completed (memory-based)")
         return text
 
     def check_voicevox_core(self):
@@ -394,13 +368,10 @@ class PaperPodcastApp:
                         type="filepath",
                         label=f"解説対象ファイルをアップロード（{', '.join(supported_extensions)}）",
                     )
-                    extract_btn = gr.Button(
-                        "テキストを抽出", variant="primary", interactive=False
-                    )
 
                     extracted_text = gr.Textbox(
                         label="解説対象テキスト（トークの元ネタ）",
-                        placeholder="ファイルを選択して[テキストを抽出]するか, 直接ここに貼り付けてください...",
+                        placeholder="ファイルをアップロードするか、直接ここにテキストを貼り付けてください...",
                         lines=10,
                     )
 
@@ -541,14 +512,8 @@ class PaperPodcastApp:
                     )
 
             # Set up event handlers
-            # ファイルがアップロードされたらボタンを有効化
+            # ファイルがアップロードされたら自動的にテキストを抽出
             file_input.change(
-                fn=lambda x: gr.update(interactive=bool(x)),
-                inputs=[file_input],
-                outputs=[extract_btn],
-            )
-
-            extract_btn.click(
                 fn=self.extract_file_text,
                 inputs=[file_input],
                 outputs=[extracted_text],

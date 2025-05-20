@@ -6,14 +6,12 @@ Feature: ファイルからテキストを抽出する
   Scenario: PDFファイルからテキストを抽出する
     Given Gradioアプリが起動している
     When the user uploads a PDF file
-    And the user clicks the extract text button
     Then the extracted text is displayed
 
   @file_extraction
   Scenario: テキストファイルからテキストを抽出する
     Given Gradioアプリが起動している
     When the user uploads a text file
-    And the user clicks the extract text button
     Then the extracted text is displayed
 
   @file_extraction
