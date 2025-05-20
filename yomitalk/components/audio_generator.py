@@ -442,6 +442,9 @@ class AudioGenerator:
         if not temp_wav_files:
             return ""
 
+        total_files = len(temp_wav_files)
+        logger.info(f"最終音声ファイル作成開始: {total_files}個のファイルを結合")
+
         # 日付付きの最終的な出力ファイル名を生成
         now = datetime.datetime.now()
         # セキュリティのため、一意のIDを使用する（日時とUUIDを組み合わせる）
@@ -450,25 +453,47 @@ class AudioGenerator:
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         output_file = str(self.output_dir / f"audio_{date_str}_{file_id}.wav")
+        logger.info(f"最終出力ファイル: {os.path.basename(output_file)}")
 
         # 全ての音声ファイルのデータをメモリに読み込む
         wav_data_list = []
         try:
-            for file in temp_wav_files:
+            logger.info("一時音声ファイルをメモリに読み込み中...")
+            for i, file in enumerate(temp_wav_files):
+                # 進捗をログに記録（10ファイルごとまたは最後のファイル）
+                if total_files > 20 and (i % 10 == 0 or i == total_files - 1):
+                    progress_percent = int(((i + 1) / total_files) * 100)
+                    logger.info(
+                        f"ファイル読み込み進捗: {i+1}/{total_files} ({progress_percent}%)"
+                    )
+
                 with open(file, "rb") as f:
                     wav_data_list.append(f.read())
 
+            logger.info("音声データの読み込み完了、ファイルを結合中...")
+
             # メモリ上でWAVファイルを結合
             combined_data = self._combine_wav_data_in_memory(wav_data_list)
+            logger.info(f"音声データ結合完了: {len(combined_data) // 1024} KB")
 
             # 結合されたデータを出力ファイルに書き込む
+            logger.info("最終音声ファイルに書き込み中...")
             with open(output_file, "wb") as f:
                 f.write(combined_data)
+            logger.info("最終音声ファイルへの書き込み完了")
 
             # 元のWAVファイルを削除
-            for file in temp_wav_files:
+            logger.info("一時音声ファイルをクリーンアップ中...")
+            for i, file in enumerate(temp_wav_files):
                 if os.path.exists(file):
                     os.remove(file)
+
+                # 大量のファイルがある場合は進捗を表示
+                if total_files > 20 and (i % 10 == 0 or i == total_files - 1):
+                    progress_percent = int(((i + 1) / total_files) * 100)
+                    logger.debug(
+                        f"クリーンアップ進捗: {i+1}/{total_files} ({progress_percent}%)"
+                    )
 
             return output_file
 
@@ -689,7 +714,16 @@ class AudioGenerator:
 
             # Generate audio for each conversation part
             temp_wav_files = []
+            total_conversation_parts = len(conversation_parts)
+            logger.info(f"キャラクター会話の音声生成開始: 会話部分数 {total_conversation_parts}")
+
             for i, (speaker, text) in enumerate(conversation_parts):
+                # 進捗状況を表示
+                part_progress = int(((i + 1) / total_conversation_parts) * 100)
+                logger.info(
+                    f"キャラクター会話進捗: {i+1}/{total_conversation_parts} ({part_progress}%)"
+                )
+
                 style_id = self.core_style_ids.get(
                     speaker, 3
                 )  # Default to Zundamon if not found
@@ -701,7 +735,7 @@ class AudioGenerator:
 
                 # メモリ上で音声生成を行う
                 if text_chunks:
-                    logger.info("Generating audio in memory")
+                    logger.info(f"{speaker}のセリフを生成中...")
                     part_wav_data = self._generate_audio_in_memory(
                         text_chunks, style_id
                     )
@@ -711,7 +745,7 @@ class AudioGenerator:
                         part_file = str(self.temp_dir / f"part_{i}.wav")
                         with open(part_file, "wb") as f:
                             f.write(part_wav_data)
-                        logger.debug(f"{len(text_chunks)}個のチャンクを一括処理しました")
+                        logger.debug(f"{speaker}の{len(text_chunks)}個のチャンクを一括処理しました")
                         temp_wav_files.append(part_file)
 
             # Combine all parts to create the final audio file
@@ -746,10 +780,18 @@ class AudioGenerator:
         if len(wav_data_list) == 1:
             return wav_data_list[0]
 
+        total_files = len(wav_data_list)
+        logger.debug(f"音声ファイル結合開始: 合計{total_files}ファイル")
+
         # 全てのWAVファイルのパラメータとデータを読み込む
         wav_params_and_data: List[Tuple[wave._wave_params, bytes]] = []
 
-        for wav_bytes in wav_data_list:
+        for i, wav_bytes in enumerate(wav_data_list):
+            # 進捗をログに記録
+            if total_files > 10 and (i % 5 == 0 or i == total_files - 1):
+                progress_percent = int(((i + 1) / total_files) * 100)
+                logger.debug(f"WAVデータ読み込み進捗: {i+1}/{total_files} ({progress_percent}%)")
+
             with wave.open(io.BytesIO(wav_bytes), "rb") as wav_file:
                 params = wav_file.getparams()
                 frames = wav_file.readframes(wav_file.getnframes())
@@ -757,6 +799,7 @@ class AudioGenerator:
 
         # 最初のWAVファイルのパラメータを使用（全て同じフォーマットと仮定）
         first_params = wav_params_and_data[0][0]
+        logger.debug("WAVデータ読み込み完了: WAVパラメータを設定中")
 
         # 結果を書き込むためのメモリバッファを作成
         output_buffer = io.BytesIO()
@@ -766,9 +809,17 @@ class AudioGenerator:
             output_wav.setparams(first_params)
 
             # 全てのフレームデータを書き込む
-            for _, frames in wav_params_and_data:
+            logger.debug(f"WAVデータ結合中: {total_files}ファイルのフレームデータを結合")
+            for i, (_, frames) in enumerate(wav_params_and_data):
+                # 大量のファイルの場合は定期的に進捗を表示
+                if total_files > 10 and (i % 5 == 0 or i == total_files - 1):
+                    progress_percent = int(((i + 1) / total_files) * 100)
+                    logger.debug(
+                        f"WAVデータ結合進捗: {i+1}/{total_files} ({progress_percent}%)"
+                    )
                 output_wav.writeframes(frames)
 
+        logger.debug(f"WAVデータ結合完了: {total_files}ファイルを正常に結合")
         # 結合されたWAVデータを返す
         return output_buffer.getvalue()
 
@@ -901,15 +952,25 @@ class AudioGenerator:
             return b""
 
         # 各チャンクの音声データをメモリ上で生成
-        wav_data_list = []
+        wav_data_list: List[bytes] = []
+        valid_chunks = [chunk for chunk in chunks if chunk.strip()]
+        total_valid_chunks = len(valid_chunks)
 
-        for chunk in chunks:
-            if not chunk.strip():
-                continue
+        logger.info(f"音声生成開始: 合計{total_valid_chunks}チャンク")
+
+        for chunk in valid_chunks:
+            # 現在の進捗状況をログに出力
+            progress_idx = len(wav_data_list) + 1
+            progress_percent = int((progress_idx / total_valid_chunks) * 100)
+            logger.info(
+                f"音声生成進捗: {progress_idx}/{total_valid_chunks} ({progress_percent}%)"
+            )
 
             # チャンクから音声データを生成
             wav_data = self.core_synthesizer.tts(chunk, style_id)
             wav_data_list.append(wav_data)
+
+        logger.info(f"音声生成完了: {total_valid_chunks}/{total_valid_chunks} (100%)")
 
         # 全てのWAVデータを結合
         return self._combine_wav_data_in_memory(wav_data_list)
