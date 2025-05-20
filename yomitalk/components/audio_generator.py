@@ -836,7 +836,7 @@ class AudioGenerator:
         import re
 
         # サポートされる全てのキャラクター名
-        character_names = ["ずんだもん", "四国めたん", "九州そら"]
+        character_names = ["ずんだもん", "四国めたん", "九州そら", "中国うさぎ", "中部つるぎ"]
 
         # Fix missing colon after speaker names
         for name in character_names:
