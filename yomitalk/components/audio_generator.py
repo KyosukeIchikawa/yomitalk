@@ -7,7 +7,6 @@ import datetime
 import io
 import os
 import re
-import shutil
 import uuid
 import wave
 from enum import Enum, auto
@@ -429,83 +428,6 @@ class AudioGenerator:
 
         result.append(katakana_part)
 
-    def _create_final_audio_file(self, temp_wav_files: List[str]) -> str:
-        """
-        Create the final audio file by combining temporary audio files.
-
-        Args:
-            temp_wav_files (List[str]): List of temporary audio file paths
-
-        Returns:
-            str: Path to the final audio file
-        """
-        if not temp_wav_files:
-            return ""
-
-        total_files = len(temp_wav_files)
-        logger.info(f"最終音声ファイル作成開始: {total_files}個のファイルを結合")
-
-        # 日付付きの最終的な出力ファイル名を生成
-        now = datetime.datetime.now()
-        # セキュリティのため、一意のIDを使用する（日時とUUIDを組み合わせる）
-        date_str = now.strftime("%Y%m%d_%H%M%S")
-        file_id = uuid.uuid4().hex[:8]
-
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = str(self.output_dir / f"audio_{date_str}_{file_id}.wav")
-        logger.info(f"最終出力ファイル: {os.path.basename(output_file)}")
-
-        # 全ての音声ファイルのデータをメモリに読み込む
-        wav_data_list = []
-        try:
-            logger.info("一時音声ファイルをメモリに読み込み中...")
-            for i, file in enumerate(temp_wav_files):
-                # 進捗をログに記録（10ファイルごとまたは最後のファイル）
-                if total_files > 20 and (i % 10 == 0 or i == total_files - 1):
-                    progress_percent = int(((i + 1) / total_files) * 100)
-                    logger.info(
-                        f"ファイル読み込み進捗: {i+1}/{total_files} ({progress_percent}%)"
-                    )
-
-                with open(file, "rb") as f:
-                    wav_data_list.append(f.read())
-
-            logger.info("音声データの読み込み完了、ファイルを結合中...")
-
-            # メモリ上でWAVファイルを結合
-            combined_data = self._combine_wav_data_in_memory(wav_data_list)
-            logger.info(f"音声データ結合完了: {len(combined_data) // 1024} KB")
-
-            # 結合されたデータを出力ファイルに書き込む
-            logger.info("最終音声ファイルに書き込み中...")
-            with open(output_file, "wb") as f:
-                f.write(combined_data)
-            logger.info("最終音声ファイルへの書き込み完了")
-
-            # 元のWAVファイルを削除
-            logger.info("一時音声ファイルをクリーンアップ中...")
-            for i, file in enumerate(temp_wav_files):
-                if os.path.exists(file):
-                    os.remove(file)
-
-                # 大量のファイルがある場合は進捗を表示
-                if total_files > 20 and (i % 10 == 0 or i == total_files - 1):
-                    progress_percent = int(((i + 1) / total_files) * 100)
-                    logger.debug(
-                        f"クリーンアップ進捗: {i+1}/{total_files} ({progress_percent}%)"
-                    )
-
-            return output_file
-
-        except Exception as e:
-            logger.error(f"Error combining audio files: {e}")
-            # エラー時は先頭のファイルを返す（少なくとも何かが再生できるように）
-            if temp_wav_files and os.path.exists(temp_wav_files[0]):
-                return temp_wav_files[0]
-            return ""
-
-    # チャンク分割処理は廃止し、一括処理に変更
-
     def generate_character_conversation(self, podcast_text: str) -> Optional[str]:
         """
         Generate audio for a character conversation from podcast text.
@@ -523,19 +445,6 @@ class AudioGenerator:
         if not podcast_text or podcast_text.strip() == "":
             logger.error("Podcast text is empty")
             return None
-
-        # 一時ファイルディレクトリが存在する場合は削除
-        if self.temp_dir.exists():
-            try:
-                # ディレクトリが空でない場合でも再帰的に削除
-                shutil.rmtree(self.temp_dir)
-                logger.debug("一時ディレクトリを削除しました")
-            except Exception:
-                # セキュリティのためファイルパスやスタックトレースは記録しない
-                logger.error("一時ファイル削除中にエラーが発生しました")
-                # エラーが発生してもディレクトリを作成して処理を続行する
-        # 一時ファイルディレクトリを作成
-        self.temp_dir.mkdir(parents=True, exist_ok=True)
 
         try:
             # 英語をカタカナに変換
@@ -617,7 +526,7 @@ class AudioGenerator:
                     return None
 
             # Generate audio for each conversation part
-            temp_wav_files = []
+            wav_data_list = []  # メモリ上に直接音声データを保持するリスト
             total_conversation_parts = len(conversation_parts)
             logger.info(f"キャラクター会話の音声生成開始: 会話部分数 {total_conversation_parts}")
 
@@ -639,21 +548,38 @@ class AudioGenerator:
                     part_wav_data = self._text_to_speech(text, style_id)
 
                     if part_wav_data:
-                        # 一時ファイルに保存
-                        part_file = str(self.temp_dir / f"part_{i}.wav")
-                        with open(part_file, "wb") as f:
-                            f.write(part_wav_data)
-                        logger.debug(f"{speaker}のセリフを一括処理しました")
-                        temp_wav_files.append(part_file)
+                        logger.debug(f"{speaker}のセリフを生成し、メモリに保存しました")
+                        wav_data_list.append(part_wav_data)
 
-            # Combine all parts to create the final audio file
-            if temp_wav_files:
-                logger.info(
-                    f"Combining {len(temp_wav_files)} audio parts into final file"
-                )
-                final_path = self._create_final_audio_file(temp_wav_files)
-                logger.info("音声ファイルを生成しました")
-                return final_path
+            # メモリ上で音声データを結合して最終的な音声ファイルを作成
+            if wav_data_list:
+                logger.info(f"メモリ上で {len(wav_data_list)} 個の音声パーツを結合中")
+
+                # 結合された音声データをメモリ上で生成
+                combined_wav_data = self._combine_wav_data_in_memory(wav_data_list)
+
+                if combined_wav_data:
+                    # 結合されたデータを最終的な出力ファイルに書き込む
+                    # 日付付きの最終的な出力ファイル名を生成
+                    now = datetime.datetime.now()
+                    date_str = now.strftime("%Y%m%d_%H%M%S")
+                    file_id = uuid.uuid4().hex[:8]
+
+                    self.output_dir.mkdir(parents=True, exist_ok=True)
+                    output_file = str(
+                        self.output_dir / f"audio_{date_str}_{file_id}.wav"
+                    )
+
+                    logger.info(f"最終出力ファイル: {os.path.basename(output_file)}")
+
+                    with open(output_file, "wb") as f:
+                        f.write(combined_wav_data)
+
+                    logger.info("音声ファイルを生成しました")
+                    return output_file
+                else:
+                    logger.error("音声データの結合に失敗しました")
+                    return None
             else:
                 logger.error("No audio parts were generated")
                 return None
