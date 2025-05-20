@@ -504,103 +504,7 @@ class AudioGenerator:
                 return temp_wav_files[0]
             return ""
 
-    def _split_text(self, text: str, max_length: int = 100) -> List[str]:
-        """
-        Split text into appropriate lengths.
-
-        Args:
-            text (str): Text to split
-            max_length (int): Maximum characters per chunk
-
-        Returns:
-            list: List of split text
-        """
-        if not text:
-            return []
-
-        chunks: List[str] = []
-        current_chunk = ""
-
-        # Split by paragraphs
-        paragraphs = text.split("\n")
-
-        for paragraph in paragraphs:
-            paragraph = paragraph.strip()
-
-            if not paragraph:
-                continue
-
-            # Handle long paragraphs
-            if len(paragraph) > max_length:
-                current_chunk = self._process_long_paragraph(
-                    paragraph, chunks, current_chunk, max_length
-                )
-            else:
-                # Add paragraph to current chunk or start a new one
-                current_chunk = self._add_paragraph_to_chunk(
-                    paragraph, chunks, current_chunk, max_length
-                )
-
-        # Add the last chunk if it exists
-        if current_chunk and current_chunk.strip():
-            chunks.append(current_chunk.strip())
-
-        return chunks
-
-    def _process_long_paragraph(
-        self, paragraph: str, chunks: List[str], current_chunk: str, max_length: int
-    ) -> str:
-        """
-        Process long paragraphs.
-
-        Args:
-            paragraph (str): Paragraph to process
-            chunks (list): List of existing chunks
-            current_chunk (str): Current chunk
-            max_length (int): Maximum chunk length
-
-        Returns:
-            str: Updated current_chunk
-        """
-        sentences = paragraph.replace("。", "。|").split("|")
-
-        for sentence in sentences:
-            if not sentence.strip():
-                continue
-
-            if len(current_chunk) + len(sentence) <= max_length:
-                current_chunk += sentence
-            else:
-                if current_chunk:
-                    chunks.append(current_chunk)
-                current_chunk = sentence
-
-        return current_chunk
-
-    def _add_paragraph_to_chunk(
-        self, paragraph: str, chunks: List[str], current_chunk: str, max_length: int
-    ) -> str:
-        """
-        Add paragraph to chunk.
-
-        Args:
-            paragraph (str): Paragraph to add
-            chunks (list): List of chunks
-            current_chunk (str): Current chunk
-            max_length (int): Maximum chunk length
-
-        Returns:
-            str: Updated current_chunk
-        """
-        # Check if paragraph can be added to current_chunk
-        if len(current_chunk) + len(paragraph) <= max_length:
-            current_chunk += paragraph
-        else:
-            if current_chunk:
-                chunks.append(current_chunk)
-            current_chunk = paragraph
-
-        return current_chunk
+    # チャンク分割処理は廃止し、一括処理に変更
 
     def generate_character_conversation(self, podcast_text: str) -> Optional[str]:
         """
@@ -729,23 +633,17 @@ class AudioGenerator:
                 )  # Default to Zundamon if not found
                 logger.info(f"Generating audio for {speaker} (style_id: {style_id})")
 
-                # Split text into chunks if it's too long
-                text_chunks = self._split_text(text, max_length=100)
-                logger.info(f"Split into {len(text_chunks)} chunks")
-
-                # メモリ上で音声生成を行う
-                if text_chunks:
+                # テキストが空でなければ一括で音声生成を行う
+                if text.strip():
                     logger.info(f"{speaker}のセリフを生成中...")
-                    part_wav_data = self._generate_audio_in_memory(
-                        text_chunks, style_id
-                    )
+                    part_wav_data = self._text_to_speech(text, style_id)
 
                     if part_wav_data:
                         # 一時ファイルに保存
                         part_file = str(self.temp_dir / f"part_{i}.wav")
                         with open(part_file, "wb") as f:
                             f.write(part_wav_data)
-                        logger.debug(f"{speaker}の{len(text_chunks)}個のチャンクを一括処理しました")
+                        logger.debug(f"{speaker}のセリフを一括処理しました")
                         temp_wav_files.append(part_file)
 
             # Combine all parts to create the final audio file
@@ -937,40 +835,27 @@ class AudioGenerator:
         # Implementation of system_log method
         return ""
 
-    def _generate_audio_in_memory(self, chunks: List[str], style_id: int) -> bytes:
+    def _text_to_speech(self, text: str, style_id: int) -> bytes:
         """
-        テキストチャンクからメモリ上で音声データを生成する
+        メモリ上でテキストから音声データを生成する
 
         Args:
-            chunks: テキストチャンクのリスト
+            text: 音声に変換するテキスト
             style_id: VOICEVOXのスタイルID
 
         Returns:
             bytes: 生成されたWAVデータ
         """
-        if not chunks or not self.core_synthesizer:
+        if not text.strip() or not self.core_synthesizer:
             return b""
 
-        # 各チャンクの音声データをメモリ上で生成
-        wav_data_list: List[bytes] = []
-        valid_chunks = [chunk for chunk in chunks if chunk.strip()]
-        total_valid_chunks = len(valid_chunks)
+        logger.info("音声生成開始: テキストを一括処理")
 
-        logger.info(f"音声生成開始: 合計{total_valid_chunks}チャンク")
-
-        for chunk in valid_chunks:
-            # 現在の進捗状況をログに出力
-            progress_idx = len(wav_data_list) + 1
-            progress_percent = int((progress_idx / total_valid_chunks) * 100)
-            logger.info(
-                f"音声生成進捗: {progress_idx}/{total_valid_chunks} ({progress_percent}%)"
-            )
-
-            # チャンクから音声データを生成
-            wav_data = self.core_synthesizer.tts(chunk, style_id)
-            wav_data_list.append(wav_data)
-
-        logger.info(f"音声生成完了: {total_valid_chunks}/{total_valid_chunks} (100%)")
-
-        # 全てのWAVデータを結合
-        return self._combine_wav_data_in_memory(wav_data_list)
+        try:
+            # テキスト全体から一度に音声データを生成
+            wav_data: bytes = self.core_synthesizer.tts(text, style_id)
+            logger.info(f"音声生成完了: サイズ {len(wav_data) // 1024} KB")
+            return wav_data
+        except Exception as e:
+            logger.error(f"音声生成エラー: {e}")
+            return b""
