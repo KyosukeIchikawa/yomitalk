@@ -15,6 +15,7 @@ from typing import List, Optional, Tuple
 
 import e2k
 
+from yomitalk.common.character import DISPLAY_NAMES, STYLE_ID_BY_NAME, Character
 from yomitalk.utils.logger import logger
 from yomitalk.utils.text_utils import is_romaji_readable
 
@@ -152,13 +153,6 @@ class AudioGenerator:
         # VOICEVOX Core
         self.core_initialized = False
         self.core_synthesizer: Optional[Synthesizer] = None
-        self.core_style_ids = {
-            "ずんだもん": 3,  # Zundamon (sweet)
-            "四国めたん": 2,  # Shikoku Metan (normal)
-            "九州そら": 16,  # Kyushu Sora (normal)
-            "中国うさぎ": 61,  # Chugoku Usagi (normal)
-            "中部つるぎ": 94,  # Chubu Tsurugi (normal)
-        }
 
         # Initialize VOICEVOX Core if available
         if VOICEVOX_CORE_AVAILABLE:
@@ -455,14 +449,10 @@ class AudioGenerator:
             lines = podcast_text.strip().split("\n")
             conversation_parts = []
 
-            # サポートされるキャラクター名とそのパターン
-            # TODO: 自動的にこれらのパターンに対応
+            # キャラクターパターンを取得
             character_patterns = {
-                "ずんだもん": ["ずんだもん:", "ずんだもん："],
-                "四国めたん": ["四国めたん:", "四国めたん："],
-                "九州そら": ["九州そら:", "九州そら："],
-                "中国うさぎ": ["中国うさぎ:", "中国うさぎ："],
-                "中部つるぎ": ["中部つるぎ:", "中部つるぎ："],
+                char.display_name: [f"{char.display_name}:", f"{char.display_name}："]
+                for char in Character
             }
 
             # 複数行のセリフを処理するために現在の話者と発言を記録
@@ -537,9 +527,7 @@ class AudioGenerator:
                     f"キャラクター会話進捗: {i+1}/{total_conversation_parts} ({part_progress}%)"
                 )
 
-                style_id = self.core_style_ids.get(
-                    speaker, 3
-                )  # Default to Zundamon if not found
+                style_id = STYLE_ID_BY_NAME[speaker]
                 logger.info(f"Generating audio for {speaker} (style_id: {style_id})")
 
                 # テキストが空でなければ一括で音声生成を行う
@@ -659,11 +647,8 @@ class AudioGenerator:
         """
         import re
 
-        # サポートされる全てのキャラクター名
-        character_names = ["ずんだもん", "四国めたん", "九州そら", "中国うさぎ", "中部つるぎ"]
-
         # Fix missing colon after speaker names
-        for name in character_names:
+        for name in DISPLAY_NAMES:
             text = re.sub(f"({name})(\\s+)(?=[^\\s:])", f"{name}:\\2", text)
 
         # カスタム名のキャラクターを検出し、標準名にマッピング
@@ -689,13 +674,15 @@ class AudioGenerator:
                 speaker, speech = match.groups()
                 # 既知のキャラクター名に最も近いものを探す
                 best_match = None
-                for name in character_names:
+                for name in DISPLAY_NAMES:
                     if name in speaker:
                         best_match = name
                         break
 
-                # 最適なマッチが見つからない場合、デフォルトをずんだもんにする
-                current_speaker = best_match if best_match else "ずんだもん"
+                # 最適なマッチが見つからない場合、デフォルトを設定
+                current_speaker = (
+                    best_match if best_match else Character.ZUNDAMON.display_name
+                )
                 if speech.strip():
                     current_speech.append(speech.strip())
             else:
@@ -711,8 +698,8 @@ class AudioGenerator:
                             if not current_speech[-1].endswith("\n"):
                                 current_speech[-1] += "\n"
                 elif line_stripped:
-                    # 話者が一度も検出されていない場合、デフォルトをずんだもんにする
-                    current_speaker = "ずんだもん"
+                    # 話者が一度も検出されていない場合、デフォルトを設定
+                    current_speaker = Character.ZUNDAMON.display_name
                     current_speech.append(line_stripped)
 
         # 最後の話者の発言を追加
@@ -728,7 +715,7 @@ class AudioGenerator:
         for line in lines:
             # 複数のキャラクターが一行に存在するかチェック
             fixed_line = line
-            for name in character_names:
+            for name in DISPLAY_NAMES:
                 if f"。{name}" in fixed_line:
                     parts = fixed_line.split(f"。{name}")
                     if len(parts) > 1:
@@ -749,7 +736,6 @@ class AudioGenerator:
             message (str): The message to add to the system log
         """
         # Implementation of update_log method
-        pass
 
     def system_log(self) -> str:
         """

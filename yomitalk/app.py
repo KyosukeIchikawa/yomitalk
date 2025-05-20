@@ -4,7 +4,6 @@
 
 Builds the Paper Podcast Generator application using Gradio.
 """
-
 import math
 import os
 from pathlib import Path
@@ -12,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 import gradio as gr
 
+from yomitalk.common.character import DISPLAY_NAMES
 from yomitalk.components.audio_generator import VOICEVOX_CORE_AVAILABLE, AudioGenerator
 from yomitalk.components.content_extractor import ContentExtractor
 from yomitalk.components.text_processor import TextProcessor
@@ -845,17 +845,15 @@ class PaperPodcastApp:
         logger.debug(f"Gemini max tokens set to {max_tokens}: {success}")
 
     def get_available_characters(self) -> List[str]:
-        """
-        利用可能なキャラクターのリストを取得します。
+        """利用可能なキャラクターのリストを取得します。
 
         Returns:
             List[str]: 利用可能なキャラクター名のリスト
         """
-        return self.text_processor.get_valid_characters()
+        return DISPLAY_NAMES
 
     def set_character_mapping(self, character1: str, character2: str) -> None:
-        """
-        キャラクターマッピングを設定します。
+        """キャラクターマッピングを設定します。
 
         Args:
             character1 (str): Character1に割り当てるキャラクター名

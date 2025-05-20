@@ -146,13 +146,6 @@ Character speech patterns:
         mapping = self.prompt_manager.get_character_mapping()
         self.assertEqual("四国めたん", mapping["Character1"])
 
-    def test_get_valid_characters(self):
-        """Test getting list of valid characters."""
-        characters = self.prompt_manager.get_valid_characters()
-        self.assertIn("ずんだもん", characters)
-        self.assertIn("四国めたん", characters)
-        self.assertIn("九州そら", characters)
-
     def test_character_name_conversion(self):
         """Test converting abstract character names to real character names."""
         text = "Character1: こんにちは\nCharacter2: はじめまして"

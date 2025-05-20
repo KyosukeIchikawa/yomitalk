@@ -485,21 +485,6 @@ class TestTextProcessor(unittest.TestCase):
         self.assertEqual("四国めたん", mapping["Character2"])
         self.mock_prompt_manager.get_character_mapping.assert_called_once()
 
-    def test_get_valid_characters(self):
-        """Test getting valid characters list."""
-        self.mock_prompt_manager.get_valid_characters.return_value = [
-            "ずんだもん",
-            "四国めたん",
-            "九州そら",
-            "中国うさぎ",
-            "中部つるぎ",
-        ]
-        characters = self.text_processor.get_valid_characters()
-        self.assertIn("ずんだもん", characters)
-        self.assertIn("四国めたん", characters)
-        self.assertEqual(5, len(characters))
-        self.mock_prompt_manager.get_valid_characters.assert_called_once()
-
     def test_set_document_type(self):
         """Test setting document type."""
         # 正常系のテスト - 有効なドキュメントタイプ

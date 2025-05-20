@@ -8,10 +8,11 @@ import shutil
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import jinja2
 
+from yomitalk.common.character import DISPLAY_NAMES, Character
 from yomitalk.utils.logger import logger
 
 
@@ -72,7 +73,6 @@ class PromptManager:
     def __init__(
         self,
         template_dir: str = "yomitalk/templates",
-        char_mapping: Optional[Dict[str, str]] = None,
     ):
         """Initialize the PromptManager.
 
@@ -85,20 +85,11 @@ class PromptManager:
         self.current_document_type = DocumentType.PAPER
         self.current_mode = PodcastMode.SECTION_BY_SECTION
 
-        self.VALID_CHARACTERS = [
-            "四国めたん",
-            "ずんだもん",
-            "九州そら",
-            "中国うさぎ",
-            "中部つるぎ",
-        ]
-
         # デフォルトのキャラクターマッピング
-        self.char_mapping = (
-            char_mapping
-            if char_mapping is not None
-            else {"Character1": "四国めたん", "Character2": "ずんだもん"}
-        )
+        self.char_mapping = {
+            "Character1": Character.SHIKOKU_METAN.display_name,
+            "Character2": Character.ZUNDAMON.display_name,
+        }
 
         # テンプレートマッピング：各モードに対応するテンプレートファイル
         self.template_mapping = {
@@ -128,14 +119,6 @@ class PromptManager:
         else:
             logger.info(f"共通ユーティリティテンプレートファイル確認: {utils_template}")
 
-    def get_valid_characters(self):
-        """Get the list of valid characters.
-
-        Returns:
-            list: List of valid character names.
-        """
-        return self.VALID_CHARACTERS
-
     def set_character_mapping(self, char1: str, char2: str):
         """Set character mapping.
 
@@ -146,9 +129,9 @@ class PromptManager:
         Returns:
             bool: True if successful, False otherwise.
         """
-        if char1 not in self.VALID_CHARACTERS or char2 not in self.VALID_CHARACTERS:
+        if char1 not in DISPLAY_NAMES or char2 not in DISPLAY_NAMES:
             logger.warning(
-                f"無効なキャラクター名: char1={char1}, char2={char2}、有効なキャラクター: {self.VALID_CHARACTERS}"
+                f"無効なキャラクター名: char1={char1}, char2={char2}、有効なキャラクター: {DISPLAY_NAMES}"
             )
             return False
 

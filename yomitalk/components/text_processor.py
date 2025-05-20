@@ -168,17 +168,6 @@ class TextProcessor:
         char_map: Dict[str, str] = self.prompt_manager.get_character_mapping()
         return char_map
 
-    def get_valid_characters(self) -> List[str]:
-        """
-        有効なキャラクターのリストを取得します。
-
-        Returns:
-            list: 有効なキャラクター名のリスト
-        """
-        # 明示的に戻り値の型を指定
-        chars: List[str] = self.prompt_manager.get_valid_characters()
-        return chars
-
     def set_document_type(self, doc_type: DocumentType) -> bool:
         """
         ドキュメントタイプを設定します。
