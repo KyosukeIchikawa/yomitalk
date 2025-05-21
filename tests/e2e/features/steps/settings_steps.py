@@ -454,7 +454,6 @@ def click_character_settings_save_button(page_with_server: Page):
     logger.info(
         "Character settings save button step skipped - auto-save is now implemented"
     )
-    pass
 
 
 @when("the user selects a different OpenAI model")
