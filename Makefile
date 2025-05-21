@@ -157,6 +157,12 @@ pre-commit-run: setup-lint
 	$(VENV_PRECOMMIT) run --all-files
 	@echo "Pre-commit hooks execution completed"
 
+# Run pre-commit hooks in CI mode (check only, no modifications)
+pre-commit-run-ci: setup-lint
+	@echo "Running pre-commit hooks in CI mode (check only)..."
+	$(VENV_PRECOMMIT) run --all-files --hook-stage manual
+	@echo "Pre-commit hooks execution completed"
+
 #--------------------------------------------------------------
 # Testing
 #--------------------------------------------------------------

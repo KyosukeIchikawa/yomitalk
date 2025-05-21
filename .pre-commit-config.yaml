@@ -57,6 +57,15 @@ repos:
             --in-place,
             --recursive
         ]
+        stages: [pre-commit]
+    -   id: autoflake
+        name: autoflake-ci-check
+        args: [
+            --remove-all-unused-imports,
+            --check,
+            --recursive
+        ]
+        stages: [manual]
 
 -   repo: local
     hooks:
