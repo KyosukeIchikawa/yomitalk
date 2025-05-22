@@ -127,7 +127,7 @@ install-voicevox-core-module: venv
 # Run the application
 run: venv
 	@echo "Running application..."
-	$(VENV_PYTHON) main.py
+	$(VENV_PYTHON) app.py
 
 # Run static analysis (lint)
 lint: setup-lint
