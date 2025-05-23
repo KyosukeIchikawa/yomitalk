@@ -496,7 +496,7 @@ class PaperPodcastApp:
                         interactive=False,
                         show_download_button=True,
                         show_label=True,
-                        label="生成された音声",
+                        label="生成された音声（ダウンロードボタンで保存可能）",
                         value=None,
                         elem_id="audio_output",
                         waveform_options=gr.WaveformOptions(
@@ -506,12 +506,7 @@ class PaperPodcastApp:
                         ),
                         min_width=300,
                     )
-                    download_btn = gr.Button(
-                        "音声が生成されていません",
-                        elem_id="download_audio_btn",
-                        interactive=False,
-                        variant="secondary",
-                    )
+                    # ダウンロードボタンは不要 - gr.Audio自体にダウンロード機能が内蔵されています
 
             # Set up event handlers
             # ファイルがアップロードされたら自動的にテキストを抽出
@@ -625,106 +620,6 @@ class PaperPodcastApp:
                 fn=self.generate_podcast_audio,
                 inputs=[podcast_text],
                 outputs=[audio_output],
-            ).then(
-                # Gradio 5.xでは、Button.updateではなくUpdateクラスを使用
-                fn=lambda x: gr.update(
-                    interactive=bool(x),
-                    value="音声をダウンロード" if bool(x) else "音声が生成されていません",
-                    variant="primary" if bool(x) else "secondary",
-                ),
-                inputs=[audio_output],
-                outputs=[download_btn],
-            )
-
-            # audio_outputが変更された時もダウンロードボタンの状態を更新
-            audio_output.change(
-                fn=lambda x: gr.update(
-                    interactive=bool(x),
-                    value="音声をダウンロード" if bool(x) else "音声が生成されていません",
-                    variant="primary" if bool(x) else "secondary",
-                ),
-                inputs=[audio_output],
-                outputs=[download_btn],
-            )
-
-            # ダウンロードボタンの実装
-            download_btn.click(
-                fn=lambda x: x,
-                inputs=[audio_output],
-                outputs=[audio_output],
-            ).then(
-                lambda x: x,
-                inputs=[audio_output],
-                outputs=None,
-                js="""
-                async (audio_path) => {
-                    if (!audio_path) {
-                        console.error("オーディオパスがありません");
-                        return;
-                    }
-
-                    try {
-                        console.log("ダウンロード処理を開始します:", audio_path);
-
-                        // 異なる形式への対応
-                        let url;
-                        let filename;
-
-                        // audio_pathの型によって処理を分岐
-                        if (typeof audio_path === 'string') {
-                            url = audio_path;
-                            filename = audio_path.split('/').pop();
-                        } else if (typeof audio_path === 'object') {
-                            // オブジェクトの形式を調査
-                            console.log("オーディオオブジェクト:", audio_path);
-
-                            if (audio_path.url) {
-                                url = audio_path.url;
-                                filename = audio_path.name || url.split('/').pop();
-                            } else if (audio_path.data) {
-                                url = audio_path.data;
-                                filename = audio_path.name || "audio.wav";
-                            } else if (audio_path.value) {
-                                url = audio_path.value;
-                                filename = url.split('/').pop();
-                            } else {
-                                // プロパティを列挙して調査
-                                for (const key in audio_path) {
-                                    console.log(`プロパティ ${key}:`, audio_path[key]);
-                                }
-                                throw new Error("認識できない音声ファイル形式です");
-                            }
-                        } else {
-                            throw new Error("不明な音声ファイル形式です: " + typeof audio_path);
-                        }
-
-                        console.log("ダウンロード情報:", { url, filename });
-
-                        // ダウンロード処理
-                        if (url) {
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = filename;
-                            a.target = "_blank";
-                            document.body.appendChild(a);
-                            a.click();
-
-                            // 成功メッセージ
-                            console.log("ダウンロード処理が実行されました:", filename);
-
-                            // クリーンアップ
-                            setTimeout(() => {
-                                document.body.removeChild(a);
-                            }, 100);
-                        } else {
-                            throw new Error("ダウンロードURLが取得できませんでした");
-                        }
-                    } catch (error) {
-                        console.error("ダウンロードエラー:", error);
-                        alert("ダウンロードに失敗しました: " + error.message);
-                    }
-                }
-                """,
             )
 
             # ドキュメントタイプ選択のイベントハンドラ
@@ -959,7 +854,7 @@ class PaperPodcastApp:
 
     def update_audio_button_state(
         self, checked: bool, podcast_text: Optional[str] = None
-    ) -> gr.Button:
+    ) -> Dict[str, Any]:
         """
         VOICEVOX利用規約チェックボックスの状態とトーク原稿の有無に基づいて音声生成ボタンの有効/無効を切り替えます。
 
@@ -968,18 +863,24 @@ class PaperPodcastApp:
             podcast_text (Optional[str], optional): 生成されたトーク原稿
 
         Returns:
-            gr.Button: 更新されたボタン
+            Dict[str, Any]: gr.update()の結果
         """
         has_text = podcast_text and podcast_text.strip() != ""
         is_enabled = checked and has_text
 
-        button_text = "音声を生成"
+        message = ""
         if not checked:
-            button_text = "VOICEVOX利用規約に同意してください"
+            message = "（VOICEVOX利用規約に同意が必要です）"
         elif not has_text:
-            button_text = "トーク原稿を生成してください"
+            message = "（トーク原稿が必要です）"
 
-        return gr.Button(value=button_text, variant="primary", interactive=is_enabled)
+        # gr.update()を使用して、既存のボタンを更新
+        result: Dict[str, Any] = gr.update(
+            value=f"音声を生成{message}",
+            interactive=is_enabled,
+            variant="primary" if is_enabled else "secondary",
+        )
+        return result
 
     def set_document_type(self, doc_type: str) -> None:
         """
