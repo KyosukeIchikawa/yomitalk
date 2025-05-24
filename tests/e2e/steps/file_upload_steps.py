@@ -3,7 +3,7 @@
 from playwright.sync_api import Page, expect
 from pytest_bdd import parsers, then, when
 
-from tests.e2e.steps.conftest import TEST_DATA_DIR
+from tests.e2e.conftest import TEST_DATA_DIR
 
 
 @when(parsers.parse('I upload a {file_type} file "{file_name}"'))
