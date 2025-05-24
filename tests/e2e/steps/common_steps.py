@@ -2,7 +2,6 @@
 from playwright.sync_api import Page
 from pytest_bdd import given
 
-# conftest.pyから必要な関数やフィクスチャをインポート
 from tests.utils.logger import test_logger as logger
 
 
@@ -16,19 +15,16 @@ def application_is_running(page: Page, app_environment):
 
     Args:
         page: Playwright page object
-        app_environment: バックエンドのフィクスチャ
+        app_environment: バックエンドのフィクスチャ(TestEnvironmentインスタンス)
     """
-    # conftest.pyから直接APP_PORTを取得（モジュールレベルの変数）
-    from tests.e2e.conftest import APP_PORT
-
     # アプリケーションが起動していることを確認
     assert (
-        APP_PORT is not None
+        app_environment.app_port is not None
     ), "Application port is not set. Test environment might not be properly initialized."
 
     # ブラウザでアプリケーションにアクセス
-    logger.info(f"Opening application in browser at http://localhost:{APP_PORT}")
-    app_url = f"http://localhost:{APP_PORT}"
+    app_url = app_environment.app_url
+    logger.info(f"Opening application in browser at {app_url}")
     page.goto(app_url)
 
     # ページの読み込み完了を待つ
