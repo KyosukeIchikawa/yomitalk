@@ -56,7 +56,7 @@ ignore_missing_imports = true
 follow_imports = "skip"
 
 [tool.pytest.ini_options]
-addopts = "--timeout=90 -v --tb=native --durations=10"
+addopts = "--timeout=90 -v --tb=native --durations=10 -v"
 markers = [
     "slow: marks tests as slow running",
     "requires_voicevox: marks tests that require VOICEVOX Core",
