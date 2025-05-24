@@ -35,6 +35,7 @@ voicevox_core/
 .pytest_cache/
 .coverage
 htmlcov/
+tests/e2e/screenshots/
 
 # データ・キャッシュディレクトリ
 data/temp/*

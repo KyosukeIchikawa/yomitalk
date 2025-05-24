@@ -1,4 +1,4 @@
-.PHONY: setup venv install setup-lint clean run test test-unit test-e2e test-staged create-sample-pdf help lint format pre-commit-install pre-commit-run download-voicevox-core install-voicevox-core-module install-system-deps install-python-packages install-python-packages-lint requirements test-e2e-parallel
+.PHONY: setup venv install setup-lint clean run test test-unit test-e2e test-staged create-sample-pdf help lint format pre-commit-install pre-commit-run download-voicevox-core install-voicevox-core-module install-system-deps install-python-packages install-python-packages-lint requirements
 
 #--------------------------------------------------------------
 # Variables and Configuration
@@ -16,9 +16,6 @@ VOICEVOX_SKIP_IF_EXISTS ?= true
 VOICEVOX_ACCEPT_AGREEMENT ?= false
 VOICEVOX_DIR = voicevox_core
 VOICEVOX_CHECK_MODULE = $(VENV_PYTHON) -c "import voicevox_core" 2>/dev/null
-
-# Testing related
-PARALLEL ?= 2  # Default to 2 parallel processes for E2E tests (more stable)
 
 # Source code related
 SRC_DIRS = app tests app.py
@@ -53,7 +50,6 @@ help:
 	@echo "  make test         - Run all tests"
 	@echo "  make test-unit    - Run unit tests only"
 	@echo "  make test-e2e     - Run E2E tests only"
-	@echo "  make test-e2e-parallel [PARALLEL=n] - Run E2E tests in parallel (default: $(PARALLEL) processes)"
 	@echo "  make test-staged  - Run unit tests for staged files only"
 	@echo "【VOICEVOX】"
 	@echo "  make download-voicevox-core - Download and setup VOICEVOX Core"
@@ -181,16 +177,6 @@ test-e2e: venv
 	@echo "Running E2E tests..."
 	E2E_TEST_MODE=true $(VENV_PYTHON) -m pytest tests/e2e/
 
-# Run E2E tests in parallel
-test-e2e-parallel: venv
-	@echo "Running E2E tests in parallel with $(PARALLEL) processes..."
-	@if ! $(VENV_PIP) list | grep -q pytest-xdist; then \
-		echo "Installing pytest-xdist for parallel testing..."; \
-		$(VENV_PIP) install pytest-xdist; \
-	fi
-	E2E_TEST_MODE=true $(VENV_PYTHON) -m pytest tests/e2e/ -n $(PARALLEL) --timeout=90
-	@echo "E2E test execution completed."
-
 # Run tests for staged files only
 test-staged: venv
 	@echo "Running tests for staged files..."
@@ -212,8 +198,3 @@ clean:
 
 requirements:
 	pip-compile -v requirements.in > requirements.txt
-
-test-parallel: venv
-	@echo "Running tests in parallel with 4 workers..."
-	$(VENV_PYTHON) -m pytest tests/unit/ -n 4
-	$(VENV_PYTHON) -m pytest tests/e2e/test_paper_podcast_generator.py -n 4
