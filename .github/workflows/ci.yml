@@ -48,6 +48,14 @@ jobs:
       run: |
         VOICEVOX_ACCEPT_AGREEMENT=true make setup
 
+    - name: Verify environment and dependencies
+      run: |
+        echo "Checking virtual environment and Python packages..."
+        ls -la $VENV_PATH/bin
+        $VENV_PATH/bin/pip list | grep gradio
+        # Check that the Python module can be imported
+        $VENV_PATH/bin/python -c "import gradio; print(f'Gradio version: {gradio.__version__}')"
+
     - name: Install Playwright browsers
       run: |
         $VENV_PATH/bin/python -m playwright install chromium

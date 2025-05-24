@@ -55,10 +55,23 @@ def setup_test_environment():
     # プロジェクトのルートパスを取得
     project_root = Path(__file__).parent.parent.parent.parent.absolute()
 
+    # CI環境での仮想環境のPythonパスを設定
+    venv_path = os.environ.get("VENV_PATH", "./venv")
+    python_executable = os.path.join(venv_path, "bin", "python")
+
+    # 仮想環境内のPythonが存在しない場合はデフォルトのPythonを使用
+    if not os.path.exists(python_executable):
+        python_executable = "python"
+        logger.warning(
+            f"Virtual environment Python not found at {python_executable}, using system Python"
+        )
+    else:
+        logger.info(f"Using Python from virtual environment: {python_executable}")
+
     # Launch application as a subprocess
-    # シンプルなモジュール起動に変更し、カレントディレクトリをプロジェクトルートに設定
+    # 仮想環境のPythonを使用してアプリケーションを起動
     APP_PROCESS = subprocess.Popen(
-        ["python", "-m", "yomitalk.app"],
+        [python_executable, "-m", "yomitalk.app"],
         env=env,
         cwd=str(project_root),  # プロジェクトルートディレクトリを設定
         stdout=subprocess.PIPE,
