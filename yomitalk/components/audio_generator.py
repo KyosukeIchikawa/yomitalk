@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import e2k
+import gradio as gr
 
 from yomitalk.common.character import DISPLAY_NAMES, STYLE_ID_BY_NAME, Character
 from yomitalk.utils.logger import logger
@@ -352,12 +353,15 @@ class AudioGenerator:
             last_part = part_
         return "".join(result)
 
-    def generate_character_conversation(self, podcast_text: str) -> Optional[str]:
+    def generate_character_conversation(
+        self, podcast_text: str, progress: Optional[gr.Progress] = None
+    ) -> Optional[str]:
         """
         Generate audio for a character conversation from podcast text.
 
         Args:
             podcast_text (str): Podcast text with character dialogue lines
+            progress (gr.Progress, optional): Gradio Progress object for updating progress
 
         Returns:
             str: Path to the generated audio file or None if failed
@@ -440,7 +444,7 @@ class AudioGenerator:
                 fixed_text = self._fix_conversation_format(podcast_text)
                 # Try again with fixed text
                 if fixed_text != podcast_text:
-                    return self.generate_character_conversation(fixed_text)
+                    return self.generate_character_conversation(fixed_text, progress)
                 else:
                     logger.error("Could not parse any valid conversation parts")
                     return None
@@ -453,9 +457,20 @@ class AudioGenerator:
             for i, (speaker, text) in enumerate(conversation_parts):
                 # 進捗状況を表示
                 part_progress = int(((i + 1) / total_conversation_parts) * 100)
+
+                # ログを更新
                 logger.info(
                     f"キャラクター会話進捗: {i+1}/{total_conversation_parts} ({part_progress}%)"
                 )
+
+                # 進捗バーを更新 - ループ内で適度に更新
+                if progress is not None:
+                    # 0%～99%の間で進捗（残り1%は最終処理用）
+                    progress_value = (i + 1) / total_conversation_parts * 0.99
+                    progress(
+                        progress_value,
+                        desc=f"音声を生成中... ({i+1}/{total_conversation_parts})",
+                    )
 
                 style_id = STYLE_ID_BY_NAME[speaker]
                 logger.info(f"Generating audio for {speaker} (style_id: {style_id})")
@@ -494,6 +509,9 @@ class AudioGenerator:
                         f.write(combined_wav_data)
 
                     logger.info("音声ファイルを生成しました")
+                    # 進捗状況を更新（完了）
+                    if progress is not None:
+                        progress(1.0, desc="音声生成完了")
                     return output_file
                 else:
                     logger.error("音声データの結合に失敗しました")

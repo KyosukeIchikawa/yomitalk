@@ -219,12 +219,15 @@ class PaperPodcastApp:
             logger.error(error_msg)
             return f"Error: {str(e)}"
 
-    def generate_podcast_audio(self, text: str) -> Optional[str]:
+    def generate_podcast_audio(
+        self, text: str, progress=gr.Progress()
+    ) -> Optional[str]:
         """
         Generate audio from podcast text.
 
         Args:
             text (str): Generated podcast text
+            progress (gr.Progress): Gradio Progress object for updating progress
 
         Returns:
             Optional[str]: audio_path or None
@@ -239,8 +242,10 @@ class PaperPodcastApp:
             return None
 
         try:
-            # Generate audio from text
-            audio_path = self.audio_generator.generate_character_conversation(text)
+            # Generate audio from text with progress updates
+            audio_path = self.audio_generator.generate_character_conversation(
+                text, progress
+            )
 
             if audio_path:
                 # 絶対パスを取得
@@ -638,6 +643,7 @@ class PaperPodcastApp:
                 outputs=[audio_output],
                 concurrency_limit=1,  # 音声生成は1つずつ実行（リソース消費が大きいため）
                 concurrency_id="audio_queue",  # 音声生成用キューID
+                show_progress=True,  # 進捗バーを表示
             )
 
             # ドキュメントタイプ選択のイベントハンドラ
