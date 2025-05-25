@@ -334,7 +334,6 @@ class AudioGenerator:
                     )
                     and word_count >= 4
                 ) or word_count >= 6:
-                    logger.error(f"{part} {word_count=}")
                     result.append(" ")
                     word_count = 0  # 息継ぎからの単語数カウントをリセット
             if converted_part := self.CONVERSION_OVERRIDE.get(
