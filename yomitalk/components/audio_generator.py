@@ -139,6 +139,7 @@ class AudioGenerator:
         "with": "ウィズ",
         "api": "API",
         "ai": "AI",
+        "VAE": "VAE",
     }
 
     def __init__(
@@ -310,8 +311,8 @@ class AudioGenerator:
         # - 前回の息継ぎから一定以上の単語数が経過した場合, 間に空白を入れる
         for part in parts:
             is_last_part_english = is_english_word
-            # 空文字はスキップ
-            if not part:
+            # 空文字やハイフンはスキップ
+            if not part or part == "-":
                 continue
             if set(last_part) & {".", "。", ",", "、", " "}:  # 息継ぎを意味する句点や読点があればリセット
                 word_count = 0
