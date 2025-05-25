@@ -241,6 +241,7 @@ class PaperPodcastApp:
         try:
             # Generate audio from text
             audio_path = self.audio_generator.generate_character_conversation(text)
+
             if audio_path:
                 # 絶対パスを取得
                 abs_path = str(Path(audio_path).absolute())
@@ -249,6 +250,7 @@ class PaperPodcastApp:
             else:
                 logger.error("Audio generation failed: No audio path returned")
                 return None
+
         except Exception as e:
             logger.error(f"Audio generation exception: {str(e)}")
             return None
@@ -264,6 +266,15 @@ class PaperPodcastApp:
             title="Yomitalk",
             css="footer {display: none !important;}",
             theme=gr.themes.Soft(),
+        )
+
+        # アプリケーション全体でキューイングを有効化
+        # デフォルトの同時実行数を設定し、長時間のタスクを効率的に管理
+        app.queue(
+            default_concurrency_limit=3,  # デフォルトの同時実行数
+            api_open=False,  # APIアクセスを制限
+            max_size=20,  # キュー内の最大タスク数
+            status_update_rate=1,  # ステータス更新頻度（秒）
         )
 
         with app:
@@ -509,11 +520,13 @@ class PaperPodcastApp:
                     # ダウンロードボタンは不要 - gr.Audio自体にダウンロード機能が内蔵されています
 
             # Set up event handlers
-            # ファイルがアップロードされたら自動的にテキストを抽出
+            # ファイルがアップロードされたら自動的にテキストを抽出（大きなファイルの場合は時間がかかるのでキューイング）
             file_input.change(
                 fn=self.extract_file_text,
                 inputs=[file_input],
                 outputs=[extracted_text],
+                concurrency_limit=3,  # ファイル抽出は3つまで同時実行可能
+                concurrency_id="file_queue",  # ファイル処理用キューID
             ).then(
                 fn=self.update_process_button_state,
                 inputs=[extracted_text],
@@ -600,10 +613,13 @@ class PaperPodcastApp:
                 outputs=[generate_btn],
             )
 
+            # トーク原稿の生成処理（時間のかかるLLM処理なのでキューイングを適用）
             process_btn.click(
                 fn=self.generate_podcast_text,
                 inputs=[extracted_text],
                 outputs=[podcast_text],
+                concurrency_limit=2,  # LLMリクエストは2つまで同時実行可能
+                concurrency_id="llm_queue",  # LLM関連のリクエスト用キューID
             ).then(
                 # トークン使用状況をUIに反映
                 fn=self.update_token_usage_display,
@@ -615,11 +631,13 @@ class PaperPodcastApp:
                 outputs=[generate_btn],
             )
 
-            # 音声生成ボタンのイベントハンドラ
+            # 音声生成ボタンのイベントハンドラ（VOICEVOXでの音声合成は時間がかかるのでキューイングを適用）
             generate_btn.click(
                 fn=self.generate_podcast_audio,
                 inputs=[podcast_text],
                 outputs=[audio_output],
+                concurrency_limit=1,  # 音声生成は1つずつ実行（リソース消費が大きいため）
+                concurrency_id="audio_queue",  # 音声生成用キューID
             )
 
             # ドキュメントタイプ選択のイベントハンドラ
@@ -917,12 +935,14 @@ def main():
     # E2E test mode options
     inbrowser = not E2E_TEST_MODE  # Don't open browser in test mode
 
+    # キューイングはlaunchの前にqueueメソッドで設定済み
     app.launch(
         server_name="0.0.0.0",
         server_port=port,
         share=False,
         favicon_path="assets/favicon.ico",
         inbrowser=inbrowser,
+        quiet=False,  # デバッグ情報表示
     )
 
 
