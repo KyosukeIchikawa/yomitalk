@@ -1,6 +1,5 @@
 """Unit tests for AudioGenerator class."""
 from pathlib import Path
-from typing import List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -143,57 +142,22 @@ class TestAudioGenerator:
     @pytest.mark.parametrize(
         "text, expected",
         [
-            ("hello", True),
-            ("world", True),
-            ("This", True),
-            ("to", True),
-            ("a", True),
-            ("A", True),
-            ("API", False),  # 仕様上, 大文字のみで1文字以上で構成される単語は英単語とみなさない
-            ("OpenAI", True),
-            ("", False),
-            ("123", False),
-            ("こんにちは", False),
-            ("A123", False),
-            ("Aこんにちは", False),
+            ("hello", ["hello"]),
+            ("HelloWorld", ["Hello", "World"]),
+            ("API", ["API"]),
+            ("OpenAI", ["Open", "AI"]),
+            ("This is a test", ["This", " ", "is", " ", "a", " ", "test"]),
+            ("A123", ["A", "123"]),
+            ("Aこんにちは", ["A", "こんにちは"]),
+            ("HelloWorldAPI", ["Hello", "World", "API"]),
+            ("OpenAI is great", ["Open", "AI", " ", "is", " ", "great"]),
+            ("PythonProgrammingLanguage", ["Python", "Programming", "Language"]),
         ],
     )
-    def test_is_english_word(self, text, expected):
-        """_is_english_wordメソッドのテスト"""
-        assert self.audio_generator._is_english_word(text) == expected
-
-    def test_split_capitalized_parts(self):
+    def test_split_capitalized_parts(self, text, expected):
         """_split_capitalized_partsメソッドのテスト"""
-        # 通常の英単語
-        assert self.audio_generator._split_capitalized_parts(["hello"]) == ["hello"]
-
-        # 大文字で始まる単語
-        assert self.audio_generator._split_capitalized_parts(["Hello"]) == ["Hello"]
-
-        # 複合語
-        assert self.audio_generator._split_capitalized_parts(["HelloWorld"]) == [
-            "Hello",
-            "World",
-        ]
-
-        # 連続する大文字（略語）
-        assert self.audio_generator._split_capitalized_parts(["API"]) == ["API"]
-
-        # 混合パターン
-        assert self.audio_generator._split_capitalized_parts(["HelloWorldAPI"]) == [
-            "Hello",
-            "World",
-            "API",
-        ]
-        assert self.audio_generator._split_capitalized_parts(["APIClient"]) == [
-            "APIC",
-            "lient",
-        ]  # 不本意だが仕様上「APIC」で切り取られるため
-
-        # 非英単語はそのまま
-        assert self.audio_generator._split_capitalized_parts(
-            ["hello", "世界", "123"]
-        ) == ["hello", "世界", "123"]
+        result = self.audio_generator._split_capitalized_parts(text)
+        assert result == expected
 
     @pytest.mark.parametrize(
         "word, expected_type",
@@ -228,75 +192,40 @@ class TestAudioGenerator:
     @pytest.mark.parametrize(
         "text, expected",
         [
-            # 基本的な英単語 - 実際の変換結果に合わせる
-            ("hello", "ヘロー"),
-            ("world", "ワールド"),
-            # オーバーライドが適用される単語
-            ("this", "ディス"),
-            ("to", "トゥ"),
-            ("a", "ア"),
-            # be動詞、前置詞、接続詞の組み合わせ - 実際の変換結果に合わせる
-            ("this is a pen", "ディス イス ア ペン"),
-            ("go to school", "ゴー トゥスクール"),
-            # 文章構造 - 実際の変換結果に合わせる
+            ("this is a pen", "ディスイズアペン"),
+            ("go to school", "ゴートゥスクール"),
             ("Hello, world!", "ヘロー, ワールド!"),
-            ("This is an example.", "ディス イス アン エキサンプル."),
-            # 大文字処理
             ("API", "API"),
             ("OpenAI", "オープンAI"),
             (
                 "APIClient",
-                "APICライエント",
-            ),  # 不本意だが仕様上「APIC」で切り取られるため, 「クライアント」ではなく「Cライエント」となる
-            ("AI", "AI"),
-            ("PDF", "PDF"),
-            # 混合文
+                "APIクライエント",
+            ),
             ("Hello世界", "ヘロー世界"),
+            ("Attention is all you need", "アテンションイズオールユーニード"),
+            (
+                "The very long long long long long long long long long long text",
+                "ザヴェリーロングロングロング ロングロングロングロングロングロング ロングテキスト",
+            ),
+            ("JavaScript", "ジャバスクリプト"),
+            ("GitHub Copilot", "ギットハブコパイロット"),
+            ("3D printer", "3Dプリンター"),
+            ("Web2.0", "ウェブ2.0"),
+            ("VersionV2", "バージョンV2"),
+            ("iPhone 15 Pro", "アイフォン15 プロ"),
+            ("I want to learn machine learning", "アイワントトゥランマシン ラーニング"),
+            ("Thank you for your cooperation", "サンクユーフォーユアコーポレーション"),
+            (
+                "The quick brown fox jumps over the lazy dog",
+                "ザクイックブラウンフォックスジャンプス オーバーザレージードッグ",
+            ),
+            ("NASA space program", "ナサスペースプログラム"),
+            ("USB cable for PC", "USBケーブルフォーPC"),
+            ("AI技術", "AI技術"),
+            ("Machine Learning入門", "マシンラーニング入門"),
         ],
     )
     def test_convert_english_to_katakana(self, text, expected):
         """_convert_english_to_katakanaメソッドのテスト"""
         result = self.audio_generator._convert_english_to_katakana(text)
         assert result == expected
-
-    def test_process_english_word(self):
-        """_process_english_wordメソッドのテスト"""
-        # テスト用のパラメータ
-        converter = MagicMock()
-        converter.return_value = "テスト"
-        result: List[str] = []
-
-        # 基本的な単語の変換
-        self.audio_generator._process_english_word(
-            "test",  # 単語
-            "next",  # 次の単語
-            True,  # 次も英単語
-            converter,  # コンバータ
-            result,  # 結果リスト
-            0,  # 最後の息継ぎからの文字数
-            False,  # 前の要素もカタカナか
-            False,  # 次の単語の前に空白を入れないか
-        )
-
-        # 結果を確認
-        assert result == ["テスト"]
-        converter.assert_called_once_with("test")
-
-        # オーバーライドが適用される単語
-        result.clear()
-        converter.reset_mock()
-
-        self.audio_generator._process_english_word(
-            "this",  # オーバーライド対象の単語
-            "is",  # 次の単語はbe動詞
-            True,  # 次も英単語
-            converter,  # コンバータ
-            result,  # 結果リスト
-            0,  # 最後の息継ぎからの文字数
-            False,  # 前の要素もカタカナか
-            False,  # 次の単語の前に空白を入れないか
-        )
-
-        # オーバーライドが適用されるため、converterは呼ばれないはず
-        assert result == ["ディス"]
-        converter.assert_not_called()
