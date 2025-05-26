@@ -10,7 +10,7 @@ on:
 env:
   VENV_PATH: ./venv
   VOICEVOX_SKIP_IF_EXISTS: true
-  HF_SPACE: Kyosuke0/yomitalk
+  HF_SPACE: Kyosuke0/yomitalk_staging
 
 jobs:
   format-check:
