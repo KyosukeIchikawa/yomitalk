@@ -7,11 +7,12 @@ import datetime
 import io
 import os
 import re
+import time
 import uuid
 import wave
 from enum import Enum, auto
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Generator, List, Optional, Tuple
 
 import e2k
 import gradio as gr
@@ -172,6 +173,10 @@ class AudioGenerator:
         # VOICEVOX Core
         self.core_initialized = False
         self.core_synthesizer: Optional[Synthesizer] = None
+
+        # 音声生成の進捗情報を保持する変数
+        self.audio_generation_progress = 0.0
+        self.final_audio_path: Optional[str] = None
 
         # Initialize VOICEVOX Core if available
         if VOICEVOX_CORE_AVAILABLE:
@@ -354,17 +359,22 @@ class AudioGenerator:
 
     def generate_character_conversation(
         self, podcast_text: str, progress: Optional[gr.Progress] = None
-    ) -> Optional[str]:
+    ) -> Generator[str, None, None]:
         """
-        Generate audio for a character conversation from podcast text.
+        Generate audio for a character conversation from podcast text with streaming support.
 
         Args:
             podcast_text (str): Podcast text with character dialogue lines
             progress (gr.Progress, optional): Gradio Progress object for updating progress
 
+        Yields:
+            str: Path to temporary audio files for streaming playback
+
         Returns:
-            str: Path to the generated audio file or None if failed
+            str: Path to the final combined audio file or None if failed
         """
+        self.reset_audio_generation_state()
+
         if not VOICEVOX_CORE_AVAILABLE or not self.core_initialized:
             logger.error("VOICEVOX Core is not available or not properly initialized.")
             return None
@@ -443,15 +453,25 @@ class AudioGenerator:
                 fixed_text = self._fix_conversation_format(podcast_text)
                 # Try again with fixed text
                 if fixed_text != podcast_text:
-                    return self.generate_character_conversation(fixed_text, progress)
+                    # 再帰的に修正したテキストを使って会話生成を試みる
+                    # ストリーミング関数を再帰的に使うため、yield fromで結果を返す
+                    yield from self.generate_character_conversation(
+                        fixed_text, progress
+                    )
+                    return
                 else:
                     logger.error("Could not parse any valid conversation parts")
                     return None
 
             # Generate audio for each conversation part
             wav_data_list = []  # メモリ上に直接音声データを保持するリスト
+            temp_files = []  # 一時ファイルのパスを保持するリスト
             total_conversation_parts = len(conversation_parts)
             logger.info(f"キャラクター会話の音声生成開始: 会話部分数 {total_conversation_parts}")
+
+            # 一時ディレクトリの作成
+            temp_dir = self.temp_dir / f"stream_{uuid.uuid4().hex[:8]}"
+            temp_dir.mkdir(parents=True, exist_ok=True)
 
             for i, (speaker, text) in enumerate(conversation_parts):
                 # 進捗状況を表示
@@ -463,6 +483,12 @@ class AudioGenerator:
                 )
 
                 # 進捗バーを更新 - ループ内で適度に更新
+                # クラス変数に進捗を保存（0.0～0.8の範囲、残り0.2は結合処理用）
+                self.audio_generation_progress = (
+                    (i + 1) / total_conversation_parts * 0.8
+                )
+
+                # 外部進捗表示用の場合のみ更新
                 if progress is not None:
                     # 0%～99%の間で進捗（残り1%は最終処理用）
                     progress_value = (i + 1) / total_conversation_parts * 0.99
@@ -482,6 +508,16 @@ class AudioGenerator:
                     if part_wav_data:
                         logger.debug(f"{speaker}のセリフを生成し、メモリに保存しました")
                         wav_data_list.append(part_wav_data)
+
+                        # 一時ファイルに書き込み、ストリーミング再生用に提供
+                        temp_file_path = temp_dir / f"part_{i:03d}_{speaker}.wav"
+                        with open(temp_file_path, "wb") as f:
+                            f.write(part_wav_data)
+
+                        temp_files.append(str(temp_file_path))
+
+                        # ストリーミング再生用に現在のパートをyield
+                        yield str(temp_file_path)
 
             # メモリ上で音声データを結合して最終的な音声ファイルを作成
             if wav_data_list:
@@ -504,17 +540,40 @@ class AudioGenerator:
 
                     logger.info(f"最終出力ファイル: {os.path.basename(output_file)}")
 
-                    with open(output_file, "wb") as f:
-                        f.write(combined_wav_data)
+                    try:
+                        with open(output_file, "wb") as f:
+                            f.write(combined_wav_data)
+                            f.flush()
+                            os.fsync(f.fileno())  # ディスクへの書き込みを確実に
 
-                    logger.info("音声ファイルを生成しました")
-                    # 進捗状況を更新（完了）
-                    if progress is not None:
-                        progress(1.0, desc="音声生成完了")
-                    return output_file
+                        # 少し待機してファイルシステムの同期を確実に
+                        time.sleep(0.2)
+
+                        # ファイルが正しく書き込まれたか確認
+                        if (
+                            os.path.exists(output_file)
+                            and os.path.getsize(output_file) > 0
+                        ):
+                            filesize = os.path.getsize(output_file)
+                            logger.info(
+                                f"音声ファイルを生成しました: {output_file} (サイズ: {filesize} bytes)"
+                            )
+                            # クラス変数に最終的なファイルパスを保存
+                            self.final_audio_path = output_file
+                            # 進捗状況を更新（完了）
+                            self.audio_generation_progress = 1.0
+                            if progress is not None:
+                                progress(1.0, desc="音声生成完了")
+                            # もう一度ファイルパスを出力してクライアントが確実に受け取れるようにする
+                            yield output_file
+                        else:
+                            logger.error(
+                                f"音声ファイルの書き込みに失敗: ファイルが存在しないか空です: {output_file}"
+                            )
+                    except Exception as e:
+                        logger.error(f"音声ファイルの書き込み中にエラー発生: {str(e)}")
                 else:
                     logger.error("音声データの結合に失敗しました")
-                    return None
             else:
                 logger.error("No audio parts were generated")
                 return None
@@ -693,6 +752,15 @@ class AudioGenerator:
         """
         # Implementation of system_log method
         return ""
+
+    def reset_audio_generation_state(self) -> None:
+        """
+        音声生成に関連する状態をリセットする
+        新しい音声生成を開始する前に呼び出す
+        """
+        self.audio_generation_progress = 0.0
+        self.final_audio_path = None
+        logger.debug("Audio generation state reset")
 
     def _text_to_speech(self, text: str, style_id: int) -> bytes:
         """

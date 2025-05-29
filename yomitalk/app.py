@@ -6,6 +6,7 @@ Builds the Paper Podcast Generator application using Gradio.
 """
 import math
 import os
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -219,46 +220,117 @@ class PaperPodcastApp:
             logger.error(error_msg)
             return f"Error: {str(e)}"
 
-    def generate_podcast_audio(
-        self, text: str, progress=gr.Progress()
-    ) -> Optional[str]:
+    def generate_podcast_audio_streaming(self, text: str, progress=gr.Progress()):
         """
-        Generate audio from podcast text.
+        Generate streaming audio from podcast text.
+        最終的な音声ファイルも生成し、クラス変数に保持する
+        進捗情報もクラス変数に保存する（進捗表示は行わない）
 
         Args:
             text (str): Generated podcast text
-            progress (gr.Progress): Gradio Progress object for updating progress
+            progress (gr.Progress): Gradio Progress object (not used directly)
 
-        Returns:
-            Optional[str]: audio_path or None
+        Yields:
+            str: Path to audio file chunks for streaming playback
         """
         if not text:
-            logger.warning("Audio generation: Text is empty")
-            return None
+            logger.warning("Streaming audio generation: Text is empty")
+            yield None
+            return
 
         # Check if VOICEVOX Core is available
         if not self.voicevox_core_available:
-            logger.error("Audio generation: VOICEVOX Core is not available")
-            return None
+            logger.error("Streaming audio generation: VOICEVOX Core is not available")
+            yield None
+            return
 
         try:
-            # Generate audio from text with progress updates
-            audio_path = self.audio_generator.generate_character_conversation(
-                text, progress
-            )
+            # 初回のyieldを行って、Gradioのストリーミングモードを確実に有効化
+            logger.debug("Initializing streaming audio generation")
+            yield None
 
-            if audio_path:
-                # 絶対パスを取得
-                abs_path = str(Path(audio_path).absolute())
-                logger.debug("Audio file generated successfully")
-                return abs_path
+            # ストリーミング対応のオーディオ生成関数を呼び出し、各チャンクを直接yield
+            parts_paths = []  # ストリーミング用の各パートのパスを保存
+
+            # カスタム進捗更新関数（generate_character_conversationに渡す）
+            def update_progress(value, desc=""):
+                # 進捗は AudioGenerator 内部で更新されるため、ここでは何もしない
+                if desc:
+                    logger.debug(f"Audio generation progress: {value:.2f} - {desc}")
+
+            # 進捗情報をクラス変数に保存しながらストリーミング処理
+            audio_parts_count = 0
+            final_combined_path = None  # 最終結合ファイルのパス
+
+            # 個別の音声パートを生成・ストリーミング
+            for audio_path in self.audio_generator.generate_character_conversation(
+                text, update_progress
+            ):
+                if audio_path:
+                    # 返されたaudio_pathがパーツの一時ファイルか、最終結合ファイルかを判断
+                    audio_parts_count += 1
+
+                    # パスが'part_'を含むか確認し、パートか結合ファイルかを判別
+                    # 'audio_'から始まるものは最終結合ファイル
+                    filename = os.path.basename(audio_path)
+                    is_part = "part_" in filename
+                    is_combined = filename.startswith("audio_") and not is_part
+
+                    if is_part:
+                        logger.debug(f"ストリーム音声パーツ ({audio_parts_count}): {audio_path}")
+                        parts_paths.append(audio_path)
+                        yield audio_path  # ストリーミング再生用にyield
+                        # 少し待機して連続再生のタイミングを調整
+                        time.sleep(0.05)
+                    elif is_combined:
+                        # 最終結合ファイルの場合
+                        final_combined_path = audio_path
+                        logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
+                        # 最終ファイルはストリーミングにはyieldしない                # 最終結合ファイルのパスが取得できた場合
+            if final_combined_path:
+                # ファイルが実際に存在することを確認
+                if os.path.exists(final_combined_path):
+                    # 進捗を結合処理中に更新 - AudioGeneratorのプロパティを使用
+                    self.audio_generator.audio_generation_progress = 0.9
+                    logger.info(f"最終結合音声ファイル: {final_combined_path}")
+                    # 最終的な音声ファイルのパスをAudioGeneratorのプロパティに保存
+                    self.audio_generator.final_audio_path = final_combined_path
+
+                    # 少し待機して確実にファイルが書き込まれたことを確認
+                    time.sleep(0.8)
+
+                    # もう一度ファイルの存在を確認し、サイズをログに記録
+                    if os.path.exists(final_combined_path):
+                        filesize = os.path.getsize(final_combined_path)
+                        # 進捗を完了状態に更新
+                        self.audio_generator.audio_generation_progress = 1.0
+                        logger.info(
+                            f"音声生成完了: {self.audio_generator.final_audio_path} (ファイルサイズ: {filesize} bytes)"
+                        )
+                    else:
+                        logger.error(f"待機後にファイルが存在しなくなりました: {final_combined_path}")
+                else:
+                    logger.error(f"結合ファイルパスが返されましたが、ファイルが存在しません: {final_combined_path}")
+                    if parts_paths:
+                        logger.warning("最終パートファイルを代わりに使用します")
+                        self.final_audio_path = parts_paths[-1]
+                        self.audio_generation_progress = 1.0
+            elif parts_paths:
+                # 最終結合ファイルが取得できなかった場合、最後のパートを使用（非推奨）
+                logger.warning("完全に結合された音声ファイルが取得できなかったため、最後のパートを使用します")
+                self.final_audio_path = parts_paths[-1]
+                self.audio_generation_progress = 1.0
+                logger.info(
+                    f"部分音声ファイル使用: {self.final_audio_path} (ファイルサイズ: {os.path.getsize(self.final_audio_path)} bytes)"
+                )
             else:
-                logger.error("Audio generation failed: No audio path returned")
-                return None
+                logger.warning("音声ファイルが生成されませんでした")
+                self.audio_generation_progress = 0.0
 
         except Exception as e:
-            logger.error(f"Audio generation exception: {str(e)}")
-            return None
+            logger.error(f"Streaming audio generation exception: {str(e)}")
+            self.audio_generation_progress = 0.0  # エラー時は進捗をリセット
+            yield None
 
     def ui(self) -> gr.Blocks:
         """
@@ -359,15 +431,31 @@ class PaperPodcastApp:
             }
 
             #audio_output.empty::before {
-                content: "音声が生成されるとここに表示されます";
+                content: "音声生成が完了すると、ここに波形と再生コントロールが表示されます";
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 height: 140px;
-                color: #666;
+                color: #555;
                 font-style: italic;
                 background-color: rgba(0,0,0,0.03);
                 border-radius: 8px;
+                text-align: center;
+                padding: 10px;
+            }
+
+            #streaming_audio_output.empty::before {
+                content: "音声生成が開始されると、ここでストリーミング再生できます";
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 80px;
+                color: #555;
+                font-style: italic;
+                background-color: rgba(0,0,0,0.03);
+                border-radius: 8px;
+                text-align: center;
+                padding: 10px;
             }
             """
             gr.HTML(f"<style>{css}</style>")
@@ -506,13 +594,29 @@ class PaperPodcastApp:
                     generate_btn = gr.Button(
                         "音声を生成", variant="primary", interactive=False
                     )
+
+                    # ストリーミング再生用のオーディオコンポーネント
+                    streaming_audio_output = gr.Audio(
+                        type="filepath",
+                        format="wav",
+                        interactive=False,
+                        show_download_button=False,
+                        show_label=True,
+                        label="プレビュー",
+                        value=None,
+                        elem_id="streaming_audio_output",
+                        streaming=True,
+                    )
+
+                    # 最終的な音声ファイル用のオーディオコンポーネント
+                    # NOTE: gradioの仕様上, ストリーミング用のAudioでは波形が表示できないため, このコンポーネントで波形を表示する
                     audio_output = gr.Audio(
                         type="filepath",
                         format="wav",
                         interactive=False,
                         show_download_button=True,
                         show_label=True,
-                        label="生成された音声（ダウンロードボタンで保存可能）",
+                        label="完成音声",
                         value=None,
                         elem_id="audio_output",
                         waveform_options=gr.WaveformOptions(
@@ -522,7 +626,6 @@ class PaperPodcastApp:
                         ),
                         min_width=300,
                     )
-                    # ダウンロードボタンは不要 - gr.Audio自体にダウンロード機能が内蔵されています
 
             # Set up event handlers
             # ファイルがアップロードされたら自動的にテキストを抽出（大きなファイルの場合は時間がかかるのでキューイング）
@@ -636,14 +739,38 @@ class PaperPodcastApp:
                 outputs=[generate_btn],
             )
 
-            # 音声生成ボタンのイベントハンドラ（VOICEVOXでの音声合成は時間がかかるのでキューイングを適用）
+            # 音声生成ボタンのイベントハンドラ（ストリーミング再生と最終波形表示を並列処理）
+
+            # 0. 音声生成状態をリセットしてストリーミング再生コンポーネントをクリア
+            audio_events = generate_btn.click(
+                fn=self.reset_audio_state_and_components,
+                inputs=[],
+                outputs=[streaming_audio_output],
+                concurrency_id="audio_reset",
+                api_name="reset_audio_state",
+            )
+
+            # 1. ストリーミング再生開始 (音声パーツ生成とストリーミング再生)
+            audio_events.then(
+                fn=self.generate_podcast_audio_streaming,
+                inputs=[podcast_text],
+                outputs=[streaming_audio_output],
+                concurrency_limit=1,  # 音声生成は1つずつ実行
+                concurrency_id="audio_queue",  # 音声生成用キューID
+                show_progress=False,  # ストリーミング表示では独自の進捗バーを表示しない
+                api_name="generate_streaming_audio",  # APIエンドポイント名（デバッグ用）
+            )
+
+            # 2. 波形表示用のコンポーネントを更新 (進捗表示とともに最終波形表示)
+            # こちらは独立したイベントとして実行し、音声生成の進捗を表示してから最終ファイルを返す
             generate_btn.click(
-                fn=self.generate_podcast_audio,
+                fn=self.wait_for_audio_completion,
                 inputs=[podcast_text],
                 outputs=[audio_output],
-                concurrency_limit=1,  # 音声生成は1つずつ実行（リソース消費が大きいため）
-                concurrency_id="audio_queue",  # 音声生成用キューID
-                show_progress=True,  # 進捗バーを表示
+                concurrency_limit=1,  # 並列実行制限
+                concurrency_id="progress_queue",  # 別のキューIDを使用して独立して実行できるようにする
+                show_progress=True,  # 進捗バーを表示（関数内で更新）
+                api_name="update_progress_display",  # APIエンドポイント名（デバッグ用）
             )
 
             # ドキュメントタイプ選択のイベントハンドラ
@@ -924,6 +1051,88 @@ class PaperPodcastApp:
 
         except ValueError as e:
             logger.error(f"Error setting document type: {str(e)}")
+
+    def wait_for_audio_completion(self, text: str, progress=gr.Progress()):
+        """
+        ストリーミング処理の進捗を表示し、最終的な結合音声ファイルを返す
+        波形表示用コンポーネントの更新に使用する
+        音声生成が完了するまで待機し、最終的な結合音声ファイルを返す
+
+        Args:
+            text (str): Generated podcast text (使用しない)
+            progress (gr.Progress): Gradio Progress object for updating progress
+
+        Returns:
+            Optional[str]: 最終結合音声ファイルのパス（すべての会話を含む）
+        """
+        if not text or not self.voicevox_core_available:
+            logger.warning(
+                "Cannot display progress: Text is empty or VOICEVOX is not available"
+            )
+            progress(1.0, desc="⚠️ 音声生成できません")
+            return None
+
+        # 進捗表示の初期化
+        progress(0, desc="音声生成準備中...")
+
+        # 音声生成の完了を待ちながら進捗表示を行う
+        last_progress = -math.inf
+        while True:
+            current_value = self.audio_generator.audio_generation_progress
+
+            # 生成完了したら音声ファイル取得を試みる
+            if current_value >= 1.0:
+                if self.audio_generator.final_audio_path is None:
+                    progress(1.0, desc="✅ 音声生成完了! 音声ファイル取得中...")
+                else:
+                    abs_path = str(
+                        Path(self.audio_generator.final_audio_path).absolute()
+                    )
+                    # ファイルが存在しなければエラー
+                    if not os.path.exists(abs_path):
+                        logger.error(f"ファイルが存在しません: {abs_path}")
+                        progress(1.0, desc="⚠️ 音声生成に問題が発生しました")
+                        return None
+                    filesize = os.path.getsize(abs_path)
+                    logger.info(f"最終音声ファイルを返します: {abs_path} (サイズ: {filesize} bytes)")
+                    progress(1.0, desc="✅ 音声ファイル取得完了!")
+                    return abs_path
+
+            # 1%以上変化があれば更新
+            if abs(current_value - last_progress) > 0.01:
+                last_progress = current_value
+                progress_percent = int(current_value * 100)
+
+                # 進捗に応じた絵文字表示
+                if progress_percent < 25:
+                    emoji = "🎤"
+                elif progress_percent < 50:
+                    emoji = "🎵"
+                elif progress_percent < 75:
+                    emoji = "🎶"
+                else:
+                    emoji = "🔊"
+
+                # 進捗を更新
+                progress(current_value, desc=f"{emoji} 音声生成中... {progress_percent}%")
+
+            # 一定時間待機してから再チェック
+            time.sleep(0.5)
+
+    def reset_audio_state_and_components(self):
+        """
+        音声生成状態をリセットし、UIコンポーネントもクリアする
+        新しい音声生成を開始する前に呼び出す
+
+        Returns:
+            None: ストリーミング再生コンポーネントをクリアするためにNoneを返す
+        """
+        # 音声生成状態をリセット
+        self.audio_generator.reset_audio_generation_state()
+
+        # ストリーミングコンポーネントをリセット - gradio UIの更新のためNoneを返す
+        logger.debug("Audio components and generation state reset")
+        return None
 
 
 # Create and launch application instance
