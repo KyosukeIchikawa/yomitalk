@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Generator, List, Optional, Tuple
 
 import e2k
-import gradio as gr
 
 from yomitalk.common.character import (
     DISPLAY_NAMES,
@@ -390,14 +389,13 @@ class AudioGenerator:
         return "".join(result)
 
     def generate_character_conversation(
-        self, podcast_text: str, progress: Optional[gr.Progress] = None
+        self, podcast_text: str
     ) -> Generator[Optional[str], None, None]:
         """
         Generate audio for a character conversation from podcast text with streaming support.
 
         Args:
             podcast_text (str): Podcast text with character dialogue lines
-            progress (gr.Progress, optional): Gradio Progress object for updating progress
 
         Yields:
             Optional[str]: Path to temporary audio files for streaming playback, or None if failed
@@ -436,9 +434,7 @@ class AudioGenerator:
             temp_dir.mkdir(parents=True, exist_ok=True)
 
             # 音声生成と結合処理
-            yield from self._generate_and_combine_audio(
-                conversation_parts, temp_dir, progress
-            )
+            yield from self._generate_and_combine_audio(conversation_parts, temp_dir)
 
         except Exception as e:
             logger.error(f"Character conversation audio generation error: {e}")
@@ -523,7 +519,6 @@ class AudioGenerator:
         self,
         conversation_parts: List[Tuple[str, str]],
         temp_dir: Path,
-        progress: Optional[gr.Progress] = None,
     ) -> Generator[str, None, None]:
         """
         会話部分から音声生成と結合を行う
@@ -531,7 +526,6 @@ class AudioGenerator:
         Args:
             conversation_parts: (話者, セリフ)のリスト
             temp_dir: 一時ファイル保存ディレクトリ
-            progress: 進捗表示オブジェクト
 
         Yields:
             str: 生成された音声ファイルパス
@@ -543,12 +537,6 @@ class AudioGenerator:
         for i, (speaker, text) in enumerate(conversation_parts):
             # 進捗状況の更新
             self.audio_generation_progress = (i + 1) / total_parts * 0.8
-
-            if progress:
-                progress(
-                    (i + 1) / total_parts * 0.99,
-                    desc=f"音声を生成中... ({i+1}/{total_parts})",
-                )
 
             if not text.strip():
                 continue
@@ -590,9 +578,6 @@ class AudioGenerator:
                     # クラス変数に最終的なファイルパスを保存
                     self.final_audio_path = output_file
                     self.audio_generation_progress = 1.0
-
-                    if progress:
-                        progress(1.0, desc="音声生成完了")
 
                     yield output_file
 

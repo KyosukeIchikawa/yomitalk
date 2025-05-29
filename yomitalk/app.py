@@ -229,88 +229,97 @@ class PaperPodcastApp:
             logger.debug("Initializing streaming audio generation")
             yield None
 
-            # ストリーミング対応のオーディオ生成関数を呼び出し、各チャンクを直接yield
-            parts_paths = []  # ストリーミング用の各パートのパスを保存
-
-            # カスタム進捗更新関数（generate_character_conversationに渡す）
-            def update_progress(value, desc=""):
-                # 進捗は AudioGenerator 内部で更新されるため、ここでは何もしない
-                if desc:
-                    logger.debug(f"Audio generation progress: {value:.2f} - {desc}")
-
-            # 進捗情報をクラス変数に保存しながらストリーミング処理
-            audio_parts_count = 0
-            final_combined_path = None  # 最終結合ファイルのパス
+            # ストリーミング用の各パートのパスを保存
+            parts_paths = []
+            final_combined_path = None
 
             # 個別の音声パートを生成・ストリーミング
             for audio_path in self.audio_generator.generate_character_conversation(
-                text, update_progress
+                text
             ):
-                if audio_path:
-                    # 返されたaudio_pathがパーツの一時ファイルか、最終結合ファイルかを判断
-                    audio_parts_count += 1
+                if not audio_path:
+                    continue
 
-                    # パスが'part_'を含むか確認し、パートか結合ファイルかを判別
-                    # 'audio_'から始まるものは最終結合ファイル
-                    filename = os.path.basename(audio_path)
-                    is_part = "part_" in filename
-                    is_combined = filename.startswith("audio_") and not is_part
+                filename = os.path.basename(audio_path)
 
-                    if is_part:
-                        logger.debug(f"ストリーム音声パーツ ({audio_parts_count}): {audio_path}")
-                        parts_paths.append(audio_path)
-                        yield audio_path  # ストリーミング再生用にyield
-                        # 少し待機して連続再生のタイミングを調整
-                        time.sleep(0.05)
-                    elif is_combined:
-                        # 最終結合ファイルの場合
-                        final_combined_path = audio_path
-                        logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
-                        # 最終ファイルはストリーミングにはyieldしない                # 最終結合ファイルのパスが取得できた場合
-            if final_combined_path:
-                # ファイルが実際に存在することを確認
-                if os.path.exists(final_combined_path):
-                    # 進捗を結合処理中に更新 - AudioGeneratorのプロパティを使用
-                    self.audio_generator.audio_generation_progress = 0.9
-                    logger.info(f"最終結合音声ファイル: {final_combined_path}")
-                    # 最終的な音声ファイルのパスをAudioGeneratorのプロパティに保存
-                    self.audio_generator.final_audio_path = final_combined_path
+                # 'part_'を含むものは部分音声ファイル、'audio_'から始まるものは最終結合ファイル
+                if "part_" in filename:
+                    parts_paths.append(audio_path)
+                    logger.debug(f"ストリーム音声パーツ ({len(parts_paths)}): {audio_path}")
+                    yield audio_path  # ストリーミング再生用にyield
+                    time.sleep(0.05)  # 連続再生のタイミング調整
+                elif filename.startswith("audio_"):
+                    # 最終結合ファイルの場合
+                    final_combined_path = audio_path
+                    logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
 
-                    # 少し待機して確実にファイルが書き込まれたことを確認
-                    time.sleep(0.8)
-
-                    # もう一度ファイルの存在を確認し、サイズをログに記録
-                    if os.path.exists(final_combined_path):
-                        filesize = os.path.getsize(final_combined_path)
-                        # 進捗を完了状態に更新
-                        self.audio_generator.audio_generation_progress = 1.0
-                        logger.info(
-                            f"音声生成完了: {self.audio_generator.final_audio_path} (ファイルサイズ: {filesize} bytes)"
-                        )
-                    else:
-                        logger.error(f"待機後にファイルが存在しなくなりました: {final_combined_path}")
-                else:
-                    logger.error(f"結合ファイルパスが返されましたが、ファイルが存在しません: {final_combined_path}")
-                    if parts_paths:
-                        logger.warning("最終パートファイルを代わりに使用します")
-                        self.final_audio_path = parts_paths[-1]
-                        self.audio_generation_progress = 1.0
-            elif parts_paths:
-                # 最終結合ファイルが取得できなかった場合、最後のパートを使用（非推奨）
-                logger.warning("完全に結合された音声ファイルが取得できなかったため、最後のパートを使用します")
-                self.final_audio_path = parts_paths[-1]
-                self.audio_generation_progress = 1.0
-                logger.info(
-                    f"部分音声ファイル使用: {self.final_audio_path} (ファイルサイズ: {os.path.getsize(self.final_audio_path)} bytes)"
-                )
-            else:
-                logger.warning("音声ファイルが生成されませんでした")
-                self.audio_generation_progress = 0.0
+            # 音声生成の完了処理
+            self._finalize_audio_generation(final_combined_path, parts_paths)
 
         except Exception as e:
             logger.error(f"Streaming audio generation exception: {str(e)}")
-            self.audio_generation_progress = 0.0  # エラー時は進捗をリセット
+            self.audio_generator.audio_generation_progress = 0.0  # エラー時は進捗をリセット
             yield None
+
+    def _finalize_audio_generation(self, final_combined_path, parts_paths):
+        """
+        音声生成の最終処理を行う
+
+        Args:
+            final_combined_path (str): 結合された最終音声ファイルのパス
+            parts_paths (List[str]): 部分音声ファイルのパスのリスト
+        """
+        # 最終結合ファイルのパスが取得できた場合
+        if final_combined_path and os.path.exists(final_combined_path):
+            # 進捗を更新
+            self.audio_generator.audio_generation_progress = 0.9
+            logger.info(f"最終結合音声ファイル: {final_combined_path}")
+
+            # 最終的な音声ファイルのパスを保存
+            self.audio_generator.final_audio_path = final_combined_path
+
+            # ファイルの書き込みを確実にするため少し待機
+            time.sleep(0.2)
+
+            if os.path.exists(final_combined_path):
+                filesize = os.path.getsize(final_combined_path)
+                # 進捗を完了状態に更新
+                self.audio_generator.audio_generation_progress = 1.0
+                logger.info(
+                    f"音声生成完了: {final_combined_path} (ファイルサイズ: {filesize} bytes)"
+                )
+            else:
+                logger.error(f"ファイルが存在しなくなりました: {final_combined_path}")
+                self._use_fallback_audio(parts_paths)
+
+        # 最終結合ファイルがない場合はフォールバック処理
+        else:
+            self._use_fallback_audio(parts_paths)
+
+    def _use_fallback_audio(self, parts_paths):
+        """
+        結合ファイルが取得できない場合のフォールバック処理
+
+        Args:
+            parts_paths (List[str]): 部分音声ファイルのパスのリスト
+        """
+        # 部分音声ファイルがある場合は最後のパートを使用
+        if parts_paths:
+            logger.warning("結合音声ファイルを取得できなかったため、最後のパートを使用します")
+            self.audio_generator.final_audio_path = parts_paths[-1]
+            self.audio_generator.audio_generation_progress = 1.0
+
+            if os.path.exists(parts_paths[-1]):
+                filesize = os.path.getsize(parts_paths[-1])
+                logger.info(
+                    f"部分音声ファイル使用: {parts_paths[-1]} (ファイルサイズ: {filesize} bytes)"
+                )
+            else:
+                logger.error(f"フォールバックファイルも存在しません: {parts_paths[-1]}")
+                self.audio_generator.audio_generation_progress = 0.0
+        else:
+            logger.warning("音声ファイルが生成されませんでした")
+            self.audio_generator.audio_generation_progress = 0.0
 
     def ui(self) -> gr.Blocks:
         """
