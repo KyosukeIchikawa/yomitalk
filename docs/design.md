@@ -18,9 +18,11 @@
 
 ## フォルダ構成
 - yomitalk/ - メインアプリケーションコード
+  - common/ - 共通データモデルおよび定義
+    - character.py - キャラクター音声設定定義
   - components/ - Gradioコンポーネント
     - audio_generator.py - 音声生成機能
-    - file_uploader.py - ファイル処理機能
+    - content_extractor.py - コンテンツ抽出機能
     - text_processor.py - テキスト処理機能
   - models/ - モデル関連コード
     - openai_model.py - OpenAI APIとの連携
@@ -32,9 +34,12 @@
     - common_podcast_utils.j2 - 共通のポッドキャスト生成ユーティリティ
     - paper_to_podcast.j2 - 論文解説用テンプレート
     - section_by_section.j2 - セクションごとの詳細解説用テンプレート
+- app/ - 追加のアプリケーション機能
+  - utils/ - 追加のユーティリティ機能
 - app.py - ルートレベルのエントリーポイント
 - assets/ - 静的アセット
   - images/ - 画像ファイル
+    - logo.png - アプリケーションロゴ
   - favicon.ico - ファビコン
 - data/ - 一時データ保存用
   - temp/ - アップロードされたファイルの一時保存
@@ -46,6 +51,7 @@
   - e2e/ - エンドツーエンドテスト
   - utils/ - テスト用ユーティリティ
 - docs/ - ドキュメント
+  - design.md - 設計ドキュメント
 - voicevox_core/ - VOICEVOXコアライブラリとモデル
 - scripts/ - 開発用スクリプト
 
