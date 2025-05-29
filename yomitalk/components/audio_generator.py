@@ -17,7 +17,12 @@ from typing import Generator, List, Optional, Tuple
 import e2k
 import gradio as gr
 
-from yomitalk.common.character import DISPLAY_NAMES, STYLE_ID_BY_NAME, Character
+from yomitalk.common.character import (
+    DISPLAY_NAMES,
+    REQUIRED_MODEL_FILES,
+    STYLE_ID_BY_NAME,
+    Character,
+)
 from yomitalk.utils.logger import logger
 from yomitalk.utils.text_utils import is_romaji_readable
 
@@ -217,20 +222,36 @@ class AudioGenerator:
                 self.core_synthesizer = Synthesizer(ort, open_jtalk)
                 logger.info("Synthesizer initialized successfully")
 
-                # 4. Load voice models
+                # 4. Load required voice models only
                 model_count = 0
-                for model_file in self.VOICEVOX_MODELS_PATH.glob("*.vvm"):
+                loaded_models = set()
+
+                # キャラクター設定で必要とされるモデルファイルのみをロード
+                for required_model in REQUIRED_MODEL_FILES:
+                    model_path = self.VOICEVOX_MODELS_PATH / required_model
+
+                    if not model_path.exists():
+                        logger.warning(
+                            f"Required model file not found: {required_model}"
+                        )
+                        continue
+
                     if self.core_synthesizer is not None:  # Type check for mypy
                         try:
-                            with VoiceModelFile.open(str(model_file)) as model:
+                            with VoiceModelFile.open(str(model_path)) as model:
                                 self.core_synthesizer.load_voice_model(model)
                                 model_count += 1
-                                logger.debug(f"Loaded voice model: {model_file}")
+                                loaded_models.add(required_model)
+                                logger.info(
+                                    f"Loaded required voice model: {required_model}"
+                                )
                         except Exception as e:
-                            logger.error(f"Failed to load model {model_file}: {e}")
+                            logger.error(f"Failed to load model {required_model}: {e}")
 
                 if model_count > 0:
-                    logger.info(f"Successfully loaded {model_count} voice models")
+                    logger.info(
+                        f"Successfully loaded {model_count}/{len(REQUIRED_MODEL_FILES)} required voice models"
+                    )
                     self.core_initialized = True
                     logger.info("VOICEVOX Core initialization completed")
                 else:
