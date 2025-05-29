@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 import gradio as gr
 
 from yomitalk.common.character import DISPLAY_NAMES
-from yomitalk.components.audio_generator import VOICEVOX_CORE_AVAILABLE, AudioGenerator
+from yomitalk.components.audio_generator import AudioGenerator
 from yomitalk.components.content_extractor import ContentExtractor
 from yomitalk.components.text_processor import TextProcessor
 from yomitalk.prompt_manager import DocumentType, PodcastMode
@@ -51,11 +51,6 @@ class PaperPodcastApp:
         self.audio_generator = AudioGenerator(
             session_output_dir=self.session_manager.get_output_dir(),
             session_temp_dir=self.session_manager.get_talk_temp_dir(),
-        )
-
-        # Check if VOICEVOX Core is available
-        self.voicevox_core_available = (
-            VOICEVOX_CORE_AVAILABLE and self.audio_generator.core_initialized
         )
 
         # 現在選択されているLLMタイプ
@@ -160,21 +155,6 @@ class PaperPodcastApp:
         logger.debug("Text extraction completed (memory-based)")
         return text
 
-    def check_voicevox_core(self):
-        """
-        Check if VOICEVOX Core is available and properly initialized.
-
-        Returns:
-            str: Status message about VOICEVOX Core
-        """
-        if not VOICEVOX_CORE_AVAILABLE:
-            return "❌ VOICEVOX Coreがインストールされていません。'make download-voicevox-core'を実行してインストールしてください。"
-
-        if not self.audio_generator.core_initialized:
-            return "⚠️ VOICEVOX Coreはインストールされていますが、正常に初期化されていません。モデルと辞書を確認してください。"
-
-        return "✅ VOICEVOX Coreは使用可能です。"
-
     def generate_podcast_text(self, text: str) -> str:
         """
         Generate podcast-style text from input text.
@@ -239,7 +219,7 @@ class PaperPodcastApp:
             return
 
         # Check if VOICEVOX Core is available
-        if not self.voicevox_core_available:
+        if not self.audio_generator.core_initialized:
             logger.error("Streaming audio generation: VOICEVOX Core is not available")
             yield None
             return
@@ -1065,7 +1045,7 @@ class PaperPodcastApp:
         Returns:
             Optional[str]: 最終結合音声ファイルのパス（すべての会話を含む）
         """
-        if not text or not self.voicevox_core_available:
+        if not text or not self.audio_generator.core_initialized:
             logger.warning(
                 "Cannot display progress: Text is empty or VOICEVOX is not available"
             )
