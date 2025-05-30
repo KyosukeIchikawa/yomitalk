@@ -7,6 +7,7 @@ import os
 from typing import Dict, List, Optional
 
 import google.generativeai as genai
+from google.generativeai.types import GenerationConfig
 
 from yomitalk.utils.logger import logger
 
@@ -30,6 +31,9 @@ class GeminiModel:
 
         # デフォルトの最大トークン数
         self.max_tokens: int = 65536
+
+        # デフォルト生成設定
+        self.temperature: float = 0.7
 
         # トークン使用状況の初期化
         self.last_token_usage: Dict[str, int] = {}
@@ -126,6 +130,25 @@ class GeminiModel:
         self.model_name = model_name
         return True
 
+    def set_temperature(self, temperature: float) -> bool:
+        """
+        温度（ランダム性）パラメータを設定します。
+
+        Args:
+            temperature (float): 設定する温度 (0.0～1.0)
+
+        Returns:
+            bool: 設定が成功したかどうか
+        """
+        try:
+            temp_float = float(temperature)
+            if 0.0 <= temp_float <= 1.0:
+                self.temperature = temp_float
+                return True
+            return False
+        except (ValueError, TypeError):
+            return False
+
     def generate_text(self, prompt: str) -> str:
         """
         Generate text using Gemini API based on the provided prompt.
@@ -143,52 +166,54 @@ class GeminiModel:
             logger.info(f"Making Gemini API request with model: {self.model_name}")
 
             # モデルを設定
-            model = genai.GenerativeModel(self.model_name)
-
-            # APIリクエスト
-            response = model.generate_content(
-                prompt,
-                generation_config={
-                    "temperature": 0.7,
-                    "max_output_tokens": self.max_tokens,
-                },
+            model = genai.GenerativeModel(
+                model_name=self.model_name,
+                generation_config=GenerationConfig(
+                    temperature=self.temperature,
+                    max_output_tokens=self.max_tokens,
+                ),
             )
 
-            # レスポンスの取得
-            generated_text = str(response.text)
+            # APIリクエスト
+            response = model.generate_content(prompt)
 
-            # トークン使用状況を推定（Gemini APIは正確なトークン使用量を返さないため）
-            # 実際のAPIでは利用可能かもしれないが、現在のSDKでは直接提供されていない
-            approx_prompt_tokens = len(prompt.split()) * 2  # 大まかな推定
-            approx_completion_tokens = len(generated_text.split()) * 2  # 大まかな推定
+            if not response.candidates:
+                return "Error: No text was generated"
 
+            # トークン使用量の取得（Gemini APIでは必ず取得できる）
+            usage_metadata = response.usage_metadata
             self.last_token_usage = {
-                "prompt_tokens": approx_prompt_tokens,
-                "completion_tokens": approx_completion_tokens,
-                "total_tokens": approx_prompt_tokens + approx_completion_tokens,
+                "prompt_tokens": usage_metadata.prompt_token_count,
+                "completion_tokens": usage_metadata.candidates_token_count,
+                "total_tokens": usage_metadata.total_token_count,
             }
 
-            # デバッグ出力（セキュリティのため生成テキストの内容は出力しない）
-            # logger.info(f"Generated text sample: {generated_text[:200]}...")
+            generated_text: str = response.text
             logger.info(
                 f"Text generation completed. Length: {len(generated_text)} characters"
             )
-            logger.info(f"Approximate token usage: {self.last_token_usage}")
+            logger.info(f"Token usage: {self.last_token_usage}")
 
             return generated_text
 
         except ImportError:
             return "Error: Install the Google Generative AI library with: pip install google-generativeai"
+        except genai.types.BlockedPromptException:
+            logger.error("Prompt was blocked: Contains prohibited content")
+            return "Error: Your request contains content that is flagged as inappropriate or against usage policies."
+        except genai.types.StopCandidateException:
+            logger.error("Generation stopped: Output may contain prohibited content")
+            return "Error: The generation was stopped as the potential response may contain inappropriate content."
         except Exception as e:
             logger.error(f"Error during Gemini API request: {e}")
             return f"Error generating text: {e}"
 
     def get_last_token_usage(self) -> dict:
         """
-        最後のAPI呼び出しで使用されたトークン情報の概算を取得します。
+        最後のAPI呼び出しで使用されたトークン情報を取得します。
 
         Returns:
-            dict: トークン使用状況の概算（prompt_tokens, completion_tokens, total_tokens）
+            dict: トークン使用状況（prompt_tokens, completion_tokens, total_tokens）
             またはAPIがまだ呼び出されていない場合は空の辞書
         """
         if hasattr(self, "last_token_usage"):

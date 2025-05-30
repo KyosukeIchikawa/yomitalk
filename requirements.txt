@@ -10,6 +10,7 @@ annotated-types==0.7.0
     # via pydantic
 anyio==4.9.0
     # via
+    #   google-genai
     #   gradio
     #   httpx
     #   openai
@@ -50,7 +51,7 @@ charset-normalizer==3.4.2
     #   markitdown
     #   pdfminer-six
     #   requests
-click==8.1.8
+click==8.2.1
     # via
     #   black
     #   magika
@@ -61,8 +62,10 @@ colorama==0.4.6
     # via radon
 coloredlogs==15.0.1
     # via onnxruntime
-cryptography==44.0.3
+cryptography==45.0.3
     # via pdfminer-six
+defusedxml==0.7.1
+    # via markitdown
 distlib==0.3.9
     # via virtualenv
 distro==1.9.0
@@ -89,7 +92,7 @@ flake8==7.2.0
     #   wemake-python-styleguide
 flatbuffers==25.2.10
     # via onnxruntime
-fsspec==2025.3.2
+fsspec==2025.5.1
     # via
     #   gradio-client
     #   huggingface-hub
@@ -98,63 +101,36 @@ future==1.0.0
     # via ffmpeg-python
 gherkin-official==29.0.0
     # via pytest-bdd
-google-ai-generativelanguage==0.6.15
-    # via google-generativeai
-google-api-core[grpc]==2.25.0rc1
-    # via
-    #   google-ai-generativelanguage
-    #   google-api-python-client
-    #   google-generativeai
-google-api-python-client==2.169.0
-    # via google-generativeai
-google-auth==2.40.1
-    # via
-    #   google-ai-generativelanguage
-    #   google-api-core
-    #   google-api-python-client
-    #   google-auth-httplib2
-    #   google-generativeai
-google-auth-httplib2==0.2.0
-    # via google-api-python-client
-google-generativeai==0.8.5
+google-auth==2.40.2
+    # via google-genai
+google-genai==1.17.0
     # via -r requirements.in
-googleapis-common-protos==1.70.0
-    # via
-    #   google-api-core
-    #   grpcio-status
-gradio==5.29.0
+gradio==5.32.0
     # via -r requirements.in
-gradio-client==1.10.0
+gradio-client==1.10.2
     # via gradio
 greenlet==3.2.2
     # via playwright
 groovy==0.1.2
     # via gradio
-grpcio==1.71.0
-    # via
-    #   google-api-core
-    #   grpcio-status
-grpcio-status==1.71.0
-    # via google-api-core
 h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
     #   wsproto
+hf-xet==1.1.2
+    # via huggingface-hub
 httpcore==1.0.9
     # via httpx
-httplib2==0.22.0
-    # via
-    #   google-api-python-client
-    #   google-auth-httplib2
 httpx==0.28.1
     # via
     #   -r requirements.in
+    #   google-genai
     #   gradio
     #   gradio-client
     #   openai
     #   safehttpx
-huggingface-hub==0.31.2
+huggingface-hub==0.32.3
     # via
     #   -r requirements.in
     #   gradio
@@ -163,7 +139,7 @@ huggingface-hub==0.31.2
     #   transformers
 humanfriendly==10.0
     # via coloredlogs
-identify==2.6.10
+identify==2.6.12
     # via pre-commit
 idna==3.10
     # via
@@ -180,7 +156,7 @@ jinja2==3.1.6
     #   -r requirements.in
     #   gradio
     #   torch
-jiter==0.9.0
+jiter==0.10.0
     # via openai
 magika==0.6.2
     # via markitdown
@@ -192,7 +168,7 @@ markdown-it-py==3.0.0
     # via rich
 markdownify==1.1.0
     # via markitdown
-markitdown[pdf]==0.1.1
+markitdown[pdf]==0.1.2
     # via -r requirements.in
 markupsafe==3.0.2
     # via
@@ -205,17 +181,17 @@ mdurl==0.1.2
     # via markdown-it-py
 mpmath==1.3.0
     # via sympy
-mypy==1.15.0
+mypy==1.16.0
     # via -r requirements.in
 mypy-extensions==1.1.0
     # via
     #   black
     #   mypy
-networkx==3.4.2
+networkx==3.5
     # via torch
 nodeenv==1.9.1
     # via pre-commit
-numpy==2.2.5
+numpy==2.2.6
     # via
     #   -r requirements.in
     #   e2k
@@ -265,7 +241,7 @@ onnxruntime==1.22.0
     # via
     #   -r requirements.in
     #   magika
-openai==1.78.1
+openai==1.82.1
     # via -r requirements.in
 orjson==3.10.18
     # via gradio
@@ -295,7 +271,9 @@ parse==1.20.2
 parse-type==0.6.4
     # via pytest-bdd
 pathspec==0.12.1
-    # via black
+    # via
+    #   black
+    #   mypy
 pdfminer-six==20250506
     # via markitdown
 pillow==11.2.1
@@ -314,23 +292,12 @@ playwright==1.52.0
     # via
     #   -r requirements.in
     #   pytest-playwright
-pluggy==1.5.0
+pluggy==1.6.0
     # via pytest
 pre-commit==4.2.0
     # via -r requirements.in
-proto-plus==1.26.1
-    # via
-    #   google-ai-generativelanguage
-    #   google-api-core
-protobuf==5.29.4
-    # via
-    #   google-ai-generativelanguage
-    #   google-api-core
-    #   google-generativeai
-    #   googleapis-common-protos
-    #   grpcio-status
-    #   onnxruntime
-    #   proto-plus
+protobuf==6.31.1
+    # via onnxruntime
 pyasn1==0.6.1
     # via
     #   pyasn1-modules
@@ -343,11 +310,11 @@ pycodestyle==2.13.0
     #   flake8
 pycparser==2.22
     # via cffi
-pydantic==2.11.4
+pydantic==2.11.5
     # via
     #   -r requirements.in
     #   fastapi
-    #   google-generativeai
+    #   google-genai
     #   gradio
     #   openai
 pydantic-core==2.33.2
@@ -364,8 +331,6 @@ pygments==2.19.1
     # via
     #   rich
     #   wemake-python-styleguide
-pyparsing==3.2.3
-    # via httplib2
 pyproject-hooks==1.2.0
     # via
     #   build
@@ -385,7 +350,7 @@ pytest-bdd==8.1.0
     # via -r requirements.in
 pytest-playwright==0.7.0
     # via -r requirements.in
-pytest-xdist==3.6.1
+pytest-xdist==3.7.0
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via pandas
@@ -415,12 +380,12 @@ radon==6.0.1
     #   xenon
 regex==2024.11.6
     # via transformers
-reportlab==4.4.0
+reportlab==4.4.1
     # via -r requirements.in
 requests==2.32.3
     # via
     #   -r requirements.in
-    #   google-api-core
+    #   google-genai
     #   huggingface-hub
     #   markitdown
     #   pytest-base-url
@@ -433,13 +398,13 @@ rope==1.13.0
     # via -r requirements.in
 rsa==4.9.1
     # via google-auth
-ruff==0.11.9
+ruff==0.11.12
     # via gradio
 safehttpx==0.1.6
     # via gradio
 safetensors==0.5.3
     # via transformers
-selenium==4.32.0
+selenium==4.33.0
     # via -r requirements.in
 semantic-version==2.10.0
     # via gradio
@@ -478,11 +443,10 @@ torch==2.7.0
     # via -r requirements.in
 tqdm==4.67.1
     # via
-    #   google-generativeai
     #   huggingface-hub
     #   openai
     #   transformers
-transformers==4.51.3
+transformers==4.52.4
     # via -r requirements.in
 trio==0.30.0
     # via
@@ -492,16 +456,16 @@ trio-websocket==0.12.2
     # via selenium
 triton==3.3.0
     # via torch
-typer==0.15.4
+typer==0.16.0
     # via gradio
-types-requests==2.32.0.20250328
+types-requests==2.32.0.20250515
     # via -r requirements.in
 typing-extensions==4.13.2
     # via
     #   anyio
     #   beautifulsoup4
     #   fastapi
-    #   google-generativeai
+    #   google-genai
     #   gradio
     #   gradio-client
     #   huggingface-hub
@@ -515,12 +479,10 @@ typing-extensions==4.13.2
     #   torch
     #   typer
     #   typing-inspection
-typing-inspection==0.4.0
+typing-inspection==0.4.1
     # via pydantic
 tzdata==2025.2
     # via pandas
-uritemplate==4.1.1
-    # via google-api-python-client
 urllib3[socks]==2.4.0
     # via
     #   requests
@@ -535,7 +497,9 @@ webdriver-manager==4.0.2
 websocket-client==1.8.0
     # via selenium
 websockets==15.0.1
-    # via gradio-client
+    # via
+    #   google-genai
+    #   gradio-client
 wemake-python-styleguide==1.1.0
     # via -r requirements.in
 wheel==0.45.1
