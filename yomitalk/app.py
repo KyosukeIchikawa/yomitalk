@@ -54,7 +54,10 @@ class PaperPodcastApp:
         )
 
         # 現在選択されているLLMタイプ
-        self.current_llm_type = "openai"
+        self.current_llm_type = "gemini"
+
+        # TextProcessorのAPI種別も初期設定
+        self.text_processor.set_api_type("gemini")
 
     @property
     def current_podcast_mode(self) -> PodcastMode:
@@ -486,30 +489,6 @@ class PaperPodcastApp:
                     # LLM API設定タブ
                     llm_tabs = gr.Tabs()
                     with llm_tabs:
-                        with gr.TabItem("OpenAI") as openai_tab:
-                            with gr.Row():
-                                with gr.Column(scale=3):
-                                    openai_api_key_input = gr.Textbox(
-                                        placeholder="sk-...",
-                                        type="password",
-                                        label="OpenAI APIキー",
-                                        info="APIキーの取得: https://platform.openai.com/api-keys",
-                                    )
-                                with gr.Column(scale=2):
-                                    openai_model_dropdown = gr.Dropdown(
-                                        choices=self.get_openai_available_models(),
-                                        value=self.get_openai_current_model(),
-                                        label="モデル",
-                                    )
-                            with gr.Row():
-                                openai_max_tokens_slider = gr.Slider(
-                                    minimum=100,
-                                    maximum=32768,
-                                    value=self.get_openai_max_tokens(),
-                                    step=100,
-                                    label="最大トークン数",
-                                )
-
                         with gr.TabItem("Google Gemini") as gemini_tab:
                             with gr.Row():
                                 with gr.Column(scale=3):
@@ -530,6 +509,30 @@ class PaperPodcastApp:
                                     minimum=100,
                                     maximum=65536,
                                     value=self.get_gemini_max_tokens(),
+                                    step=100,
+                                    label="最大トークン数",
+                                )
+
+                        with gr.TabItem("OpenAI") as openai_tab:
+                            with gr.Row():
+                                with gr.Column(scale=3):
+                                    openai_api_key_input = gr.Textbox(
+                                        placeholder="sk-...",
+                                        type="password",
+                                        label="OpenAI APIキー",
+                                        info="APIキーの取得: https://platform.openai.com/api-keys",
+                                    )
+                                with gr.Column(scale=2):
+                                    openai_model_dropdown = gr.Dropdown(
+                                        choices=self.get_openai_available_models(),
+                                        value=self.get_openai_current_model(),
+                                        label="モデル",
+                                    )
+                            with gr.Row():
+                                openai_max_tokens_slider = gr.Slider(
+                                    minimum=100,
+                                    maximum=32768,
+                                    value=self.get_openai_max_tokens(),
                                     step=100,
                                     label="最大トークン数",
                                 )
@@ -635,13 +638,13 @@ class PaperPodcastApp:
             )
 
             # タブ切り替え時のLLMタイプ変更
-            openai_tab.select(
-                fn=lambda: self.switch_llm_type("openai"),
+            gemini_tab.select(
+                fn=lambda: self.switch_llm_type("gemini"),
                 outputs=[],
             )
 
-            gemini_tab.select(
-                fn=lambda: self.switch_llm_type("gemini"),
+            openai_tab.select(
+                fn=lambda: self.switch_llm_type("openai"),
                 outputs=[],
             )
 
