@@ -20,11 +20,11 @@ class GeminiModel:
         self.api_key: Optional[str] = os.environ.get("GOOGLE_API_KEY")
 
         # デフォルトモデル
-        self.model_name: str = "gemini-2.5-flash-preview-04-17"
+        self.model_name: str = "gemini-2.5-flash-preview-05-20"
 
         # 利用可能なモデルのリスト
         self._available_models = [
-            "gemini-2.5-flash-preview-04-17",
+            "gemini-2.5-flash-preview-05-20",
             "gemini-2.5-pro-preview-05-06",
         ]
 
