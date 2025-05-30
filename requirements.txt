@@ -296,8 +296,10 @@ pluggy==1.6.0
     # via pytest
 pre-commit==4.2.0
     # via -r requirements.in
-protobuf==6.31.1
-    # via onnxruntime
+protobuf==5.29.5
+    # via
+    #   -r requirements.in
+    #   onnxruntime
 pyasn1==0.6.1
     # via
     #   pyasn1-modules
@@ -306,6 +308,7 @@ pyasn1-modules==0.4.2
     # via google-auth
 pycodestyle==2.13.0
     # via
+    #   -r requirements.in
     #   autopep8
     #   flake8
 pycparser==2.22

@@ -6,8 +6,8 @@ Uses Google's Gemini LLM to generate podcast-style conversation text from resear
 import os
 from typing import Dict, List, Optional
 
-import google.generativeai as genai
-from google.generativeai.types import GenerationConfig
+import google.genai as genai
+from google.genai.types import GenerationConfig
 
 from yomitalk.utils.logger import logger
 
