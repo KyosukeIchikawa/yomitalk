@@ -318,11 +318,11 @@ class PaperPodcastApp:
         )
 
         # アプリケーション全体でキューイングを有効化
-        # デフォルトの同時実行数を設定し、長時間のタスクを効率的に管理
+        # Hugging Face Spacesの無料CPUを効率的に使うため、同時実行数を1に制限
         app.queue(
-            default_concurrency_limit=3,  # デフォルトの同時実行数
+            default_concurrency_limit=1,  # デフォルトの同時実行数を1に制限
             api_open=False,  # APIアクセスを制限
-            max_size=20,  # キュー内の最大タスク数
+            max_size=5,  # キュー内の最大タスク数を制限
             status_update_rate=1,  # ステータス更新頻度（秒）
         )
 
@@ -607,7 +607,7 @@ class PaperPodcastApp:
                 fn=self.extract_file_text,
                 inputs=[file_input],
                 outputs=[extracted_text],
-                concurrency_limit=3,  # ファイル抽出は3つまで同時実行可能
+                concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="file_queue",  # ファイル処理用キューID
             ).then(
                 fn=self.update_process_button_state,
@@ -700,7 +700,7 @@ class PaperPodcastApp:
                 fn=self.generate_podcast_text,
                 inputs=[extracted_text],
                 outputs=[podcast_text],
-                concurrency_limit=2,  # LLMリクエストは2つまで同時実行可能
+                concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="llm_queue",  # LLM関連のリクエスト用キューID
             ).then(
                 # トークン使用状況をUIに反映
@@ -721,6 +721,7 @@ class PaperPodcastApp:
                 inputs=[],
                 outputs=[streaming_audio_output],
                 concurrency_id="audio_reset",
+                concurrency_limit=1,  # 同時実行数を1に制限
                 api_name="reset_audio_state",
             )
 
@@ -741,8 +742,8 @@ class PaperPodcastApp:
                 fn=self.wait_for_audio_completion,
                 inputs=[podcast_text],
                 outputs=[audio_output],
-                concurrency_limit=1,  # 並列実行制限
-                concurrency_id="progress_queue",  # 別のキューIDを使用して独立して実行できるようにする
+                concurrency_limit=1,  # 同時実行数を1に制限
+                concurrency_id="progress_queue",  # 進捗表示用キューID
                 show_progress=True,  # 進捗バーを表示（関数内で更新）
                 api_name="update_progress_display",  # APIエンドポイント名（デバッグ用）
             )
