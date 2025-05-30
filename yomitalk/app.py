@@ -328,6 +328,45 @@ class PaperPodcastApp:
             variant="primary" if has_text else "secondary",
         )
 
+    def disable_process_button(self):
+        """トーク原稿生成ボタンを無効化します。
+
+        Returns:
+            Dict[str, Any]: gr.update()の結果
+        """
+        return gr.update(interactive=False, value="トーク原稿生成中...")
+
+    def enable_process_button(self, extracted_text):
+        """トーク原稿生成ボタンを再び有効化します。
+
+        Args:
+            extracted_text (str): テキストエリアの内容（状態確認用）
+
+        Returns:
+            Dict[str, Any]: gr.update()の結果
+        """
+        # 現在のAPIキーとテキストの状態に基づいてボタンの状態を更新
+        has_text = (
+            extracted_text
+            and extracted_text.strip() != ""
+            and extracted_text
+            not in ["Please upload a file.", "Failed to process the file."]
+        )
+        has_api_key = False
+
+        if self.current_llm_type == "openai":
+            has_api_key = bool(self.text_processor.openai_model.api_key)
+        elif self.current_llm_type == "gemini":
+            has_api_key = bool(self.text_processor.gemini_model.api_key)
+
+        is_enabled = has_text and has_api_key
+
+        return gr.update(
+            interactive=is_enabled,
+            value="トーク原稿を生成",
+            variant="primary" if is_enabled else "secondary",
+        )
+
     def ui(self) -> gr.Blocks:
         """
         Create the Gradio interface.
@@ -720,7 +759,17 @@ class PaperPodcastApp:
             )
 
             # トーク原稿の生成処理（時間のかかるLLM処理なのでキューイングを適用）
-            process_btn.click(
+            # 1. まずボタンを無効化
+            process_events = process_btn.click(
+                fn=self.disable_process_button,
+                inputs=[],
+                outputs=[process_btn],
+                queue=False,  # 即時実行
+                api_name="disable_process_button",
+            )
+
+            # 2. トーク原稿の生成処理
+            process_events.then(
                 fn=self.generate_podcast_text,
                 inputs=[extracted_text],
                 outputs=[podcast_text],
@@ -735,6 +784,13 @@ class PaperPodcastApp:
                 fn=self.update_audio_button_state,
                 inputs=[terms_checkbox, podcast_text],
                 outputs=[generate_btn],
+            ).then(
+                # 3. 最後にトーク原稿生成ボタンを再度有効化
+                fn=self.enable_process_button,
+                inputs=[extracted_text],
+                outputs=[process_btn],
+                queue=False,  # 即時実行
+                api_name="enable_process_button",
             )
 
             # 音声生成ボタンのイベントハンドラ（ストリーミング再生と最終波形表示を並列処理）
