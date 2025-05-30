@@ -493,6 +493,7 @@ class PaperPodcastApp:
                                         placeholder="sk-...",
                                         type="password",
                                         label="OpenAI APIキー",
+                                        info="APIキーの取得: https://platform.openai.com/api-keys",
                                     )
                                 with gr.Column(scale=2):
                                     openai_model_dropdown = gr.Dropdown(
@@ -516,6 +517,7 @@ class PaperPodcastApp:
                                         placeholder="AIza...",
                                         type="password",
                                         label="Google Gemini APIキー",
+                                        info="APIキーの取得: https://aistudio.google.com/app/apikey",
                                     )
                                 with gr.Column(scale=2):
                                     gemini_model_dropdown = gr.Dropdown(
