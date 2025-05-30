@@ -304,6 +304,30 @@ class PaperPodcastApp:
             logger.warning("音声ファイルが生成されませんでした")
             self.audio_generator.audio_generation_progress = 0.0
 
+    def disable_generate_button(self):
+        """音声生成ボタンを無効化します。
+
+        Returns:
+            Dict[str, Any]: gr.update()の結果
+        """
+        return gr.update(interactive=False, value="音声生成中...")
+
+    def enable_generate_button(self, podcast_text):
+        """音声生成ボタンを再び有効化します。
+
+        Args:
+            podcast_text (str): 生成されたトーク原稿（状態確認用）
+
+        Returns:
+            Dict[str, Any]: gr.update()の結果
+        """
+        has_text = podcast_text and podcast_text.strip() != ""
+        return gr.update(
+            interactive=True,
+            value="音声を生成",
+            variant="primary" if has_text else "secondary",
+        )
+
     def ui(self) -> gr.Blocks:
         """
         Create the Gradio interface.
@@ -715,8 +739,17 @@ class PaperPodcastApp:
 
             # 音声生成ボタンのイベントハンドラ（ストリーミング再生と最終波形表示を並列処理）
 
+            # ボタンを無効化する（クリック時）
+            disable_btn_event = generate_btn.click(
+                fn=self.disable_generate_button,
+                inputs=[],
+                outputs=[generate_btn],
+                queue=False,  # 即時実行
+                api_name="disable_generate_button",
+            )
+
             # 0. 音声生成状態をリセットしてストリーミング再生コンポーネントをクリア
-            audio_events = generate_btn.click(
+            audio_events = disable_btn_event.then(
                 fn=self.reset_audio_state_and_components,
                 inputs=[],
                 outputs=[streaming_audio_output],
@@ -738,7 +771,7 @@ class PaperPodcastApp:
 
             # 2. 波形表示用のコンポーネントを更新 (進捗表示とともに最終波形表示)
             # こちらは独立したイベントとして実行し、音声生成の進捗を表示してから最終ファイルを返す
-            generate_btn.click(
+            wave_display_event = generate_btn.click(
                 fn=self.wait_for_audio_completion,
                 inputs=[podcast_text],
                 outputs=[audio_output],
@@ -746,6 +779,15 @@ class PaperPodcastApp:
                 concurrency_id="progress_queue",  # 進捗表示用キューID
                 show_progress=True,  # 進捗バーを表示（関数内で更新）
                 api_name="update_progress_display",  # APIエンドポイント名（デバッグ用）
+            )
+
+            # 3. 処理完了後にボタンを再度有効化
+            wave_display_event.then(
+                fn=self.enable_generate_button,
+                inputs=[podcast_text],
+                outputs=[generate_btn],
+                queue=False,  # 即時実行
+                api_name="enable_generate_button",
             )
 
             # ドキュメントタイプ選択のイベントハンドラ
