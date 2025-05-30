@@ -430,7 +430,6 @@ class PaperPodcastApp:
             .header-row {
                 display: flex !important;
                 align-items: flex-end !important;
-                margin-bottom: 16px !important;
                 min-height: 80px !important;
             }
 
