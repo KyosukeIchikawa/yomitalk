@@ -98,6 +98,9 @@ class TestSessionCleanup:
         os.utime(invalid_temp_dir, (two_days_ago, two_days_ago))
         os.utime(invalid_output_dir, (two_days_ago, two_days_ago))
 
+        # 明示的にcleanupメソッドを呼び出す
+        session_manager.cleanup_old_sessions()
+
         # 残っているディレクトリを確認
         remaining_temp_dirs = [d.name for d in test_temp_dir.iterdir()]
         remaining_output_dirs = [d.name for d in test_output_dir.iterdir()]
