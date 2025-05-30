@@ -3,6 +3,7 @@
 This module provides functionality for managing Hugging Face Space sessions.
 """
 
+import shutil
 import time
 import uuid
 from pathlib import Path
@@ -76,3 +77,31 @@ class SessionManager:
         talk_temp_dir = self.get_temp_dir() / "talks"
         talk_temp_dir.mkdir(parents=True, exist_ok=True)
         return talk_temp_dir
+
+    def cleanup_session_data(self) -> bool:
+        """
+        Clean up all session data when the session ends.
+
+        Removes the session's temporary and output directories.
+
+        Returns:
+            bool: True if cleanup was successful, False otherwise
+        """
+        success = True
+        try:
+            # セッション用テンポラリディレクトリの削除
+            temp_dir = self.get_temp_dir()
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                logger.info(f"Removed session temp directory: {temp_dir}")
+
+            # セッション用出力ディレクトリの削除
+            output_dir = self.get_output_dir()
+            if output_dir.exists():
+                shutil.rmtree(output_dir, ignore_errors=True)
+                logger.info(f"Removed session output directory: {output_dir}")
+
+            return success
+        except Exception as e:
+            logger.error(f"Failed to clean up session data: {str(e)}")
+            return False

@@ -66,55 +66,35 @@ class PaperPodcastApp:
         """現在選択されているドキュメントタイプを取得します。"""
         return self.text_processor.get_document_type()
 
-    def set_openai_api_key(self, api_key: str) -> str:
+    def set_openai_api_key(self, api_key: str):
         """
         Set the OpenAI API key and returns a result message based on the outcome.
 
         Args:
             api_key (str): OpenAI API key
-
-        Returns:
-            str: status_message
         """
         # APIキーが空白や空文字の場合は処理しない
         if not api_key or api_key.strip() == "":
             logger.warning("OpenAI API key is empty")
-            return "❌ APIキーが空です。有効なAPIキーを入力してください"
+            return
 
         success = self.text_processor.set_openai_api_key(api_key)
-        result = "✅ APIキーが正常に設定されました" if success else "❌ APIキーの設定に失敗しました"
         logger.debug(f"OpenAI API key set: {success}")
 
-        # OpenAIがアクティブになった場合、LLMタイプも更新
-        if success:
-            self.current_llm_type = "openai"
-
-        return result
-
-    def set_gemini_api_key(self, api_key: str) -> str:
+    def set_gemini_api_key(self, api_key: str):
         """
         Set the Google Gemini API key and returns a result message based on the outcome.
 
         Args:
             api_key (str): Google API key
-
-        Returns:
-            str: status_message
         """
         # APIキーが空白や空文字の場合は処理しない
         if not api_key or api_key.strip() == "":
             logger.warning("Gemini API key is empty")
-            return "❌ APIキーが空です。有効なAPIキーを入力してください"
+            return
 
         success = self.text_processor.set_gemini_api_key(api_key)
-        result = "✅ APIキーが正常に設定されました" if success else "❌ APIキーの設定に失敗しました"
         logger.debug(f"Gemini API key set: {success}")
-
-        # Geminiがアクティブになった場合、LLMタイプも更新
-        if success:
-            self.current_llm_type = "gemini"
-
-        return result
 
     def switch_llm_type(self, llm_type: str) -> None:
         """
@@ -783,6 +763,11 @@ class PaperPodcastApp:
                 outputs=[generate_btn],
             )
 
+            # ユーザーがブラウザタブを閉じるかリロードしたときにセッションデータをクリーンアップ
+            app.unload(
+                fn=self.cleanup_session,
+            )
+
         return app
 
     def get_openai_available_models(self) -> List[str]:
@@ -1122,6 +1107,25 @@ class PaperPodcastApp:
         # ストリーミングコンポーネントをリセット - gradio UIの更新のためNoneを返す
         logger.debug("Audio components and generation state reset")
         return None
+
+    def cleanup_session(self):
+        """
+        セッションが終了した時に呼び出されるクリーンアップ関数。
+        ユーザーがブラウザタブを閉じたり更新したりした時に実行される。
+
+        セッションのテンポラリファイルと出力ファイルを削除する。
+
+        Returns:
+            None
+        """
+        logger.info(
+            f"Session {self.session_manager.get_session_id()} ended, cleaning up..."
+        )
+        success = self.session_manager.cleanup_session_data()
+        if success:
+            logger.info("Session cleanup completed successfully")
+        else:
+            logger.warning("Session cleanup encountered issues")
 
 
 # Create and launch application instance
