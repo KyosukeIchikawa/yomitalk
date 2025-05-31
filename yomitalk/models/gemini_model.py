@@ -3,7 +3,7 @@
 Uses Google's Gemini LLM to generate podcast-style conversation text from research papers.
 """
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 from google import genai
 from google.genai.types import GenerateContentConfig
@@ -15,32 +15,20 @@ class GeminiModel:
     """Class that generates conversational text using the Google Gemini API."""
 
     # Class-level constants for model configuration
-    DEFAULT_MODELS = [
+    AVAILABLE_MODELS = [
         "gemini-2.5-flash-preview-05-20",
         "gemini-2.5-pro-preview-05-06",
     ]
     DEFAULT_MODEL = "gemini-2.5-flash-preview-05-20"
     DEFAULT_MAX_TOKENS = 65536
-    DEFAULT_TEMPERATURE = 0.7
 
     def __init__(self) -> None:
         """Initialize GeminiModel."""
         # APIキーの取得試行
         self.api_key: Optional[str] = os.environ.get("GOOGLE_API_KEY")
 
-        # デフォルトモデル
         self.model_name: str = self.DEFAULT_MODEL
-
-        # 利用可能なモデルのリスト
-        self._available_models = self.DEFAULT_MODELS.copy()
-
-        # デフォルトの最大トークン数
         self.max_tokens: int = self.DEFAULT_MAX_TOKENS
-
-        # デフォルト生成設定
-        self.temperature: float = self.DEFAULT_TEMPERATURE
-
-        # トークン使用状況の初期化
         self.last_token_usage: Dict[str, int] = {}
 
     def set_api_key(self, api_key: str) -> bool:
@@ -98,15 +86,6 @@ class GeminiModel:
         """
         return self.max_tokens
 
-    def get_available_models(self) -> List[str]:
-        """
-        Get available Gemini models.
-
-        Returns:
-            List[str]: List of available model names
-        """
-        return self._available_models
-
     def set_model_name(self, model_name: str) -> bool:
         """
         Set the Gemini model name.
@@ -121,30 +100,11 @@ class GeminiModel:
             return False
 
         model_name = model_name.strip()
-        if model_name not in self._available_models:
+        if model_name not in self.AVAILABLE_MODELS:
             return False
 
         self.model_name = model_name
         return True
-
-    def set_temperature(self, temperature: float) -> bool:
-        """
-        温度（ランダム性）パラメータを設定します。
-
-        Args:
-            temperature (float): 設定する温度 (0.0～1.0)
-
-        Returns:
-            bool: 設定が成功したかどうか
-        """
-        try:
-            temp_float = float(temperature)
-            if 0.0 <= temp_float <= 1.0:
-                self.temperature = temp_float
-                return True
-            return False
-        except (ValueError, TypeError):
-            return False
 
     def generate_text(self, prompt: str) -> str:
         """
@@ -168,7 +128,7 @@ class GeminiModel:
                 contents=[prompt],
                 config=GenerateContentConfig(
                     max_output_tokens=self.max_tokens,
-                    temperature=self.temperature,
+                    temperature=0.7,
                 ),
             )
 
@@ -219,13 +179,3 @@ class GeminiModel:
         if hasattr(self, "last_token_usage"):
             return self.last_token_usage
         return {}
-
-    @classmethod
-    def get_default_models_info(cls) -> Tuple[List[str], str, int]:
-        """
-        Get default Gemini models information without creating instance.
-
-        Returns:
-            Tuple[List[str], str, int]: (available_models, default_model, default_max_tokens)
-        """
-        return cls.DEFAULT_MODELS.copy(), cls.DEFAULT_MODEL, cls.DEFAULT_MAX_TOKENS

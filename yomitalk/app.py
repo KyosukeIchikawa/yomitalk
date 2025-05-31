@@ -142,22 +142,12 @@ class PaperPodcastApp:
     @staticmethod
     def get_static_openai_models() -> Tuple[List[str], str]:
         """Get OpenAI models and default model without requiring UserSession."""
-        return OpenAIModel.DEFAULT_MODELS.copy(), OpenAIModel.DEFAULT_MODEL
+        return OpenAIModel.AVAILABLE_MODELS.copy(), OpenAIModel.DEFAULT_MODEL
 
     @staticmethod
     def get_static_gemini_models() -> Tuple[List[str], str]:
         """Get Gemini models and default model without requiring UserSession."""
-        return GeminiModel.DEFAULT_MODELS.copy(), GeminiModel.DEFAULT_MODEL
-
-    @staticmethod
-    def get_static_openai_max_tokens() -> int:
-        """Get OpenAI default max tokens."""
-        return OpenAIModel.DEFAULT_MAX_TOKENS
-
-    @staticmethod
-    def get_static_gemini_max_tokens() -> int:
-        """Get Gemini default max tokens."""
-        return GeminiModel.DEFAULT_MAX_TOKENS
+        return GeminiModel.AVAILABLE_MODELS.copy(), GeminiModel.DEFAULT_MODEL
 
     @staticmethod
     def get_static_document_types() -> Tuple[List[str], str]:
@@ -699,7 +689,7 @@ class PaperPodcastApp:
                                 gemini_max_tokens_slider = gr.Slider(
                                     minimum=100,
                                     maximum=65536,
-                                    value=self.get_static_gemini_max_tokens(),
+                                    value=GeminiModel.DEFAULT_MAX_TOKENS,
                                     step=100,
                                     label="最大トークン数",
                                 )
@@ -728,7 +718,7 @@ class PaperPodcastApp:
                                 openai_max_tokens_slider = gr.Slider(
                                     minimum=100,
                                     maximum=32768,
-                                    value=self.get_static_openai_max_tokens(),
+                                    value=OpenAIModel.DEFAULT_MAX_TOKENS,
                                     step=100,
                                     label="最大トークン数",
                                 )
@@ -1030,42 +1020,6 @@ class PaperPodcastApp:
             # Session cleanup will be handled by garbage collection or periodic cleanup
 
         return app
-
-    def get_openai_available_models(self, user_session: UserSession) -> List[str]:
-        """
-        利用可能なOpenAIモデルのリストを取得します。
-
-        Returns:
-            List[str]: 利用可能なモデル名のリスト
-        """
-        return user_session.text_processor.openai_model.get_available_models()
-
-    def get_openai_current_model(self, user_session: UserSession) -> str:
-        """
-        現在設定されているOpenAIモデル名を取得します。
-
-        Returns:
-            str: 現在のモデル名
-        """
-        return user_session.text_processor.openai_model.model_name
-
-    def get_gemini_available_models(self, user_session: UserSession) -> List[str]:
-        """
-        利用可能なGeminiモデルのリストを取得します。
-
-        Returns:
-            List[str]: 利用可能なモデル名のリスト
-        """
-        return user_session.text_processor.gemini_model.get_available_models()
-
-    def get_gemini_current_model(self, user_session: UserSession) -> str:
-        """
-        現在設定されているGeminiモデル名を取得します。
-
-        Returns:
-            str: 現在のモデル名
-        """
-        return user_session.text_processor.gemini_model.model_name
 
     def set_openai_model_name(
         self, model_name: str, user_session: UserSession

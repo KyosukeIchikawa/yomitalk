@@ -373,20 +373,6 @@ class TextProcessor:
         else:
             return ""
 
-    def get_available_models(self) -> List[str]:
-        """
-        現在選択されているAPIタイプで利用可能なモデルのリストを取得します。
-
-        Returns:
-            List[str]: 利用可能なモデル名のリスト
-        """
-        if self.current_api_type == APIType.OPENAI:
-            return self.openai_model.get_available_models()
-        elif self.current_api_type == APIType.GEMINI:
-            return self.gemini_model.get_available_models()
-        else:
-            return []
-
     def set_max_tokens(self, max_tokens: int) -> bool:
         """
         現在選択されているAPIタイプの最大トークン数を設定します。

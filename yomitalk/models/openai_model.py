@@ -4,7 +4,7 @@ Uses OpenAI's LLM to generate podcast-style conversation text from research pape
 """
 
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 import httpx
 from openai import OpenAI
@@ -16,7 +16,7 @@ class OpenAIModel:
     """Class that generates conversational text using the OpenAI API."""
 
     # Class-level constants for model configuration
-    DEFAULT_MODELS = [
+    AVAILABLE_MODELS = [
         "gpt-4.1-nano",
         "gpt-4.1-mini",
         "gpt-4.1",
@@ -30,16 +30,9 @@ class OpenAIModel:
         # Try to get API key from environment
         self.api_key: Optional[str] = os.environ.get("OPENAI_API_KEY")
 
-        # デフォルトモデル
         self.model_name: str = self.DEFAULT_MODEL
-
-        # 利用可能なモデルのリスト
-        self._available_models = self.DEFAULT_MODELS.copy()
-
-        # デフォルトの最大トークン数
+        self._available_models = self.AVAILABLE_MODELS.copy()
         self.max_tokens: int = self.DEFAULT_MAX_TOKENS
-
-        # トークン使用状況の初期化
         self.last_token_usage: Dict[str, int] = {}
 
     def set_api_key(self, api_key: str) -> bool:
@@ -98,15 +91,6 @@ class OpenAIModel:
             int: 現在の最大トークン数
         """
         return self.max_tokens
-
-    def get_available_models(self) -> List[str]:
-        """
-        Get available OpenAI models.
-
-        Returns:
-            List[str]: List of available model names
-        """
-        return self._available_models
 
     def set_model_name(self, model_name: str) -> bool:
         """
@@ -192,13 +176,3 @@ class OpenAIModel:
         if hasattr(self, "last_token_usage"):
             return self.last_token_usage
         return {}
-
-    @classmethod
-    def get_default_models_info(cls) -> Tuple[List[str], str, int]:
-        """
-        Get default OpenAI models information without creating instance.
-
-        Returns:
-            Tuple[List[str], str, int]: (available_models, default_model, default_max_tokens)
-        """
-        return cls.DEFAULT_MODELS.copy(), cls.DEFAULT_MODEL, cls.DEFAULT_MAX_TOKENS

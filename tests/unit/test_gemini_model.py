@@ -12,8 +12,6 @@ class TestGeminiModel:
         model = GeminiModel()
         assert model.model_name == GeminiModel.DEFAULT_MODEL
         assert model.max_tokens == GeminiModel.DEFAULT_MAX_TOKENS
-        assert model.temperature == GeminiModel.DEFAULT_TEMPERATURE
-        assert model._available_models == GeminiModel.DEFAULT_MODELS
         assert model.last_token_usage == {}
 
     def test_set_api_key(self):
@@ -58,22 +56,6 @@ class TestGeminiModel:
         # Empty model name
         assert model.set_model_name("") is False
         assert model.model_name == "gemini-2.5-flash-preview-05-20"  # Should not change
-
-    def test_set_temperature(self):
-        """Test setting the temperature."""
-        model = GeminiModel()
-        # Valid temperature
-        assert model.set_temperature(0.5) is True
-        assert model.temperature == 0.5
-        # Too low
-        assert model.set_temperature(-0.1) is False
-        assert model.temperature == 0.5  # Should not change
-        # Too high
-        assert model.set_temperature(1.1) is False
-        assert model.temperature == 0.5  # Should not change
-        # Invalid type
-        assert model.set_temperature(float("-inf")) is False  # 負の無限大は無効な値なのでFalseが返るはず
-        assert model.temperature == 0.5  # Should not change
 
     @patch("google.genai.Client")
     def test_generate_text_success(self, mock_client):
@@ -203,16 +185,3 @@ class TestGeminiModel:
 
         # Assertions
         assert result == "Error generating text: Generic error"
-
-    def test_get_default_models_info(self):
-        """Test getting default models information."""
-        (
-            models,
-            default_model,
-            default_max_tokens,
-        ) = GeminiModel.get_default_models_info()
-        assert models == GeminiModel.DEFAULT_MODELS
-        assert default_model == GeminiModel.DEFAULT_MODEL
-        assert default_max_tokens == GeminiModel.DEFAULT_MAX_TOKENS
-        # Check that we're getting a copy of the list, not the original
-        assert models is not GeminiModel.DEFAULT_MODELS
