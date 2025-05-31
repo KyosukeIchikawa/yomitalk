@@ -2,7 +2,6 @@
 
 Uses Google's Gemini LLM to generate podcast-style conversation text from research papers.
 """
-
 import os
 from typing import Dict, List, Optional
 
@@ -38,15 +37,6 @@ class GeminiModel:
         # トークン使用状況の初期化
         self.last_token_usage: Dict[str, int] = {}
 
-        # APIが設定されていれば初期化
-        if self.api_key:
-            self._initialize_api()
-
-    def _initialize_api(self) -> None:
-        """Initialize the Gemini API with the current API key."""
-        if self.api_key:
-            genai.configure(api_key=self.api_key)
-
     def set_api_key(self, api_key: str) -> bool:
         """
         Set the Google API key and returns the result.
@@ -57,18 +47,10 @@ class GeminiModel:
         Returns:
             bool: Whether the configuration was successful
         """
-        if not api_key or api_key.strip() == "":
-            return False
-
-        self.api_key = api_key.strip()
-        os.environ["GOOGLE_API_KEY"] = self.api_key
-
-        try:
-            self._initialize_api()
+        if api_key_ := api_key.strip():
+            self.api_key = api_key_
             return True
-        except Exception as e:
-            logger.error(f"Error initializing Gemini API: {e}")
-            return False
+        return False
 
     def set_max_tokens(self, max_tokens: int) -> bool:
         """
@@ -165,17 +147,15 @@ class GeminiModel:
         try:
             logger.info(f"Making Gemini API request with model: {self.model_name}")
 
-            # モデルを設定
-            model = genai.GenerativeModel(
-                model_name=self.model_name,
-                generation_config=GenerationConfig(
-                    temperature=self.temperature,
+            client = genai.Client(api_key=self.api_key)
+            response = client.models.generate_content(
+                model=self.model_name,
+                contents=[prompt],
+                config=GenerationConfig(
                     max_output_tokens=self.max_tokens,
+                    temperature=self.temperature,
                 ),
             )
-
-            # APIリクエスト
-            response = model.generate_content(prompt)
 
             if not response.candidates:
                 return "Error: No text was generated"
