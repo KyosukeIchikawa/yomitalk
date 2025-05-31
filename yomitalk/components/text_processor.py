@@ -231,7 +231,12 @@ class TextProcessor:
         else:
             return "Error: No API key is set or valid API type is not selected."
 
-        # 抽象キャラクター名を実際のキャラクター名に変換
+        # モデルからのレスポンスがNoneの場合のエラーハンドリングを改善
+        if result is None:
+            logger.error("Model returned None response")
+            return "Error: No response was generated from the model. Please try again or check your inputs."
+
+        # 抽象キャラクター名を実際のキャラクター名に変換（エラーメッセージの場合はそのまま）
         if not result.startswith("Error"):
             result = self.convert_abstract_to_real_characters(result)
 

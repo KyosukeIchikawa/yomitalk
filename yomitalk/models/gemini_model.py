@@ -3,10 +3,10 @@
 Uses Google's Gemini LLM to generate podcast-style conversation text from research papers.
 """
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from google import genai
-from google.genai.types import GenerationConfig
+from google.genai.types import GenerateContentConfig
 
 from yomitalk.utils.logger import logger
 
@@ -14,25 +14,31 @@ from yomitalk.utils.logger import logger
 class GeminiModel:
     """Class that generates conversational text using the Google Gemini API."""
 
+    # Class-level constants for model configuration
+    DEFAULT_MODELS = [
+        "gemini-2.5-flash-preview-05-20",
+        "gemini-2.5-pro-preview-05-06",
+    ]
+    DEFAULT_MODEL = "gemini-2.5-flash-preview-05-20"
+    DEFAULT_MAX_TOKENS = 65536
+    DEFAULT_TEMPERATURE = 0.7
+
     def __init__(self) -> None:
         """Initialize GeminiModel."""
         # APIキーの取得試行
         self.api_key: Optional[str] = os.environ.get("GOOGLE_API_KEY")
 
         # デフォルトモデル
-        self.model_name: str = "gemini-2.5-flash-preview-05-20"
+        self.model_name: str = self.DEFAULT_MODEL
 
         # 利用可能なモデルのリスト
-        self._available_models = [
-            "gemini-2.5-flash-preview-05-20",
-            "gemini-2.5-pro-preview-05-06",
-        ]
+        self._available_models = self.DEFAULT_MODELS.copy()
 
         # デフォルトの最大トークン数
-        self.max_tokens: int = 65536
+        self.max_tokens: int = self.DEFAULT_MAX_TOKENS
 
         # デフォルト生成設定
-        self.temperature: float = 0.7
+        self.temperature: float = self.DEFAULT_TEMPERATURE
 
         # トークン使用状況の初期化
         self.last_token_usage: Dict[str, int] = {}
@@ -160,7 +166,7 @@ class GeminiModel:
             response = client.models.generate_content(
                 model=self.model_name,
                 contents=[prompt],
-                config=GenerationConfig(
+                config=GenerateContentConfig(
                     max_output_tokens=self.max_tokens,
                     temperature=self.temperature,
                 ),
@@ -187,15 +193,20 @@ class GeminiModel:
 
         except ImportError:
             return "Error: Install the Google Generative AI library with: pip install google-generativeai"
-        except genai.types.BlockedPromptException:
-            logger.error("Prompt was blocked: Contains prohibited content")
-            return "Error: Your request contains content that is flagged as inappropriate or against usage policies."
-        except genai.types.StopCandidateException:
-            logger.error("Generation stopped: Output may contain prohibited content")
-            return "Error: The generation was stopped as the potential response may contain inappropriate content."
         except Exception as e:
-            logger.error(f"Error during Gemini API request: {e}")
-            return f"Error generating text: {e}"
+            error_class = str(e.__class__.__name__)
+
+            if "BlockedPrompt" in error_class:
+                logger.error("Prompt was blocked: Contains prohibited content")
+                return "Error: Your request contains content that is flagged as inappropriate or against usage policies."
+            elif "StopCandidate" in error_class:
+                logger.error(
+                    "Generation stopped: Output may contain prohibited content"
+                )
+                return "Error: The generation was stopped as the potential response may contain inappropriate content."
+            else:
+                logger.error(f"Error during Gemini API request: {error_class} - {e}")
+                return f"Error generating text: {e}"
 
     def get_last_token_usage(self) -> dict:
         """
@@ -208,3 +219,13 @@ class GeminiModel:
         if hasattr(self, "last_token_usage"):
             return self.last_token_usage
         return {}
+
+    @classmethod
+    def get_default_models_info(cls) -> Tuple[List[str], str, int]:
+        """
+        Get default Gemini models information without creating instance.
+
+        Returns:
+            Tuple[List[str], str, int]: (available_models, default_model, default_max_tokens)
+        """
+        return cls.DEFAULT_MODELS.copy(), cls.DEFAULT_MODEL, cls.DEFAULT_MAX_TOKENS

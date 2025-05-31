@@ -8,7 +8,7 @@ import shutil
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import jinja2
 
@@ -83,7 +83,9 @@ class PromptManager:
         """
         self.template_dir = Path(template_dir)
         self.current_document_type = DocumentType.PAPER
-        self.current_mode = PodcastMode.SECTION_BY_SECTION
+        self.current_mode = (
+            PodcastMode.SECTION_BY_SECTION
+        )  # Change default to STANDARD for consistency
 
         # デフォルトのキャラクターマッピング
         self.char_mapping = {
@@ -329,3 +331,37 @@ class PromptManager:
             Dict[str, str]: Current character mapping.
         """
         return self.char_mapping
+
+    @staticmethod
+    def get_default_document_type_info() -> Tuple[List[str], str]:
+        """Get default document type choices and default value.
+
+        Returns:
+            Tuple[List[str], str]: (choices, default_value)
+        """
+        choices = DocumentType.get_all_label_names()
+        default = DocumentType.PAPER.label_name
+        return choices, default
+
+    @staticmethod
+    def get_default_podcast_mode_info() -> Tuple[List[str], str]:
+        """Get default podcast mode choices and default value.
+
+        Returns:
+            Tuple[List[str], str]: (choices, default_value)
+        """
+        choices = PodcastMode.get_all_label_names()
+        default = PodcastMode.STANDARD.label_name
+        return choices, default
+
+    @staticmethod
+    def get_default_character_info() -> Tuple[List[str], str, str]:
+        """Get default character choices and default values.
+
+        Returns:
+            Tuple[List[str], str, str]: (choices, character1_default, character2_default)
+        """
+        choices = DISPLAY_NAMES
+        character1_default = Character.SHIKOKU_METAN.display_name
+        character2_default = Character.ZUNDAMON.display_name
+        return choices, character1_default, character2_default

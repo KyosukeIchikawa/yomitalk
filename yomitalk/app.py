@@ -8,7 +8,7 @@ import math
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import gradio as gr
 
@@ -17,6 +17,8 @@ from yomitalk.common.character import DISPLAY_NAMES
 from yomitalk.components.audio_generator import AudioGenerator
 from yomitalk.components.content_extractor import ContentExtractor
 from yomitalk.components.text_processor import TextProcessor
+from yomitalk.models.gemini_model import GeminiModel
+from yomitalk.models.openai_model import OpenAIModel
 from yomitalk.prompt_manager import DocumentType, PodcastMode
 from yomitalk.utils.logger import logger
 from yomitalk.utils.session_manager import SessionManager
@@ -32,21 +34,16 @@ E2E_TEST_MODE = os.environ.get("E2E_TEST_MODE", "false").lower() == "true"
 DEFAULT_PORT = 7860
 
 
-# Application class
-class PaperPodcastApp:
-    """Main class for the Paper Podcast Generator application."""
+# User session data structure for managing per-user state
+class UserSession:
+    """Class for managing per-user session data."""
 
-    def __init__(self):
-        """Initialize the PaperPodcastApp.
-
-        Creates instances of FileUploader, TextProcessor, and AudioGenerator.
-        """
-        # セッション管理の初期化
+    def __init__(self, session_id: str):
+        """Initialize user session with unique session ID."""
+        self.session_id = session_id
         self.session_manager = SessionManager()
-        logger.info(
-            f"Initializing app with session ID: {self.session_manager.get_session_id()}"
-        )
 
+        # Initialize per-user components
         self.content_extractor = ContentExtractor()
         self.text_processor = TextProcessor()
         self.audio_generator = AudioGenerator(
@@ -54,132 +51,238 @@ class PaperPodcastApp:
             session_temp_dir=self.session_manager.get_talk_temp_dir(),
         )
 
-        # TextProcessorでAPI種別を一元管理（デフォルトはGemini）
+        # Default API type is Gemini
         self.text_processor.set_api_type(APIType.GEMINI)
 
-    @property
-    def current_podcast_mode(self) -> PodcastMode:
-        """現在選択されているポッドキャストモードを取得します。"""
-        return self.text_processor.get_podcast_mode()
+        logger.info(f"User session initialized: {session_id}")
 
     @property
-    def current_document_type(self) -> DocumentType:
-        """現在選択されているドキュメントタイプを取得します。"""
-        return self.text_processor.get_document_type()
+    def current_document_type(self) -> str:
+        """Get current document type label name.
 
-    @property
-    def current_llm_type(self) -> Optional[APIType]:
-        """現在のLLMタイプを取得します。"""
-        return self.text_processor.get_current_api_type()
-
-    def set_openai_api_key(self, api_key: str):
+        Returns:
+            str: Current document type label name
         """
-        Set the OpenAI API key and returns a result message based on the outcome.
+        return self.text_processor.prompt_manager.current_document_type.label_name
 
-        Args:
-            api_key (str): OpenAI API key
+    @property
+    def current_podcast_mode(self) -> str:
+        """Get current podcast mode label name.
+
+        Returns:
+            str: Current podcast mode label name
         """
-        # APIキーが空白や空文字の場合は処理しない
+        return self.text_processor.prompt_manager.current_mode.label_name
+
+    @property
+    def current_character_mapping(self) -> Tuple[str, str]:
+        """Get current character mapping.
+
+        Returns:
+            Tuple[str, str]: (character1, character2)
+        """
+        char_mapping = self.text_processor.prompt_manager.char_mapping
+        return char_mapping["Character1"], char_mapping["Character2"]
+
+    @property
+    def openai_max_tokens(self) -> int:
+        """Get current OpenAI max tokens.
+
+        Returns:
+            int: Current OpenAI max tokens
+        """
+        return self.text_processor.openai_model.get_max_tokens()
+
+    @property
+    def gemini_max_tokens(self) -> int:
+        """Get current Gemini max tokens.
+
+        Returns:
+            int: Current Gemini max tokens
+        """
+        return self.text_processor.gemini_model.get_max_tokens()
+
+    def get_ui_sync_values(self) -> Tuple[str, str, str, str, int, int]:
+        """Get values for syncing UI components with session state.
+
+        Returns:
+            Tuple[str, str, str, str, int, int]: (document_type, podcast_mode, character1, character2, openai_max_tokens, gemini_max_tokens)
+        """
+        character1, character2 = self.current_character_mapping
+        return (
+            self.current_document_type,
+            self.current_podcast_mode,
+            character1,
+            character2,
+            self.openai_max_tokens,
+            self.gemini_max_tokens,
+        )
+
+    def cleanup(self):
+        """Clean up session resources."""
+        logger.info(f"Cleaning up user session: {self.session_id}")
+        self.session_manager.cleanup_session_data()
+
+
+# Application class
+class PaperPodcastApp:
+    """Main class for the Paper Podcast Generator application."""
+
+    def __init__(self):
+        """Initialize the PaperPodcastApp."""
+        logger.info("Initializing PaperPodcastApp for multi-user support")
+
+    @staticmethod
+    def get_static_openai_models() -> Tuple[List[str], str]:
+        """Get OpenAI models and default model without requiring UserSession."""
+        return OpenAIModel.DEFAULT_MODELS.copy(), OpenAIModel.DEFAULT_MODEL
+
+    @staticmethod
+    def get_static_gemini_models() -> Tuple[List[str], str]:
+        """Get Gemini models and default model without requiring UserSession."""
+        return GeminiModel.DEFAULT_MODELS.copy(), GeminiModel.DEFAULT_MODEL
+
+    @staticmethod
+    def get_static_openai_max_tokens() -> int:
+        """Get OpenAI default max tokens."""
+        return OpenAIModel.DEFAULT_MAX_TOKENS
+
+    @staticmethod
+    def get_static_gemini_max_tokens() -> int:
+        """Get Gemini default max tokens."""
+        return GeminiModel.DEFAULT_MAX_TOKENS
+
+    @staticmethod
+    def get_static_document_types() -> Tuple[List[str], str]:
+        """Get document type choices and default without requiring UserSession."""
+        from yomitalk.prompt_manager import PromptManager
+
+        return PromptManager.get_default_document_type_info()
+
+    @staticmethod
+    def get_static_podcast_modes() -> Tuple[List[str], str]:
+        """Get podcast mode choices and default without requiring UserSession."""
+        from yomitalk.prompt_manager import PromptManager
+
+        return PromptManager.get_default_podcast_mode_info()
+
+    @staticmethod
+    def get_static_characters() -> Tuple[List[str], str, str]:
+        """Get character choices and defaults without requiring UserSession."""
+        from yomitalk.prompt_manager import PromptManager
+
+        return PromptManager.get_default_character_info()
+
+    def create_user_session(self, request: gr.Request) -> UserSession:
+        """Create a new user session with unique session ID."""
+        session_id = request.session_hash
+        return UserSession(session_id)
+
+    def set_openai_api_key(self, api_key: str, user_session: UserSession):
+        """Set the OpenAI API key for the specific user session."""
         if not api_key or api_key.strip() == "":
             logger.warning("OpenAI API key is empty")
-            return
+            return user_session
 
-        success = self.text_processor.set_openai_api_key(api_key)
-        logger.debug(f"OpenAI API key set: {success}")
+        success = user_session.text_processor.set_openai_api_key(api_key)
+        logger.debug(
+            f"OpenAI API key set for session {user_session.session_id}: {success}"
+        )
+        return user_session
 
-    def set_gemini_api_key(self, api_key: str):
-        """
-        Set the Google Gemini API key and returns a result message based on the outcome.
-
-        Args:
-            api_key (str): Google API key
-        """
-        # APIキーが空白や空文字の場合は処理しない
+    def set_gemini_api_key(self, api_key: str, user_session: UserSession):
+        """Set the Google Gemini API key for the specific user session."""
         if not api_key or api_key.strip() == "":
             logger.warning("Gemini API key is empty")
-            return
+            return user_session
 
-        success = self.text_processor.set_gemini_api_key(api_key)
-        logger.debug(f"Gemini API key set: {success}")
+        success = user_session.text_processor.set_gemini_api_key(api_key)
+        logger.debug(
+            f"Gemini API key set for session {user_session.session_id}: {success}"
+        )
+        return user_session
 
-    def switch_llm_type(self, api_type: APIType) -> None:
-        """
-        LLMタイプを切り替えます。
-
-        Args:
-            api_type (APIType): APIType.OPENAI または APIType.GEMINI
-        """
-        success = self.text_processor.set_api_type(api_type)
+    def switch_llm_type(
+        self, api_type: APIType, user_session: UserSession
+    ) -> UserSession:
+        """Switch LLM type for the specific user session."""
+        success = user_session.text_processor.set_api_type(api_type)
         if success:
-            logger.debug(f"LLM type switched to {api_type.display_name}")
+            logger.debug(
+                f"LLM type switched to {api_type.display_name} for session {user_session.session_id}"
+            )
         else:
-            logger.warning(f"{api_type.display_name} API key not set")
+            logger.warning(
+                f"{api_type.display_name} API key not set for session {user_session.session_id}"
+            )
+        return user_session
 
-    def extract_file_text(self, file_obj) -> str:
-        """
-        Extract text from a file.
-
-        Args:
-            file_obj: Uploaded file object
-
-        Returns:
-            str: extracted_text
-        """
+    def extract_file_text(
+        self, file_obj, user_session: UserSession
+    ) -> Tuple[str, UserSession]:
+        """Extract text from a file for the specific user session."""
         if file_obj is None:
             logger.warning("No file selected for extraction")
-            return "Please upload a file."
+            return "Please upload a file.", user_session
 
-        # メモリ上でテキスト抽出を行う
-        text = self.content_extractor.extract_text(file_obj)
-        logger.debug("Text extraction completed (memory-based)")
-        return text
+        text = user_session.content_extractor.extract_text(file_obj)
+        logger.debug(f"Text extraction completed for session {user_session.session_id}")
+        return text, user_session
 
-    def generate_podcast_text(self, text: str) -> str:
-        """
-        Generate podcast-style text from input text.
-
-        Args:
-            text (str): Input text from file
-
-        Returns:
-            str: generated_podcast_text
-        """
+    def generate_podcast_text(
+        self, text: str, user_session: UserSession
+    ) -> Tuple[str, UserSession]:
+        """Generate podcast-style text from input text for the specific user session."""
         if not text:
             logger.warning("Podcast text generation: Input text is empty")
-            return "Please upload a file and extract text first."
+            return "Please upload a file and extract text first.", user_session
 
         # Check if API key is set
+        current_llm_type = user_session.text_processor.get_current_api_type()
+
         if (
-            self.current_llm_type == APIType.OPENAI
-            and not self.text_processor.openai_model.has_api_key()
+            current_llm_type == APIType.OPENAI
+            and not user_session.text_processor.openai_model.has_api_key()
         ):
-            logger.warning("Podcast text generation: OpenAI API key not set")
-            return "OpenAI API key is not set. Please configure it in the Settings tab."
+            logger.warning(
+                f"Podcast text generation: OpenAI API key not set for session {user_session.session_id}"
+            )
+            return (
+                "OpenAI API key is not set. Please configure it in the Settings tab.",
+                user_session,
+            )
         elif (
-            self.current_llm_type == APIType.GEMINI
-            and not self.text_processor.gemini_model.has_api_key()
+            current_llm_type == APIType.GEMINI
+            and not user_session.text_processor.gemini_model.has_api_key()
         ):
-            logger.warning("Podcast text generation: Gemini API key not set")
-            return "Google Gemini API key is not set. Please configure it in the Settings tab."
+            logger.warning(
+                f"Podcast text generation: Gemini API key not set for session {user_session.session_id}"
+            )
+            return (
+                "Google Gemini API key is not set. Please configure it in the Settings tab.",
+                user_session,
+            )
 
         try:
-            # Generate podcast text
-            podcast_text = self.text_processor.process_text(text)
+            podcast_text = user_session.text_processor.process_text(text)
 
-            # トークン使用状況を取得してログに追加
-            token_usage = self.text_processor.get_token_usage()
+            token_usage = user_session.text_processor.get_token_usage()
             if token_usage:
                 usage_msg = f"Token usage: input {token_usage.get('prompt_tokens', 0)}, output {token_usage.get('completion_tokens', 0)}, total {token_usage.get('total_tokens', 0)}"
                 logger.debug(usage_msg)
 
-            logger.debug("Podcast text generation completed")
-            return podcast_text
+            logger.debug(
+                f"Podcast text generation completed for session {user_session.session_id}"
+            )
+            return podcast_text, user_session
         except Exception as e:
             error_msg = f"Podcast text generation error: {str(e)}"
             logger.error(error_msg)
-            return f"Error: {str(e)}"
+            return f"Error: {str(e)}", user_session
 
-    def generate_podcast_audio_streaming(self, text: str, progress=gr.Progress()):
+    def generate_podcast_audio_streaming(
+        self, text: str, user_session: UserSession, progress=gr.Progress()
+    ):
         """
         Generate streaming audio from podcast text.
         最終的な音声ファイルも生成し、クラス変数に保持する
@@ -198,7 +301,7 @@ class PaperPodcastApp:
             return
 
         # Check if VOICEVOX Core is available
-        if not self.audio_generator.core_initialized:
+        if not user_session.audio_generator.core_initialized:
             logger.error("Streaming audio generation: VOICEVOX Core is not available")
             yield None
             return
@@ -213,9 +316,9 @@ class PaperPodcastApp:
             final_combined_path = None
 
             # 個別の音声パートを生成・ストリーミング
-            for audio_path in self.audio_generator.generate_character_conversation(
-                text
-            ):
+            for (
+                audio_path
+            ) in user_session.audio_generator.generate_character_conversation(text):
                 if not audio_path:
                     continue
 
@@ -233,14 +336,18 @@ class PaperPodcastApp:
                     logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
 
             # 音声生成の完了処理
-            self._finalize_audio_generation(final_combined_path, parts_paths)
+            self._finalize_audio_generation(
+                final_combined_path, parts_paths, user_session
+            )
 
         except Exception as e:
             logger.error(f"Streaming audio generation exception: {str(e)}")
-            self.audio_generator.audio_generation_progress = 0.0  # エラー時は進捗をリセット
+            user_session.audio_generator.audio_generation_progress = 0.0  # エラー時は進捗をリセット
             yield None
 
-    def _finalize_audio_generation(self, final_combined_path, parts_paths):
+    def _finalize_audio_generation(
+        self, final_combined_path, parts_paths, user_session: UserSession
+    ):
         """
         音声生成の最終処理を行う
 
@@ -251,11 +358,11 @@ class PaperPodcastApp:
         # 最終結合ファイルのパスが取得できた場合
         if final_combined_path and os.path.exists(final_combined_path):
             # 進捗を更新
-            self.audio_generator.audio_generation_progress = 0.9
+            user_session.audio_generator.audio_generation_progress = 0.9
             logger.info(f"最終結合音声ファイル: {final_combined_path}")
 
             # 最終的な音声ファイルのパスを保存
-            self.audio_generator.final_audio_path = final_combined_path
+            user_session.audio_generator.final_audio_path = final_combined_path
 
             # ファイルの書き込みを確実にするため少し待機
             time.sleep(0.2)
@@ -263,19 +370,19 @@ class PaperPodcastApp:
             if os.path.exists(final_combined_path):
                 filesize = os.path.getsize(final_combined_path)
                 # 進捗を完了状態に更新
-                self.audio_generator.audio_generation_progress = 1.0
+                user_session.audio_generator.audio_generation_progress = 1.0
                 logger.info(
                     f"音声生成完了: {final_combined_path} (ファイルサイズ: {filesize} bytes)"
                 )
             else:
                 logger.error(f"ファイルが存在しなくなりました: {final_combined_path}")
-                self._use_fallback_audio(parts_paths)
+                self._use_fallback_audio(parts_paths, user_session)
 
         # 最終結合ファイルがない場合はフォールバック処理
         else:
-            self._use_fallback_audio(parts_paths)
+            self._use_fallback_audio(parts_paths, user_session)
 
-    def _use_fallback_audio(self, parts_paths):
+    def _use_fallback_audio(self, parts_paths, user_session: UserSession):
         """
         結合ファイルが取得できない場合のフォールバック処理
 
@@ -285,8 +392,8 @@ class PaperPodcastApp:
         # 部分音声ファイルがある場合は最後のパートを使用
         if parts_paths:
             logger.warning("結合音声ファイルを取得できなかったため、最後のパートを使用します")
-            self.audio_generator.final_audio_path = parts_paths[-1]
-            self.audio_generator.audio_generation_progress = 1.0
+            user_session.audio_generator.final_audio_path = parts_paths[-1]
+            user_session.audio_generator.audio_generation_progress = 1.0
 
             if os.path.exists(parts_paths[-1]):
                 filesize = os.path.getsize(parts_paths[-1])
@@ -295,10 +402,10 @@ class PaperPodcastApp:
                 )
             else:
                 logger.error(f"フォールバックファイルも存在しません: {parts_paths[-1]}")
-                self.audio_generator.audio_generation_progress = 0.0
+                user_session.audio_generator.audio_generation_progress = 0.0
         else:
             logger.warning("音声ファイルが生成されませんでした")
-            self.audio_generator.audio_generation_progress = 0.0
+            user_session.audio_generator.audio_generation_progress = 0.0
 
     def disable_generate_button(self):
         """音声生成ボタンを無効化します。
@@ -332,7 +439,7 @@ class PaperPodcastApp:
         """
         return gr.update(interactive=False, value="トーク原稿生成中...")
 
-    def enable_process_button(self, extracted_text):
+    def enable_process_button(self, extracted_text, user_session: UserSession):
         """トーク原稿生成ボタンを再び有効化します。
 
         Args:
@@ -350,10 +457,11 @@ class PaperPodcastApp:
         )
         has_api_key = False
 
-        if self.current_llm_type == APIType.OPENAI:
-            has_api_key = self.text_processor.openai_model.has_api_key()
-        elif self.current_llm_type == APIType.GEMINI:
-            has_api_key = self.text_processor.gemini_model.has_api_key()
+        current_llm_type = user_session.text_processor.get_current_api_type()
+        if current_llm_type == APIType.OPENAI:
+            has_api_key = user_session.text_processor.openai_model.has_api_key()
+        elif current_llm_type == APIType.GEMINI:
+            has_api_key = user_session.text_processor.gemini_model.has_api_key()
 
         is_enabled = has_text and has_api_key
 
@@ -494,9 +602,11 @@ class PaperPodcastApp:
                 gr.Markdown("""## トーク原稿の生成""")
                 with gr.Column(variant="panel"):
                     # サポートしているファイル形式の拡張子を取得
-                    supported_extensions = (
-                        self.content_extractor.get_supported_extensions()
-                    )
+                    # UIの初期化時は一時的なContentExtractorインスタンスを使用
+                    from yomitalk.components.content_extractor import ContentExtractor
+
+                    temp_extractor = ContentExtractor()
+                    supported_extensions = temp_extractor.get_supported_extensions()
 
                     # ファイルをアップロードするコンポーネント
                     file_input = gr.File(
@@ -514,16 +624,26 @@ class PaperPodcastApp:
                 with gr.Column(variant="panel"):
                     gr.Markdown("### プロンプト設定")
 
+                    # Get document type info from PromptManager
+                    (
+                        doc_type_choices,
+                        doc_type_default,
+                    ) = self.get_static_document_types()
                     document_type_radio = gr.Radio(
-                        choices=DocumentType.get_all_label_names(),
-                        value=self.current_document_type.label_name,
+                        choices=doc_type_choices,
+                        value=doc_type_default,  # 後でユーザーセッションの値で更新される
                         label="ドキュメントタイプ",
                         elem_id="document_type_radio_group",
                     )
 
+                    # Get podcast mode info from PromptManager
+                    (
+                        podcast_mode_choices,
+                        podcast_mode_default,
+                    ) = self.get_static_podcast_modes()
                     podcast_mode_radio = gr.Radio(
-                        choices=PodcastMode.get_all_label_names(),
-                        value=self.current_podcast_mode.label_name,
+                        choices=podcast_mode_choices,
+                        value=podcast_mode_default,  # 後でユーザーセッションの値で更新される
                         label="生成モード",
                         elem_id="podcast_mode_radio_group",
                     )
@@ -531,15 +651,20 @@ class PaperPodcastApp:
                     # キャラクター設定
                     with gr.Accordion(label="キャラクター設定", open=False):
                         with gr.Row():
-                            available_characters = self.get_available_characters()
+                            # Get character info from PromptManager
+                            (
+                                char_choices,
+                                char1_default,
+                                char2_default,
+                            ) = self.get_static_characters()
                             character1_dropdown = gr.Dropdown(
-                                choices=available_characters,
-                                value="四国めたん",
+                                choices=char_choices,
+                                value=char1_default,  # 後でユーザーセッションの値で更新される
                                 label="キャラクター1（専門家役）",
                             )
                             character2_dropdown = gr.Dropdown(
-                                choices=available_characters,
-                                value="ずんだもん",
+                                choices=char_choices,
+                                value=char2_default,  # 後でユーザーセッションの値で更新される
                                 label="キャラクター2（初学者役）",
                             )
 
@@ -557,16 +682,21 @@ class PaperPodcastApp:
                                         info="APIキーの取得: https://aistudio.google.com/app/apikey",
                                     )
                                 with gr.Column(scale=2):
+                                    # Get Gemini models from model class
+                                    (
+                                        gemini_models,
+                                        gemini_default,
+                                    ) = self.get_static_gemini_models()
                                     gemini_model_dropdown = gr.Dropdown(
-                                        choices=self.get_gemini_available_models(),
-                                        value=self.get_gemini_current_model(),
+                                        choices=gemini_models,
+                                        value=gemini_default,
                                         label="モデル",
                                     )
                             with gr.Row():
                                 gemini_max_tokens_slider = gr.Slider(
                                     minimum=100,
                                     maximum=65536,
-                                    value=self.get_gemini_max_tokens(),
+                                    value=self.get_static_gemini_max_tokens(),
                                     step=100,
                                     label="最大トークン数",
                                 )
@@ -581,16 +711,21 @@ class PaperPodcastApp:
                                         info="APIキーの取得: https://platform.openai.com/api-keys",
                                     )
                                 with gr.Column(scale=2):
+                                    # Get OpenAI models from model class
+                                    (
+                                        openai_models,
+                                        openai_default,
+                                    ) = self.get_static_openai_models()
                                     openai_model_dropdown = gr.Dropdown(
-                                        choices=self.get_openai_available_models(),
-                                        value=self.get_openai_current_model(),
+                                        choices=openai_models,
+                                        value=openai_default,
                                         label="モデル",
                                     )
                             with gr.Row():
                                 openai_max_tokens_slider = gr.Slider(
                                     minimum=100,
                                     maximum=32768,
-                                    value=self.get_openai_max_tokens(),
+                                    value=self.get_static_openai_max_tokens(),
                                     step=100,
                                     label="最大トークン数",
                                 )
@@ -659,91 +794,116 @@ class PaperPodcastApp:
                         min_width=300,
                     )
 
+            # Initialize user session and sync UI components with session values
+            user_session = gr.State()
+            app.load(
+                fn=self.create_user_session, outputs=[user_session], queue=False
+            ).then(
+                # ユーザーセッション作成後にUIコンポーネントの値を同期
+                fn=self.sync_ui_with_session,
+                inputs=[user_session],
+                outputs=[
+                    document_type_radio,
+                    podcast_mode_radio,
+                    character1_dropdown,
+                    character2_dropdown,
+                    openai_max_tokens_slider,
+                    gemini_max_tokens_slider,
+                ],
+                queue=False,
+            )
+
             # Set up event handlers
             # ファイルがアップロードされたら自動的にテキストを抽出（大きなファイルの場合は時間がかかるのでキューイング）
             file_input.change(
                 fn=self.extract_file_text,
-                inputs=[file_input],
-                outputs=[extracted_text],
+                inputs=[file_input, user_session],
+                outputs=[extracted_text, user_session],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="file_queue",  # ファイル処理用キューID
             ).then(
-                fn=self.update_process_button_state,
-                inputs=[extracted_text],
+                fn=self.enable_process_button,
+                inputs=[extracted_text, user_session],
                 outputs=[process_btn],
             )
 
             # OpenAI API key - ユーザが入力したらすぐに保存
             openai_api_key_input.change(
                 fn=self.set_openai_api_key,
-                inputs=[openai_api_key_input],
-                outputs=[],
+                inputs=[openai_api_key_input, user_session],
+                outputs=[user_session],
             ).then(
-                fn=self.update_process_button_state,
-                inputs=[extracted_text],
+                fn=self.enable_process_button,
+                inputs=[extracted_text, user_session],
                 outputs=[process_btn],
             )
 
             # Gemini API key
             gemini_api_key_input.change(
                 fn=self.set_gemini_api_key,
-                inputs=[gemini_api_key_input],
-                outputs=[],
+                inputs=[gemini_api_key_input, user_session],
+                outputs=[user_session],
             ).then(
-                fn=self.update_process_button_state,
-                inputs=[extracted_text],
+                fn=self.enable_process_button,
+                inputs=[extracted_text, user_session],
                 outputs=[process_btn],
             )
 
             # タブ切り替え時のLLMタイプ変更
             gemini_tab.select(
-                fn=lambda: self.switch_llm_type(APIType.GEMINI),
-                outputs=[],
+                fn=lambda user_session: self.switch_llm_type(
+                    APIType.GEMINI, user_session
+                ),
+                inputs=[user_session],
+                outputs=[user_session],
             )
 
             openai_tab.select(
-                fn=lambda: self.switch_llm_type(APIType.OPENAI),
-                outputs=[],
+                fn=lambda user_session: self.switch_llm_type(
+                    APIType.OPENAI, user_session
+                ),
+                inputs=[user_session],
+                outputs=[user_session],
             )
 
             # OpenAI Model selection
             openai_model_dropdown.change(
                 fn=self.set_openai_model_name,
-                inputs=[openai_model_dropdown],
-                outputs=[],
+                inputs=[openai_model_dropdown, user_session],
+                outputs=[user_session],
             )
 
             # Gemini Model selection
             gemini_model_dropdown.change(
                 fn=self.set_gemini_model_name,
-                inputs=[gemini_model_dropdown],
-                outputs=[],
+                inputs=[gemini_model_dropdown, user_session],
+                outputs=[user_session],
             )
 
             # OpenAI Max tokens selection
             openai_max_tokens_slider.change(
                 fn=self.set_openai_max_tokens,
-                inputs=[openai_max_tokens_slider],
-                outputs=[],
+                inputs=[openai_max_tokens_slider, user_session],
+                outputs=[user_session],
             )
 
             # Gemini Max tokens selection
             gemini_max_tokens_slider.change(
                 fn=self.set_gemini_max_tokens,
-                inputs=[gemini_max_tokens_slider],
-                outputs=[],
+                inputs=[gemini_max_tokens_slider, user_session],
+                outputs=[user_session],
             )
 
             character1_dropdown.change(
                 fn=self.set_character_mapping,
-                inputs=[character1_dropdown, character2_dropdown],
-                outputs=[],
+                inputs=[character1_dropdown, character2_dropdown, user_session],
+                outputs=[user_session],
             )
 
             character2_dropdown.change(
                 fn=self.set_character_mapping,
-                inputs=[character1_dropdown, character2_dropdown],
-                outputs=[],
+                inputs=[character1_dropdown, character2_dropdown, user_session],
+                outputs=[user_session],
             )
 
             # VOICEVOX Terms checkbox - 音声生成ボタンに対してイベントハンドラを更新
@@ -766,13 +926,14 @@ class PaperPodcastApp:
             # 2. トーク原稿の生成処理
             process_events.then(
                 fn=self.generate_podcast_text,
-                inputs=[extracted_text],
-                outputs=[podcast_text],
+                inputs=[extracted_text, user_session],
+                outputs=[podcast_text, user_session],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="llm_queue",  # LLM関連のリクエスト用キューID
             ).then(
                 # トークン使用状況をUIに反映
                 fn=self.update_token_usage_display,
+                inputs=[user_session],
                 outputs=[token_usage_info],
             ).then(
                 # トーク原稿生成後に音声生成ボタンの状態を更新
@@ -782,7 +943,7 @@ class PaperPodcastApp:
             ).then(
                 # 3. 最後にトーク原稿生成ボタンを再度有効化
                 fn=self.enable_process_button,
-                inputs=[extracted_text],
+                inputs=[extracted_text, user_session],
                 outputs=[process_btn],
                 queue=False,  # 即時実行
                 api_name="enable_process_button",
@@ -802,7 +963,7 @@ class PaperPodcastApp:
             # 0. 音声生成状態をリセットしてストリーミング再生コンポーネントをクリア
             audio_events = disable_btn_event.then(
                 fn=self.reset_audio_state_and_components,
-                inputs=[],
+                inputs=[user_session],
                 outputs=[streaming_audio_output],
                 concurrency_id="audio_reset",
                 concurrency_limit=1,  # 同時実行数を1に制限
@@ -812,7 +973,7 @@ class PaperPodcastApp:
             # 1. ストリーミング再生開始 (音声パーツ生成とストリーミング再生)
             audio_events.then(
                 fn=self.generate_podcast_audio_streaming,
-                inputs=[podcast_text],
+                inputs=[podcast_text, user_session],
                 outputs=[streaming_audio_output],
                 concurrency_limit=1,  # 音声生成は1つずつ実行
                 concurrency_id="audio_queue",  # 音声生成用キューID
@@ -824,7 +985,7 @@ class PaperPodcastApp:
             # こちらは独立したイベントとして実行し、音声生成の進捗を表示してから最終ファイルを返す
             wave_display_event = generate_btn.click(
                 fn=self.wait_for_audio_completion,
-                inputs=[podcast_text],
+                inputs=[podcast_text, user_session],
                 outputs=[audio_output],
                 concurrency_limit=1,  # 同時実行数を1に制限
                 concurrency_id="progress_queue",  # 進捗表示用キューID
@@ -844,15 +1005,15 @@ class PaperPodcastApp:
             # ドキュメントタイプ選択のイベントハンドラ
             document_type_radio.change(
                 fn=self.set_document_type,
-                inputs=[document_type_radio],
-                outputs=[],
+                inputs=[document_type_radio, user_session],
+                outputs=[user_session],
             )
 
             # ポッドキャストモード選択のイベントハンドラ
             podcast_mode_radio.change(
                 fn=self.set_podcast_mode,
-                inputs=[podcast_mode_radio],
-                outputs=[],
+                inputs=[podcast_mode_radio, user_session],
+                outputs=[user_session],
             )
 
             # podcast_textの変更時にも音声生成ボタンの状態を更新
@@ -862,106 +1023,116 @@ class PaperPodcastApp:
                 outputs=[generate_btn],
             )
 
-            # ユーザーがブラウザタブを閉じるかリロードしたときにセッションデータをクリーンアップ
-            app.unload(
-                fn=self.cleanup_session,
-            )
+            # Note: Gradio's unload event doesn't support session-specific cleanup
+            # Session cleanup will be handled by garbage collection or periodic cleanup
 
         return app
 
-    def get_openai_available_models(self) -> List[str]:
+    def get_openai_available_models(self, user_session: UserSession) -> List[str]:
         """
         利用可能なOpenAIモデルのリストを取得します。
 
         Returns:
             List[str]: 利用可能なモデル名のリスト
         """
-        return self.text_processor.openai_model.get_available_models()
+        return user_session.text_processor.openai_model.get_available_models()
 
-    def get_openai_current_model(self) -> str:
+    def get_openai_current_model(self, user_session: UserSession) -> str:
         """
         現在設定されているOpenAIモデル名を取得します。
 
         Returns:
             str: 現在のモデル名
         """
-        return self.text_processor.openai_model.model_name
+        return user_session.text_processor.openai_model.model_name
 
-    def get_gemini_available_models(self) -> List[str]:
+    def get_gemini_available_models(self, user_session: UserSession) -> List[str]:
         """
         利用可能なGeminiモデルのリストを取得します。
 
         Returns:
             List[str]: 利用可能なモデル名のリスト
         """
-        return self.text_processor.gemini_model.get_available_models()
+        return user_session.text_processor.gemini_model.get_available_models()
 
-    def get_gemini_current_model(self) -> str:
+    def get_gemini_current_model(self, user_session: UserSession) -> str:
         """
         現在設定されているGeminiモデル名を取得します。
 
         Returns:
             str: 現在のモデル名
         """
-        return self.text_processor.gemini_model.model_name
+        return user_session.text_processor.gemini_model.model_name
 
-    def set_openai_model_name(self, model_name: str) -> None:
+    def set_openai_model_name(
+        self, model_name: str, user_session: UserSession
+    ) -> UserSession:
         """
         OpenAIモデル名を設定します。
 
         Args:
             model_name (str): 使用するモデル名
         """
-        success = self.text_processor.openai_model.set_model_name(model_name)
+        success = user_session.text_processor.openai_model.set_model_name(model_name)
         logger.debug(f"OpenAI model set to {model_name}: {success}")
+        return user_session
 
-    def set_gemini_model_name(self, model_name: str) -> None:
+    def set_gemini_model_name(
+        self, model_name: str, user_session: UserSession
+    ) -> UserSession:
         """
         Geminiモデル名を設定します。
 
         Args:
             model_name (str): 使用するモデル名
         """
-        success = self.text_processor.gemini_model.set_model_name(model_name)
+        success = user_session.text_processor.gemini_model.set_model_name(model_name)
         logger.debug(f"Gemini model set to {model_name}: {success}")
+        return user_session
 
-    def get_openai_max_tokens(self) -> int:
+    def get_openai_max_tokens(self, user_session: UserSession) -> int:
         """
         現在設定されているOpenAIの最大トークン数を取得します。
 
         Returns:
             int: 現在の最大トークン数
         """
-        return self.text_processor.openai_model.get_max_tokens()
+        return user_session.text_processor.openai_model.get_max_tokens()
 
-    def get_gemini_max_tokens(self) -> int:
+    def get_gemini_max_tokens(self, user_session: UserSession) -> int:
         """
         現在設定されているGeminiの最大トークン数を取得します。
 
         Returns:
             int: 現在の最大トークン数
         """
-        return self.text_processor.gemini_model.get_max_tokens()
+        return user_session.text_processor.gemini_model.get_max_tokens()
 
-    def set_openai_max_tokens(self, max_tokens: int) -> None:
+    def set_openai_max_tokens(
+        self, max_tokens: int, user_session: UserSession
+    ) -> UserSession:
         """
         OpenAIの最大トークン数を設定します。
 
         Args:
             max_tokens (int): 設定する最大トークン数
         """
-        success = self.text_processor.openai_model.set_max_tokens(max_tokens)
+        success = user_session.text_processor.openai_model.set_max_tokens(max_tokens)
         logger.debug(f"OpenAI max tokens set to {max_tokens}: {success}")
+        return user_session
 
-    def set_gemini_max_tokens(self, max_tokens: int) -> None:
+    def set_gemini_max_tokens(
+        self, max_tokens: int, user_session: UserSession
+    ) -> UserSession:
         """
         Geminiの最大トークン数を設定します。
 
         Args:
             max_tokens (int): 設定する最大トークン数
         """
-        success = self.text_processor.gemini_model.set_max_tokens(max_tokens)
+        success = user_session.text_processor.gemini_model.set_max_tokens(max_tokens)
         logger.debug(f"Gemini max tokens set to {max_tokens}: {success}")
+        return user_session
 
     def get_available_characters(self) -> List[str]:
         """利用可能なキャラクターのリストを取得します。
@@ -971,22 +1142,30 @@ class PaperPodcastApp:
         """
         return DISPLAY_NAMES
 
-    def set_character_mapping(self, character1: str, character2: str) -> None:
+    def set_character_mapping(
+        self, character1: str, character2: str, user_session: UserSession
+    ) -> UserSession:
         """キャラクターマッピングを設定します。
 
         Args:
             character1 (str): Character1に割り当てるキャラクター名
             character2 (str): Character2に割り当てるキャラクター名
         """
-        success = self.text_processor.set_character_mapping(character1, character2)
+        success = user_session.text_processor.set_character_mapping(
+            character1, character2
+        )
         logger.debug(f"Character mapping set: {character1}, {character2}: {success}")
+        return user_session
 
-    def update_process_button_state(self, extracted_text: str) -> Dict[str, Any]:
+    def update_process_button_state(
+        self, extracted_text: str, user_session: UserSession
+    ) -> Dict[str, Any]:
         """
         抽出されたテキストとAPIキーの状態に基づいて"トーク原稿を生成"ボタンの有効/無効を切り替えます。
 
         Args:
             extracted_text (str): 抽出されたテキスト
+            user_session (UserSession): ユーザーセッション
 
         Returns:
             Dict[str, Any]: gr.update()の結果
@@ -1000,10 +1179,10 @@ class PaperPodcastApp:
         )
         has_api_key = False
 
-        if self.current_llm_type == APIType.OPENAI:
-            has_api_key = self.text_processor.openai_model.has_api_key()
-        elif self.current_llm_type == APIType.GEMINI:
-            has_api_key = self.text_processor.gemini_model.has_api_key()
+        if user_session.text_processor.current_api_type == APIType.OPENAI:
+            has_api_key = user_session.text_processor.openai_model.has_api_key()
+        elif user_session.text_processor.current_api_type == APIType.GEMINI:
+            has_api_key = user_session.text_processor.gemini_model.has_api_key()
 
         is_enabled = has_text and has_api_key
 
@@ -1014,7 +1193,7 @@ class PaperPodcastApp:
         )
         return result  # type: ignore
 
-    def set_podcast_mode(self, mode: str) -> None:
+    def set_podcast_mode(self, mode: str, user_session: UserSession) -> UserSession:
         """
         ポッドキャスト生成モードを設定します。
 
@@ -1026,12 +1205,14 @@ class PaperPodcastApp:
             podcast_mode = PodcastMode.from_label_name(mode)
 
             # TextProcessorを使ってPodcastModeのEnumを設定
-            success = self.text_processor.set_podcast_mode(podcast_mode.value)
+            success = user_session.text_processor.set_podcast_mode(podcast_mode.value)
 
             logger.debug(f"Podcast mode set to {mode}: {success}")
 
         except ValueError as e:
             logger.error(f"Error setting podcast mode: {str(e)}")
+
+        return user_session
 
     def get_podcast_modes(self):
         """
@@ -1042,14 +1223,14 @@ class PaperPodcastApp:
         """
         return PodcastMode.get_all_label_names()
 
-    def update_token_usage_display(self) -> str:
+    def update_token_usage_display(self, user_session: UserSession) -> str:
         """
         トークン使用状況を表示用のHTMLとして返します。
 
         Returns:
             str: トークン使用状況のHTML
         """
-        token_usage = self.text_processor.get_token_usage()
+        token_usage = user_session.text_processor.get_token_usage()
         if not token_usage:
             return "<div>トークン使用状況: データがありません</div>"
 
@@ -1058,7 +1239,7 @@ class PaperPodcastApp:
         total_tokens = token_usage.get("total_tokens", math.nan)
 
         # API名を取得
-        api_name = f"{self.text_processor.current_api_type.display_name if self.text_processor.current_api_type else 'API'} API"
+        api_name = f"{user_session.text_processor.current_api_type.display_name if user_session.text_processor.current_api_type else 'API'} API"
 
         html = f"""
         <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-top: 10px;">
@@ -1102,7 +1283,9 @@ class PaperPodcastApp:
         )
         return result
 
-    def set_document_type(self, doc_type: str) -> None:
+    def set_document_type(
+        self, doc_type: str, user_session: UserSession
+    ) -> UserSession:
         """
         ドキュメントタイプを設定します。
 
@@ -1114,14 +1297,18 @@ class PaperPodcastApp:
             document_type = DocumentType.from_label_name(doc_type)
 
             # TextProcessorを使ってドキュメントタイプを設定
-            success = self.text_processor.set_document_type(document_type)
+            success = user_session.text_processor.set_document_type(document_type)
 
             logger.debug(f"Document type set to {doc_type}: {success}")
 
         except ValueError as e:
             logger.error(f"Error setting document type: {str(e)}")
 
-    def wait_for_audio_completion(self, text: str, progress=gr.Progress()):
+        return user_session
+
+    def wait_for_audio_completion(
+        self, text: str, user_session: UserSession, progress=gr.Progress()
+    ):
         """
         ストリーミング処理の進捗を表示し、最終的な結合音声ファイルを返す
         波形表示用コンポーネントの更新に使用する
@@ -1134,7 +1321,7 @@ class PaperPodcastApp:
         Returns:
             Optional[str]: 最終結合音声ファイルのパス（すべての会話を含む）
         """
-        if not text or not self.audio_generator.core_initialized:
+        if not text or not user_session.audio_generator.core_initialized:
             logger.warning(
                 "Cannot display progress: Text is empty or VOICEVOX is not available"
             )
@@ -1147,15 +1334,15 @@ class PaperPodcastApp:
         # 音声生成の完了を待ちながら進捗表示を行う
         last_progress = -math.inf
         while True:
-            current_value = self.audio_generator.audio_generation_progress
+            current_value = user_session.audio_generator.audio_generation_progress
 
             # 生成完了したら音声ファイル取得を試みる
             if current_value >= 1.0:
-                if self.audio_generator.final_audio_path is None:
+                if user_session.audio_generator.final_audio_path is None:
                     progress(1.0, desc="✅ 音声生成完了! 音声ファイル取得中...")
                 else:
                     abs_path = str(
-                        Path(self.audio_generator.final_audio_path).absolute()
+                        Path(user_session.audio_generator.final_audio_path).absolute()
                     )
                     # ファイルが存在しなければエラー
                     if not os.path.exists(abs_path):
@@ -1188,7 +1375,7 @@ class PaperPodcastApp:
             # 一定時間待機してから再チェック
             time.sleep(0.5)
 
-    def reset_audio_state_and_components(self):
+    def reset_audio_state_and_components(self, user_session: UserSession):
         """
         音声生成状態をリセットし、UIコンポーネントもクリアする
         新しい音声生成を開始する前に呼び出す
@@ -1197,13 +1384,13 @@ class PaperPodcastApp:
             None: ストリーミング再生コンポーネントをクリアするためにNoneを返す
         """
         # 音声生成状態をリセット
-        self.audio_generator.reset_audio_generation_state()
+        user_session.audio_generator.reset_audio_generation_state()
 
         # ストリーミングコンポーネントをリセット - gradio UIの更新のためNoneを返す
         logger.debug("Audio components and generation state reset")
         return None
 
-    def cleanup_session(self):
+    def cleanup_session(self, user_session: UserSession):
         """
         セッションが終了した時に呼び出されるクリーンアップ関数。
         ユーザーがブラウザタブを閉じたり更新したりした時に実行される。
@@ -1213,14 +1400,22 @@ class PaperPodcastApp:
         Returns:
             None
         """
-        logger.info(
-            f"Session {self.session_manager.get_session_id()} ended, cleaning up..."
-        )
-        success = self.session_manager.cleanup_session_data()
-        if success:
-            logger.info("Session cleanup completed successfully")
-        else:
-            logger.warning("Session cleanup encountered issues")
+        logger.info(f"Session {user_session.session_id} ended, cleaning up...")
+        user_session.cleanup()
+        logger.info("Session cleanup completed successfully")
+
+    def sync_ui_with_session(
+        self, user_session: UserSession
+    ) -> Tuple[str, str, str, str, int, int]:
+        """Sync UI components with user session values.
+
+        Args:
+            user_session (UserSession): User session
+
+        Returns:
+            Tuple[str, str, str, str, int, int]: (document_type, podcast_mode, character1, character2, openai_max_tokens, gemini_max_tokens)
+        """
+        return user_session.get_ui_sync_values()
 
 
 # Create and launch application instance

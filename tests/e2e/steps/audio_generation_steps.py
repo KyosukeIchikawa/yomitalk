@@ -97,7 +97,7 @@ def click_generate_audio_button(page: Page):
 
     # ボタンが有効でない場合は強制的に有効化
     if not generate_button.is_enabled():
-        page.evaluate("button => button.disabled = false", generate_button)
+        generate_button.evaluate("button => button.disabled = false")
 
     try:
         # ボタンをクリック

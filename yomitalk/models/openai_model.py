@@ -4,7 +4,7 @@ Uses OpenAI's LLM to generate podcast-style conversation text from research pape
 """
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import httpx
 from openai import OpenAI
@@ -15,24 +15,29 @@ from yomitalk.utils.logger import logger
 class OpenAIModel:
     """Class that generates conversational text using the OpenAI API."""
 
+    # Class-level constants for model configuration
+    DEFAULT_MODELS = [
+        "gpt-4.1-nano",
+        "gpt-4.1-mini",
+        "gpt-4.1",
+        "o4-mini",
+    ]
+    DEFAULT_MODEL = "gpt-4.1-mini"
+    DEFAULT_MAX_TOKENS = 32768
+
     def __init__(self) -> None:
         """Initialize OpenAIModel."""
         # Try to get API key from environment
         self.api_key: Optional[str] = os.environ.get("OPENAI_API_KEY")
 
         # デフォルトモデル
-        self.model_name: str = "gpt-4.1-mini"
+        self.model_name: str = self.DEFAULT_MODEL
 
         # 利用可能なモデルのリスト
-        self._available_models = [
-            "gpt-4.1-nano",
-            "gpt-4.1-mini",
-            "gpt-4.1",
-            "o4-mini",
-        ]
+        self._available_models = self.DEFAULT_MODELS.copy()
 
         # デフォルトの最大トークン数
-        self.max_tokens: int = 32768
+        self.max_tokens: int = self.DEFAULT_MAX_TOKENS
 
         # トークン使用状況の初期化
         self.last_token_usage: Dict[str, int] = {}
@@ -187,3 +192,13 @@ class OpenAIModel:
         if hasattr(self, "last_token_usage"):
             return self.last_token_usage
         return {}
+
+    @classmethod
+    def get_default_models_info(cls) -> Tuple[List[str], str, int]:
+        """
+        Get default OpenAI models information without creating instance.
+
+        Returns:
+            Tuple[List[str], str, int]: (available_models, default_model, default_max_tokens)
+        """
+        return cls.DEFAULT_MODELS.copy(), cls.DEFAULT_MODEL, cls.DEFAULT_MAX_TOKENS
