@@ -52,7 +52,6 @@ class UserSession:
         self.session_manager = SessionManager()
 
         # Initialize per-user components
-        self.content_extractor = ContentExtractor()
         self.text_processor = TextProcessor()
         self.audio_generator = AudioGenerator(
             session_output_dir=self.session_manager.get_output_dir(),
@@ -233,7 +232,7 @@ class PaperPodcastApp:
             logger.warning("No file selected for extraction")
             return "Please upload a file.", user_session
 
-        text = user_session.content_extractor.extract_text(file_obj)
+        text = ContentExtractor.extract_text(file_obj)
         logger.debug(f"Text extraction completed for session {user_session.session_id}")
         return text, user_session
 
@@ -610,11 +609,7 @@ class PaperPodcastApp:
                 gr.Markdown("""## トーク原稿の生成""")
                 with gr.Column(variant="panel"):
                     # サポートしているファイル形式の拡張子を取得
-                    # UIの初期化時は一時的なContentExtractorインスタンスを使用
-                    from yomitalk.components.content_extractor import ContentExtractor
-
-                    temp_extractor = ContentExtractor()
-                    supported_extensions = temp_extractor.get_supported_extensions()
+                    supported_extensions = ContentExtractor.SUPPORTED_EXTENSIONS
 
                     # ファイルをアップロードするコンポーネント
                     file_input = gr.File(

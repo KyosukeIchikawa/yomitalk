@@ -7,29 +7,27 @@ Supports extracting text content from various sources including files (PDF, text
 import io
 import os
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 from markitdown import MarkItDown, StreamInfo
 
 from yomitalk.utils.logger import logger
 
+# Global markdown converter shared by all instances and users
+_markdown_converter = MarkItDown()
+
 
 class ContentExtractor:
     """Class for extracting text content from various sources."""
 
-    def __init__(self) -> None:
-        """
-        Initialize ContentExtractor.
-        """
-        self.supported_text_extensions = [".txt", ".md", ".text", ".tmp"]
-        self.supported_pdf_extensions = [".pdf"]
-        self.supported_extensions = (
-            self.supported_text_extensions + self.supported_pdf_extensions
-        )
-        self.markdown_converter = MarkItDown()
+    # Class constants for supported file extensions
+    SUPPORTED_TEXT_EXTENSIONS = [".txt", ".md", ".text", ".tmp"]
+    SUPPORTED_PDF_EXTENSIONS = [".pdf"]
+    SUPPORTED_EXTENSIONS = SUPPORTED_TEXT_EXTENSIONS + SUPPORTED_PDF_EXTENSIONS
 
+    @classmethod
     def extract_file_content(
-        self, file_obj: Any
+        cls, file_obj: Any
     ) -> Tuple[Optional[str], Optional[bytes]]:
         """
         メモリ上でファイルコンテンツを抽出します。
@@ -85,7 +83,8 @@ class ContentExtractor:
             logger.error(f"File content extraction error: {e}")
             return None, None
 
-    def extract_text(self, file_obj: Any) -> str:
+    @classmethod
+    def extract_text(cls, file_obj: Any) -> str:
         """
         メモリ上でファイルからテキストを抽出します。
         ファイルをディスクに保存せずに直接処理します。
@@ -101,7 +100,7 @@ class ContentExtractor:
 
         try:
             # ファイルコンテンツを取得
-            result = self.extract_file_content(file_obj)
+            result = cls.extract_file_content(file_obj)
             file_ext, file_content = result
 
             if file_content is None or file_ext is None:
@@ -109,13 +108,14 @@ class ContentExtractor:
 
             # ファイルの種類に応じて処理
             if isinstance(file_ext, str):
-                return self.extract_from_bytes(file_content, file_ext)
+                return cls.extract_from_bytes(file_content, file_ext)
 
         except Exception as e:
             logger.error(f"File processing error: {e}")
             return f"Error processing file: {str(e)}"
 
-    def extract_from_bytes(self, file_content: bytes, file_ext: str) -> str:
+    @classmethod
+    def extract_from_bytes(cls, file_content: bytes, file_ext: str) -> str:
         """
         Extract text from file content in memory.
 
@@ -127,7 +127,7 @@ class ContentExtractor:
             str: Extracted text content
         """
         # テキストファイル
-        if file_ext in self.supported_text_extensions:
+        if file_ext in cls.SUPPORTED_TEXT_EXTENSIONS:
             # テキストの解読を試みる
             try:
                 # UTF-8で試みる
@@ -146,7 +146,7 @@ class ContentExtractor:
                         return f"Text file decoding failed: {str(e)}"
 
         # PDFファイル
-        elif file_ext in self.supported_pdf_extensions:
+        elif file_ext in cls.SUPPORTED_PDF_EXTENSIONS:
             try:
                 # BytesIOオブジェクトとしてバイト列をラップする
                 pdf_stream = io.BytesIO(file_content)
@@ -156,7 +156,7 @@ class ContentExtractor:
 
                 # メモリ上のPDFストリームを直接変換
                 logger.debug("Processing PDF from memory stream")
-                result = self.markdown_converter.convert(
+                result = _markdown_converter.convert(
                     pdf_stream, stream_info=stream_info
                 )
 
@@ -169,13 +169,4 @@ class ContentExtractor:
                 logger.error(f"PDF memory stream to Markdown conversion failed: {e}")
                 return f"PDF conversion error: {str(e)}"
         else:
-            return f"Unsupported file type: {file_ext}. Supported types: {', '.join(self.supported_extensions)}"
-
-    def get_supported_extensions(self) -> List[str]:
-        """
-        Get list of supported file extensions.
-
-        Returns:
-            List[str]: List of supported file extensions
-        """
-        return self.supported_extensions
+            return f"Unsupported file type: {file_ext}. Supported types: {', '.join(cls.SUPPORTED_EXTENSIONS)}"
