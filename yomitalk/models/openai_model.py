@@ -54,6 +54,15 @@ class OpenAIModel:
         os.environ["OPENAI_API_KEY"] = self.api_key
         return True
 
+    def has_api_key(self) -> bool:
+        """
+        Check if API key is set.
+
+        Returns:
+            bool: Whether API key is set
+        """
+        return self.api_key is not None and self.api_key.strip() != ""
+
     def set_max_tokens(self, max_tokens: int) -> bool:
         """
         最大トークン数を設定します。

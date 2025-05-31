@@ -1,6 +1,7 @@
 """Unit tests for TextProcessor class."""
 from unittest.mock import MagicMock, patch
 
+from yomitalk.common import APIType
 from yomitalk.components.text_processor import TextProcessor
 from yomitalk.prompt_manager import DocumentType, PodcastMode
 
@@ -18,14 +19,10 @@ class TestTextProcessor:
         assert hasattr(self.text_processor, "prompt_manager")
         assert hasattr(self.text_processor, "openai_model")
         assert hasattr(self.text_processor, "gemini_model")
-        assert hasattr(self.text_processor, "use_openai")
-        assert hasattr(self.text_processor, "use_gemini")
         assert hasattr(self.text_processor, "current_api_type")
 
         # Check default values
-        assert self.text_processor.use_openai is False
-        assert self.text_processor.use_gemini is False
-        assert self.text_processor.current_api_type == "openai"
+        assert self.text_processor.current_api_type is None
 
     @patch("yomitalk.components.text_processor.OpenAIModel")
     def test_set_openai_api_key(self, mock_openai_model):
@@ -42,7 +39,7 @@ class TestTextProcessor:
 
         # Verify results
         assert result is True
-        assert self.text_processor.use_openai is True
+        assert self.text_processor.current_api_type == APIType.OPENAI
         mock_instance.set_api_key.assert_called_once_with(api_key)
 
     @patch("yomitalk.components.text_processor.GeminiModel")
@@ -60,7 +57,7 @@ class TestTextProcessor:
 
         # Verify results
         assert result is True
-        assert self.text_processor.use_gemini is True
+        assert self.text_processor.current_api_type == APIType.GEMINI
         mock_instance.set_api_key.assert_called_once_with(api_key)
 
     def test_get_podcast_mode(self):
@@ -73,16 +70,24 @@ class TestTextProcessor:
     def test_set_api_type(self):
         """Test setting API type."""
         # APIが設定されていない場合
-        assert self.text_processor.set_api_type("openai") is False
-        assert self.text_processor.set_api_type("gemini") is False
+        assert self.text_processor.set_api_type(APIType.OPENAI) is False
+        assert self.text_processor.set_api_type(APIType.GEMINI) is False
 
         # APIが設定されている場合をシミュレート
-        self.text_processor.use_openai = True
-        assert self.text_processor.set_api_type("openai") is True
-        assert self.text_processor.get_current_api_type() == "openai"
+        with patch.object(
+            self.text_processor.openai_model, "has_api_key", return_value=True
+        ):
+            assert self.text_processor.set_api_type(APIType.OPENAI) is True
+            assert self.text_processor.get_current_api_type() == APIType.OPENAI
 
-        # 無効なAPIタイプの場合
-        assert self.text_processor.set_api_type("invalid_api") is False
+        # OpenAI APIキーが設定されていないがGemini APIキーがある場合
+        with patch.object(
+            self.text_processor.openai_model, "has_api_key", return_value=False
+        ), patch.object(
+            self.text_processor.gemini_model, "has_api_key", return_value=True
+        ):
+            assert self.text_processor.set_api_type(APIType.GEMINI) is True
+            assert self.text_processor.get_current_api_type() == APIType.GEMINI
 
     def test_set_document_type(self):
         """Test setting document type."""
@@ -96,13 +101,18 @@ class TestTextProcessor:
     def test_generate_conversation(self):
         """Test generate podcast conversation."""
         # アップストリームを設定
-        self.text_processor.use_openai = True
+        with patch.object(
+            self.text_processor.openai_model, "has_api_key", return_value=True
+        ):
+            self.text_processor.current_api_type = APIType.OPENAI
 
-        # 簡単なテキストでテスト実行
-        result = self.text_processor.generate_podcast_conversation("Test input text")
+            # 簡単なテキストでテスト実行
+            result = self.text_processor.generate_podcast_conversation(
+                "Test input text"
+            )
 
-        # 出力の基本検証
-        assert isinstance(result, str)
+            # 出力の基本検証
+            assert isinstance(result, str)
 
     def test_api_generation(self):
         """Test API generation methods."""
@@ -110,10 +120,12 @@ class TestTextProcessor:
         # 実際のAPIを呼び出さないでモックする
         with patch.object(
             self.text_processor.openai_model, "generate_text"
-        ) as mock_openai:
+        ) as mock_openai, patch.object(
+            self.text_processor.openai_model, "has_api_key"
+        ) as mock_has_api_key:
             mock_openai.return_value = "OpenAI generated text"
-            self.text_processor.use_openai = True
-            self.text_processor.current_api_type = "openai"
+            mock_has_api_key.return_value = True
+            self.text_processor.current_api_type = APIType.OPENAI
 
             # OpenAIによる生成をテスト
             result = self.text_processor.generate_podcast_conversation("Test")
@@ -124,10 +136,12 @@ class TestTextProcessor:
         # Geminiのモックをセットアップ
         with patch.object(
             self.text_processor.gemini_model, "generate_text"
-        ) as mock_gemini:
+        ) as mock_gemini, patch.object(
+            self.text_processor.gemini_model, "has_api_key"
+        ) as mock_has_api_key:
             mock_gemini.return_value = "Gemini generated text"
-            self.text_processor.use_gemini = True
-            self.text_processor.current_api_type = "gemini"
+            mock_has_api_key.return_value = True
+            self.text_processor.current_api_type = APIType.GEMINI
 
             # GeminiによるPodcast会話生成をテスト
             result = self.text_processor.generate_podcast_conversation("Test")
@@ -136,8 +150,7 @@ class TestTextProcessor:
     def test_api_configuration_validation(self):
         """Test API configuration validation."""
         # APIキーが設定されていない場合のエラー処理テスト
-        self.text_processor.use_openai = False
-        self.text_processor.use_gemini = False
+        self.text_processor.current_api_type = None
 
         # エラーメッセージが返ることを確認
         result = self.text_processor.generate_podcast_conversation("Test")

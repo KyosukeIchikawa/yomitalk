@@ -3,8 +3,9 @@
 This module provides text preprocessing and API integrations.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
+from yomitalk.common import APIType
 from yomitalk.models.gemini_model import GeminiModel
 from yomitalk.models.openai_model import OpenAIModel
 from yomitalk.prompt_manager import DocumentType, PodcastMode, PromptManager
@@ -23,12 +24,8 @@ class TextProcessor:
         self.openai_model = OpenAIModel()
         self.gemini_model = GeminiModel()
 
-        # APIの使用状態
-        self.use_openai = False
-        self.use_gemini = False
-
-        # 現在選択されているAPIタイプ（デフォルトはOpenAI）
-        self.current_api_type = "openai"
+        # 現在選択されているAPIタイプ（デフォルト値はNone）
+        self.current_api_type: Optional[APIType] = None
 
     def set_openai_api_key(self, api_key: str) -> bool:
         """
@@ -42,9 +39,8 @@ class TextProcessor:
         """
         success = self.openai_model.set_api_key(api_key)
         if success:
-            self.use_openai = True
             # APIキーが設定されたら、このAPIタイプを現在の選択に
-            self.current_api_type = "openai"
+            self.current_api_type = APIType.OPENAI
         return success
 
     def set_gemini_api_key(self, api_key: str) -> bool:
@@ -59,39 +55,38 @@ class TextProcessor:
         """
         success = self.gemini_model.set_api_key(api_key)
         if success:
-            self.use_gemini = True
             # APIキーが設定されたら、このAPIタイプを現在の選択に
-            self.current_api_type = "gemini"
+            self.current_api_type = APIType.GEMINI
         return success
 
-    def set_api_type(self, api_type: str) -> bool:
+    def set_api_type(self, api_type: APIType) -> bool:
         """
         使用するAPIタイプを設定します。
 
         Args:
-            api_type (str): "openai" または "gemini"
+            api_type (APIType): APIType.OPENAI または APIType.GEMINI
 
         Returns:
             bool: 設定が成功したかどうか
         """
-        if api_type not in ["openai", "gemini"]:
+        if not isinstance(api_type, APIType):
             return False
 
         # APIキーが設定されているか確認
-        if api_type == "openai" and not self.use_openai:
+        if api_type == APIType.OPENAI and not self.openai_model.has_api_key():
             return False
-        if api_type == "gemini" and not self.use_gemini:
+        if api_type == APIType.GEMINI and not self.gemini_model.has_api_key():
             return False
 
         self.current_api_type = api_type
         return True
 
-    def get_current_api_type(self) -> str:
+    def get_current_api_type(self) -> Optional[APIType]:
         """
         現在選択されているAPIタイプを取得します。
 
         Returns:
-            str: "openai" または "gemini"
+            Optional[APIType]: 現在のAPIタイプ、設定されていない場合はNone
         """
         return self.current_api_type
 
@@ -227,9 +222,11 @@ class TextProcessor:
         logger.info(f"現在のポッドキャストモード: {current_mode.name}")
 
         # 現在選択されているAPIに基づいてテキスト生成
-        if self.current_api_type == "openai" and self.use_openai:
+        if self.current_api_type == APIType.OPENAI and self.openai_model.has_api_key():
             result = self.openai_model.generate_text(prompt)
-        elif self.current_api_type == "gemini" and self.use_gemini:
+        elif (
+            self.current_api_type == APIType.GEMINI and self.gemini_model.has_api_key()
+        ):
             result = self.gemini_model.generate_text(prompt)
         else:
             return "Error: No API key is set or valid API type is not selected."
@@ -274,13 +271,21 @@ class TextProcessor:
             logger.info(f"現在のポッドキャストモード: {current_mode.name}")
 
             # 現在のAPIタイプに基づいて適切なAPIが設定されているか確認
-            if self.current_api_type == "openai" and self.use_openai:
+            if (
+                self.current_api_type == APIType.OPENAI
+                and self.openai_model.has_api_key()
+            ):
                 podcast_text = self.generate_podcast_conversation(cleaned_text)
-            elif self.current_api_type == "gemini" and self.use_gemini:
+            elif (
+                self.current_api_type == APIType.GEMINI
+                and self.gemini_model.has_api_key()
+            ):
                 podcast_text = self.generate_podcast_conversation(cleaned_text)
             else:
                 api_name = (
-                    "OpenAI" if self.current_api_type == "openai" else "Google Gemini"
+                    self.current_api_type.display_name
+                    if self.current_api_type
+                    else "API"
                 )
                 podcast_text = (
                     f"{api_name} API key is not set. Please enter your API key."
@@ -325,10 +330,12 @@ class TextProcessor:
         Returns:
             dict: トークン使用状況を含む辞書
         """
-        if self.current_api_type == "openai":
+        if self.current_api_type == APIType.OPENAI:
             return self.openai_model.get_last_token_usage()
-        else:
+        elif self.current_api_type == APIType.GEMINI:
             return self.gemini_model.get_last_token_usage()
+        else:
+            return {}
 
     def set_model_name(self, model_name: str) -> bool:
         """
@@ -340,10 +347,12 @@ class TextProcessor:
         Returns:
             bool: 設定が成功したかどうか
         """
-        if self.current_api_type == "openai":
+        if self.current_api_type == APIType.OPENAI:
             return self.openai_model.set_model_name(model_name)
-        else:
+        elif self.current_api_type == APIType.GEMINI:
             return self.gemini_model.set_model_name(model_name)
+        else:
+            return False
 
     def get_current_model(self) -> str:
         """
@@ -352,10 +361,12 @@ class TextProcessor:
         Returns:
             str: 現在のモデル名
         """
-        if self.current_api_type == "openai":
+        if self.current_api_type == APIType.OPENAI:
             return self.openai_model.model_name
-        else:
+        elif self.current_api_type == APIType.GEMINI:
             return self.gemini_model.model_name
+        else:
+            return ""
 
     def get_available_models(self) -> List[str]:
         """
@@ -364,10 +375,12 @@ class TextProcessor:
         Returns:
             List[str]: 利用可能なモデル名のリスト
         """
-        if self.current_api_type == "openai":
+        if self.current_api_type == APIType.OPENAI:
             return self.openai_model.get_available_models()
-        else:
+        elif self.current_api_type == APIType.GEMINI:
             return self.gemini_model.get_available_models()
+        else:
+            return []
 
     def set_max_tokens(self, max_tokens: int) -> bool:
         """
@@ -379,10 +392,12 @@ class TextProcessor:
         Returns:
             bool: 設定が成功したかどうか
         """
-        if self.current_api_type == "openai":
+        if self.current_api_type == APIType.OPENAI:
             return self.openai_model.set_max_tokens(max_tokens)
-        else:
+        elif self.current_api_type == APIType.GEMINI:
             return self.gemini_model.set_max_tokens(max_tokens)
+        else:
+            return False
 
     def get_max_tokens(self) -> int:
         """
@@ -391,7 +406,9 @@ class TextProcessor:
         Returns:
             int: 現在の最大トークン数
         """
-        if self.current_api_type == "openai":
+        if self.current_api_type == APIType.OPENAI:
             return self.openai_model.get_max_tokens()
-        else:
+        elif self.current_api_type == APIType.GEMINI:
             return self.gemini_model.get_max_tokens()
+        else:
+            return 0

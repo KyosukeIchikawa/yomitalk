@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import gradio as gr
 
+from yomitalk.common import APIType
 from yomitalk.common.character import DISPLAY_NAMES
 from yomitalk.components.audio_generator import AudioGenerator
 from yomitalk.components.content_extractor import ContentExtractor
@@ -53,11 +54,11 @@ class PaperPodcastApp:
             session_temp_dir=self.session_manager.get_talk_temp_dir(),
         )
 
-        # 現在選択されているLLMタイプ
-        self.current_llm_type = "gemini"
+        # 現在選択されているLLMタイプ（デフォルトはGemini）
+        self.current_llm_type = APIType.GEMINI
 
         # TextProcessorのAPI種別も初期設定
-        self.text_processor.set_api_type("gemini")
+        self.text_processor.set_api_type(APIType.GEMINI)
 
     @property
     def current_podcast_mode(self) -> PodcastMode:
@@ -99,25 +100,19 @@ class PaperPodcastApp:
         success = self.text_processor.set_gemini_api_key(api_key)
         logger.debug(f"Gemini API key set: {success}")
 
-    def switch_llm_type(self, llm_type: str) -> None:
+    def switch_llm_type(self, api_type: APIType) -> None:
         """
         LLMタイプを切り替えます。
 
         Args:
-            llm_type (str): "openai" または "gemini"
+            api_type (APIType): APIType.OPENAI または APIType.GEMINI
         """
-        if llm_type not in ["openai", "gemini"]:
-            logger.warning(f"Invalid LLM type: {llm_type}")
-            return
-
-        success = self.text_processor.set_api_type(llm_type)
+        success = self.text_processor.set_api_type(api_type)
         if success:
-            self.current_llm_type = llm_type
-            api_name = "OpenAI" if llm_type == "openai" else "Google Gemini"
-            logger.debug(f"LLM type switched to {api_name}")
+            self.current_llm_type = api_type
+            logger.debug(f"LLM type switched to {api_type.display_name}")
         else:
-            api_name = "OpenAI" if llm_type == "openai" else "Google Gemini"
-            logger.warning(f"{api_name} API key not set")
+            logger.warning(f"{api_type.display_name} API key not set")
 
     def extract_file_text(self, file_obj) -> str:
         """
@@ -154,14 +149,14 @@ class PaperPodcastApp:
 
         # Check if API key is set
         if (
-            self.current_llm_type == "openai"
-            and not self.text_processor.openai_model.api_key
+            self.current_llm_type == APIType.OPENAI
+            and not self.text_processor.openai_model.has_api_key()
         ):
             logger.warning("Podcast text generation: OpenAI API key not set")
             return "OpenAI API key is not set. Please configure it in the Settings tab."
         elif (
-            self.current_llm_type == "gemini"
-            and not self.text_processor.gemini_model.api_key
+            self.current_llm_type == APIType.GEMINI
+            and not self.text_processor.gemini_model.has_api_key()
         ):
             logger.warning("Podcast text generation: Gemini API key not set")
             return "Google Gemini API key is not set. Please configure it in the Settings tab."
@@ -354,10 +349,10 @@ class PaperPodcastApp:
         )
         has_api_key = False
 
-        if self.current_llm_type == "openai":
-            has_api_key = bool(self.text_processor.openai_model.api_key)
-        elif self.current_llm_type == "gemini":
-            has_api_key = bool(self.text_processor.gemini_model.api_key)
+        if self.current_llm_type == APIType.OPENAI:
+            has_api_key = self.text_processor.openai_model.has_api_key()
+        elif self.current_llm_type == APIType.GEMINI:
+            has_api_key = self.text_processor.gemini_model.has_api_key()
 
         is_enabled = has_text and has_api_key
 
@@ -378,7 +373,6 @@ class PaperPodcastApp:
             title="Yomitalk",
             css="footer {display: none !important;}",
             theme=gr.themes.Soft(),
-            pwa=True,  # Progressive Web App（インストール可能）を有効化
         )
 
         # アプリケーション全体でキューイングを有効化
@@ -702,12 +696,12 @@ class PaperPodcastApp:
 
             # タブ切り替え時のLLMタイプ変更
             gemini_tab.select(
-                fn=lambda: self.switch_llm_type("gemini"),
+                fn=lambda: self.switch_llm_type(APIType.GEMINI),
                 outputs=[],
             )
 
             openai_tab.select(
-                fn=lambda: self.switch_llm_type("openai"),
+                fn=lambda: self.switch_llm_type(APIType.OPENAI),
                 outputs=[],
             )
 
@@ -1005,10 +999,10 @@ class PaperPodcastApp:
         )
         has_api_key = False
 
-        if self.current_llm_type == "openai":
-            has_api_key = bool(self.text_processor.openai_model.api_key)
-        elif self.current_llm_type == "gemini":
-            has_api_key = bool(self.text_processor.gemini_model.api_key)
+        if self.current_llm_type == APIType.OPENAI:
+            has_api_key = self.text_processor.openai_model.has_api_key()
+        elif self.current_llm_type == APIType.GEMINI:
+            has_api_key = self.text_processor.gemini_model.has_api_key()
 
         is_enabled = has_text and has_api_key
 
@@ -1063,11 +1057,7 @@ class PaperPodcastApp:
         total_tokens = token_usage.get("total_tokens", math.nan)
 
         # API名を取得
-        api_name = (
-            "OpenAI API"
-            if self.text_processor.current_api_type == "openai"
-            else "Google Gemini API"
-        )
+        api_name = f"{self.text_processor.current_api_type.display_name if self.text_processor.current_api_type else 'API'} API"
 
         html = f"""
         <div style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-top: 10px;">
@@ -1255,6 +1245,7 @@ def main():
         favicon_path="assets/favicon.ico",
         inbrowser=inbrowser,
         quiet=False,  # デバッグ情報表示
+        pwa=True,  # Progressive Web App（インストール可能）を有効化
     )
 
 
