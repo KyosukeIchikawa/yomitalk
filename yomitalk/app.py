@@ -378,6 +378,7 @@ class PaperPodcastApp:
             title="Yomitalk",
             css="footer {display: none !important;}",
             theme=gr.themes.Soft(),
+            pwa=True,  # Progressive Web App（インストール可能）を有効化
         )
 
         # アプリケーション全体でキューイングを有効化
