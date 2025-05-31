@@ -33,11 +33,11 @@ def application_is_running(page: Page, app_environment):
     # 重要なUI要素が表示されるのを待つ - より具体的なセレクターを使用
     try:
         # Gradioアプリの主要コンテナが表示されるのを待つ
-        page.wait_for_selector(".gradio-container, #root, main", timeout=10000)
+        page.wait_for_selector(".gradio-container, #root, main", timeout=5000)
         logger.debug("Gradio container found")
 
         # アプリケーション固有の要素が表示されるのを待つ
-        page.wait_for_selector("h1, h2, .gr-button", timeout=10000)
+        page.wait_for_selector("h1, h2, .gr-button", timeout=5000)
         logger.debug("Main UI elements found")
 
         # アプリケーションが完全にロードされたことを確認
@@ -45,7 +45,7 @@ def application_is_running(page: Page, app_environment):
         page.wait_for_function(
             "() => document.readyState === 'complete' && "
             "(document.querySelector('h1') || document.querySelector('h2') || document.querySelector('.gr-button'))",
-            timeout=15000,
+            timeout=8000,
         )
         logger.debug("Application fully loaded")
 
