@@ -8,7 +8,7 @@ import shutil
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import jinja2
 
@@ -70,52 +70,42 @@ class PodcastMode(Enum):
 class PromptManager:
     """Manages templates and prompt generation for podcast conversations."""
 
-    def __init__(
-        self,
-        template_dir: str = "yomitalk/templates",
-    ):
-        """Initialize the PromptManager.
+    TEMPLATE_DIR = Path("yomitalk/templates")
+    TEMPLATE_MAPPING = {
+        PodcastMode.STANDARD: "paper_to_podcast.j2",
+        PodcastMode.SECTION_BY_SECTION: "section_by_section.j2",
+    }
+    DEFAULT_DOCUMENT_TYPE = DocumentType.PAPER
+    DEFAULT_MODE = PodcastMode.SECTION_BY_SECTION
+    DEFAULT_CHARACTER1 = Character.SHIKOKU_METAN
+    DEFAULT_CHARACTER2 = Character.ZUNDAMON
 
-        Args:
-            template_dir (str): Directory containing the templates.
-            char_mapping (Dict[str, str], optional): Character mapping.
-                Defaults to None.
-        """
-        self.template_dir = Path(template_dir)
-        self.current_document_type = DocumentType.PAPER
-        self.current_mode = (
-            PodcastMode.SECTION_BY_SECTION
-        )  # Change default to STANDARD for consistency
+    def __init__(self):
+        """Initialize the PromptManager."""
+        self.current_document_type = self.DEFAULT_DOCUMENT_TYPE
+        self.current_mode = self.DEFAULT_MODE
 
         # デフォルトのキャラクターマッピング
         self.char_mapping = {
-            "Character1": Character.SHIKOKU_METAN.display_name,
-            "Character2": Character.ZUNDAMON.display_name,
+            "Character1": self.DEFAULT_CHARACTER1.display_name,
+            "Character2": self.DEFAULT_CHARACTER2.display_name,
         }
 
-        # テンプレートマッピング：各モードに対応するテンプレートファイル
-        self.template_mapping = {
-            PodcastMode.STANDARD: "paper_to_podcast.j2",
-            PodcastMode.SECTION_BY_SECTION: "section_by_section.j2",
-        }
-
-        # テンプレートファイルの存在を確認
-        self._check_template_files()
-
-    def _check_template_files(self):
+    @classmethod
+    def check_template_files(cls):
         """Check if template files exist."""
         # 各モードのテンプレートファイルの存在を確認
-        for mode, template_file in self.template_mapping.items():
-            template_path = self.template_dir / template_file
+        for mode, template_file in cls.TEMPLATE_MAPPING.items():
+            template_path = cls.TEMPLATE_DIR / template_file
             if not template_path.exists():
                 logger.warning(
                     f"テンプレートファイルが見つかりません: {template_path} (モード: {mode.value})"
                 )
-            else:
-                logger.info(f"テンプレートファイル確認: {template_path} (モード: {mode.value})")
+        else:
+            logger.info(f"テンプレートファイル確認: {template_path} (モード: {mode.value})")
 
         # 共通ユーティリティテンプレートの存在を確認
-        utils_template = self.template_dir / "common_podcast_utils.j2"
+        utils_template = cls.TEMPLATE_DIR / "common_podcast_utils.j2"
         if not utils_template.exists():
             logger.warning(f"共通ユーティリティテンプレートファイルが見つかりません: {utils_template}")
         else:
@@ -165,15 +155,15 @@ class PromptManager:
             str: Template content as string.
         """
         # 現在のモードに基づいてテンプレートファイルを選択
-        template_file = self.template_mapping.get(self.current_mode)
+        template_file = self.TEMPLATE_MAPPING.get(self.current_mode)
 
         if not template_file:
             logger.warning(
                 f"モード '{self.current_mode.value}' に対応するテンプレートが見つかりません。デフォルトを使用します。"
             )
-            template_file = self.template_mapping[PodcastMode.STANDARD]
+            template_file = self.TEMPLATE_MAPPING[PodcastMode.STANDARD]
 
-        logger.info(f"テンプレートファイルパス: {self.template_dir / template_file}")
+        logger.info(f"テンプレートファイルパス: {self.TEMPLATE_DIR / template_file}")
         logger.info(
             f"使用するドキュメントタイプ: {self.current_document_type.name}, "
             f"モード: {self.current_mode.name}, "
@@ -181,7 +171,7 @@ class PromptManager:
         )
 
         try:
-            with open(self.template_dir / template_file, "r", encoding="utf-8") as f:
+            with open(self.TEMPLATE_DIR / template_file, "r", encoding="utf-8") as f:
                 template_content = f.read()
                 logger.info(f"テンプレート長: {len(template_content)} 文字")
                 return template_content
@@ -218,7 +208,7 @@ class PromptManager:
             os.makedirs(temp_templates_dir, exist_ok=True)
 
             # プロジェクトのテンプレートディレクトリから共通テンプレートをコピー
-            common_utils_src = self.template_dir / "common_podcast_utils.j2"
+            common_utils_src = self.TEMPLATE_DIR / "common_podcast_utils.j2"
             if common_utils_src.exists():
                 common_utils_dest = os.path.join(
                     temp_templates_dir, "common_podcast_utils.j2"
@@ -332,36 +322,6 @@ class PromptManager:
         """
         return self.char_mapping
 
-    @staticmethod
-    def get_default_document_type_info() -> Tuple[List[str], str]:
-        """Get default document type choices and default value.
 
-        Returns:
-            Tuple[List[str], str]: (choices, default_value)
-        """
-        choices = DocumentType.get_all_label_names()
-        default = DocumentType.PAPER.label_name
-        return choices, default
-
-    @staticmethod
-    def get_default_podcast_mode_info() -> Tuple[List[str], str]:
-        """Get default podcast mode choices and default value.
-
-        Returns:
-            Tuple[List[str], str]: (choices, default_value)
-        """
-        choices = PodcastMode.get_all_label_names()
-        default = PodcastMode.STANDARD.label_name
-        return choices, default
-
-    @staticmethod
-    def get_default_character_info() -> Tuple[List[str], str, str]:
-        """Get default character choices and default values.
-
-        Returns:
-            Tuple[List[str], str, str]: (choices, character1_default, character2_default)
-        """
-        choices = DISPLAY_NAMES
-        character1_default = Character.SHIKOKU_METAN.display_name
-        character2_default = Character.ZUNDAMON.display_name
-        return choices, character1_default, character2_default
+# Check if template files exist
+PromptManager.check_template_files()

@@ -82,32 +82,3 @@ class TestPromptManager:
         # Check that the formatted prompt is a string
         assert isinstance(formatted_prompt, str)
         assert len(formatted_prompt) > 0
-
-    def test_static_methods(self):
-        """Test static methods for default values."""
-        # Test document type static method
-        doc_choices, doc_default = PromptManager.get_default_document_type_info()
-        assert isinstance(doc_choices, list)
-        assert len(doc_choices) > 0
-        assert doc_default == "論文"
-        assert doc_default in doc_choices
-
-        # Test podcast mode static method
-        mode_choices, mode_default = PromptManager.get_default_podcast_mode_info()
-        assert isinstance(mode_choices, list)
-        assert len(mode_choices) > 0
-        assert mode_default == "概要解説"
-        assert mode_default in mode_choices
-
-        # Test character static method
-        (
-            char_choices,
-            char1_default,
-            char2_default,
-        ) = PromptManager.get_default_character_info()
-        assert isinstance(char_choices, list)
-        assert len(char_choices) > 0
-        assert char1_default == "四国めたん"
-        assert char2_default == "ずんだもん"
-        assert char1_default in char_choices
-        assert char2_default in char_choices

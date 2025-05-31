@@ -22,7 +22,7 @@ from yomitalk.components.content_extractor import ContentExtractor
 from yomitalk.components.text_processor import TextProcessor
 from yomitalk.models.gemini_model import GeminiModel
 from yomitalk.models.openai_model import OpenAIModel
-from yomitalk.prompt_manager import DocumentType, PodcastMode
+from yomitalk.prompt_manager import DocumentType, PodcastMode, PromptManager
 from yomitalk.utils.logger import logger
 from yomitalk.utils.session_manager import SessionManager
 
@@ -138,37 +138,6 @@ class PaperPodcastApp:
     def __init__(self):
         """Initialize the PaperPodcastApp."""
         logger.info("Initializing PaperPodcastApp for multi-user support")
-
-    @staticmethod
-    def get_static_openai_models() -> Tuple[List[str], str]:
-        """Get OpenAI models and default model without requiring UserSession."""
-        return OpenAIModel.AVAILABLE_MODELS.copy(), OpenAIModel.DEFAULT_MODEL
-
-    @staticmethod
-    def get_static_gemini_models() -> Tuple[List[str], str]:
-        """Get Gemini models and default model without requiring UserSession."""
-        return GeminiModel.AVAILABLE_MODELS.copy(), GeminiModel.DEFAULT_MODEL
-
-    @staticmethod
-    def get_static_document_types() -> Tuple[List[str], str]:
-        """Get document type choices and default without requiring UserSession."""
-        from yomitalk.prompt_manager import PromptManager
-
-        return PromptManager.get_default_document_type_info()
-
-    @staticmethod
-    def get_static_podcast_modes() -> Tuple[List[str], str]:
-        """Get podcast mode choices and default without requiring UserSession."""
-        from yomitalk.prompt_manager import PromptManager
-
-        return PromptManager.get_default_podcast_mode_info()
-
-    @staticmethod
-    def get_static_characters() -> Tuple[List[str], str, str]:
-        """Get character choices and defaults without requiring UserSession."""
-        from yomitalk.prompt_manager import PromptManager
-
-        return PromptManager.get_default_character_info()
 
     def create_user_session(self, request: gr.Request) -> UserSession:
         """Create a new user session with unique session ID."""
@@ -616,27 +585,16 @@ class PaperPodcastApp:
 
                 with gr.Column(variant="panel"):
                     gr.Markdown("### プロンプト設定")
-
-                    # Get document type info from PromptManager
-                    (
-                        doc_type_choices,
-                        doc_type_default,
-                    ) = self.get_static_document_types()
                     document_type_radio = gr.Radio(
-                        choices=doc_type_choices,
-                        value=doc_type_default,  # 後でユーザーセッションの値で更新される
+                        choices=DocumentType.get_all_label_names(),
+                        value=PromptManager.DEFAULT_DOCUMENT_TYPE.label_name,  # 後でユーザーセッションの値で更新される
                         label="ドキュメントタイプ",
                         elem_id="document_type_radio_group",
                     )
 
-                    # Get podcast mode info from PromptManager
-                    (
-                        podcast_mode_choices,
-                        podcast_mode_default,
-                    ) = self.get_static_podcast_modes()
                     podcast_mode_radio = gr.Radio(
-                        choices=podcast_mode_choices,
-                        value=podcast_mode_default,  # 後でユーザーセッションの値で更新される
+                        choices=PodcastMode.get_all_label_names(),
+                        value=PromptManager.DEFAULT_MODE.label_name,  # 後でユーザーセッションの値で更新される
                         label="生成モード",
                         elem_id="podcast_mode_radio_group",
                     )
@@ -644,20 +602,14 @@ class PaperPodcastApp:
                     # キャラクター設定
                     with gr.Accordion(label="キャラクター設定", open=False):
                         with gr.Row():
-                            # Get character info from PromptManager
-                            (
-                                char_choices,
-                                char1_default,
-                                char2_default,
-                            ) = self.get_static_characters()
                             character1_dropdown = gr.Dropdown(
-                                choices=char_choices,
-                                value=char1_default,  # 後でユーザーセッションの値で更新される
+                                choices=DISPLAY_NAMES,
+                                value=PromptManager.DEFAULT_CHARACTER1.display_name,  # 後でユーザーセッションの値で更新される
                                 label="キャラクター1（専門家役）",
                             )
                             character2_dropdown = gr.Dropdown(
-                                choices=char_choices,
-                                value=char2_default,  # 後でユーザーセッションの値で更新される
+                                choices=DISPLAY_NAMES,
+                                value=PromptManager.DEFAULT_CHARACTER2.display_name,  # 後でユーザーセッションの値で更新される
                                 label="キャラクター2（初学者役）",
                             )
 
@@ -675,14 +627,9 @@ class PaperPodcastApp:
                                         info="APIキーの取得: https://aistudio.google.com/app/apikey",
                                     )
                                 with gr.Column(scale=2):
-                                    # Get Gemini models from model class
-                                    (
-                                        gemini_models,
-                                        gemini_default,
-                                    ) = self.get_static_gemini_models()
                                     gemini_model_dropdown = gr.Dropdown(
-                                        choices=gemini_models,
-                                        value=gemini_default,
+                                        choices=GeminiModel.AVAILABLE_MODELS,
+                                        value=GeminiModel.DEFAULT_MODEL,
                                         label="モデル",
                                     )
                             with gr.Row():
@@ -704,14 +651,9 @@ class PaperPodcastApp:
                                         info="APIキーの取得: https://platform.openai.com/api-keys",
                                     )
                                 with gr.Column(scale=2):
-                                    # Get OpenAI models from model class
-                                    (
-                                        openai_models,
-                                        openai_default,
-                                    ) = self.get_static_openai_models()
                                     openai_model_dropdown = gr.Dropdown(
-                                        choices=openai_models,
-                                        value=openai_default,
+                                        choices=OpenAIModel.AVAILABLE_MODELS,
+                                        value=OpenAIModel.DEFAULT_MODEL,
                                         label="モデル",
                                     )
                             with gr.Row():
