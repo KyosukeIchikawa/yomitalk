@@ -104,7 +104,7 @@ class TestTextProcessor:
         with patch.object(
             self.text_processor.openai_model, "has_api_key", return_value=True
         ):
-            self.text_processor.current_api_type = APIType.OPENAI
+            self.text_processor.set_api_type(APIType.OPENAI)
 
             # 簡単なテキストでテスト実行
             result = self.text_processor.generate_podcast_conversation(
@@ -125,7 +125,7 @@ class TestTextProcessor:
         ) as mock_has_api_key:
             mock_openai.return_value = "OpenAI generated text"
             mock_has_api_key.return_value = True
-            self.text_processor.current_api_type = APIType.OPENAI
+            self.text_processor.set_api_type(APIType.OPENAI)
 
             # OpenAIによる生成をテスト
             result = self.text_processor.generate_podcast_conversation("Test")
@@ -141,7 +141,7 @@ class TestTextProcessor:
         ) as mock_has_api_key:
             mock_gemini.return_value = "Gemini generated text"
             mock_has_api_key.return_value = True
-            self.text_processor.current_api_type = APIType.GEMINI
+            self.text_processor.set_api_type(APIType.GEMINI)
 
             # GeminiによるPodcast会話生成をテスト
             result = self.text_processor.generate_podcast_conversation("Test")
@@ -150,7 +150,7 @@ class TestTextProcessor:
     def test_api_configuration_validation(self):
         """Test API configuration validation."""
         # APIキーが設定されていない場合のエラー処理テスト
-        self.text_processor.current_api_type = None
+        # 直接current_api_typeにアクセスする代わりにAPIキーなしの状態をテスト
 
         # エラーメッセージが返ることを確認
         result = self.text_processor.generate_podcast_conversation("Test")

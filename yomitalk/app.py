@@ -54,10 +54,7 @@ class PaperPodcastApp:
             session_temp_dir=self.session_manager.get_talk_temp_dir(),
         )
 
-        # 現在選択されているLLMタイプ（デフォルトはGemini）
-        self.current_llm_type = APIType.GEMINI
-
-        # TextProcessorのAPI種別も初期設定
+        # TextProcessorでAPI種別を一元管理（デフォルトはGemini）
         self.text_processor.set_api_type(APIType.GEMINI)
 
     @property
@@ -69,6 +66,11 @@ class PaperPodcastApp:
     def current_document_type(self) -> DocumentType:
         """現在選択されているドキュメントタイプを取得します。"""
         return self.text_processor.get_document_type()
+
+    @property
+    def current_llm_type(self) -> Optional[APIType]:
+        """現在のLLMタイプを取得します。"""
+        return self.text_processor.get_current_api_type()
 
     def set_openai_api_key(self, api_key: str):
         """
@@ -109,7 +111,6 @@ class PaperPodcastApp:
         """
         success = self.text_processor.set_api_type(api_type)
         if success:
-            self.current_llm_type = api_type
             logger.debug(f"LLM type switched to {api_type.display_name}")
         else:
             logger.warning(f"{api_type.display_name} API key not set")
