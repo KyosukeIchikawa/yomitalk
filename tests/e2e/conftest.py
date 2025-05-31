@@ -13,9 +13,25 @@ from playwright.sync_api import Browser, Page, sync_playwright
 
 from tests.utils.logger import test_logger as logger
 from tests.utils.test_environment import TestEnvironment
+from yomitalk.components.audio_generator import initialize_global_voicevox_manager
 
 # Test data path
 TEST_DATA_DIR = Path(__file__).parent.parent / "data"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def initialize_voicevox():
+    """Initialize global VOICEVOX manager for all tests."""
+    try:
+        manager = initialize_global_voicevox_manager()
+        if manager:
+            logger.info("Global VOICEVOX manager initialized successfully for tests")
+        else:
+            logger.warning("VOICEVOX manager initialization returned None")
+    except Exception as e:
+        logger.warning(f"VOICEVOX initialization failed in tests: {e}")
+    yield
+    # No cleanup needed as this is a global singleton
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -42,7 +58,7 @@ def app_environment() -> Generator[TestEnvironment, None, None]:
 
 
 @pytest.fixture(scope="function")
-def page(browser: Browser) -> Page:
+def page(browser: Browser) -> Generator[Page, None, None]:
     """
     Provides a test page fixture
 

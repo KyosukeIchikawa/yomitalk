@@ -41,6 +41,150 @@ except ImportError as e:
     VOICEVOX_CORE_AVAILABLE = False
 
 
+class VoicevoxCoreManager:
+    """Global VOICEVOX Core manager shared across all users."""
+
+    # VOICEVOX Core paths as constants (VOICEVOX version is managed in
+    # VOICEVOX_VERSION in Makefile)
+    VOICEVOX_BASE_PATH = Path("voicevox_core/voicevox_core")
+    VOICEVOX_MODELS_PATH = VOICEVOX_BASE_PATH / "models/vvms"
+    VOICEVOX_DICT_PATH = VOICEVOX_BASE_PATH / "dict/open_jtalk_dic_utf_8-1.11"
+    VOICEVOX_LIB_PATH = VOICEVOX_BASE_PATH / "onnxruntime/lib"
+
+    def __init__(self) -> None:
+        """Initialize global VOICEVOX Core manager."""
+        self.core_initialized = False
+        self.core_synthesizer: Optional[Synthesizer] = None
+
+        # Initialize VOICEVOX Core if available
+        if VOICEVOX_CORE_AVAILABLE:
+            self._init_voicevox_core()
+
+    def _init_voicevox_core(self) -> None:
+        """Initialize VOICEVOX Core if components are available."""
+        # Initialize flag is set to False by default
+        self.core_initialized = False
+
+        # 1. Check existence of required directories
+        if (
+            not self.VOICEVOX_MODELS_PATH.exists()
+            or not self.VOICEVOX_DICT_PATH.exists()
+        ):
+            logger.warning(
+                "Required VOICEVOX directories not found. Please run 'make download-voicevox-core'"
+            )
+            return
+
+        try:
+            # 2. Initialize OpenJtalk
+            open_jtalk = OpenJtalk(str(self.VOICEVOX_DICT_PATH))
+
+            # 3. Initialize ONNX Runtime
+            runtime_path = str(
+                self.VOICEVOX_LIB_PATH / "libvoicevox_onnxruntime.so.1.17.3"
+            )
+
+            if os.path.exists(runtime_path):
+                logger.info("Loading ONNX runtime from local path")
+                ort = Onnxruntime.load_once(filename=runtime_path)
+            else:
+                logger.info("Loading default ONNX runtime")
+                ort = Onnxruntime.load_once()
+
+            # 4. Initialize Synthesizer
+            self.core_synthesizer = Synthesizer(ort, open_jtalk)
+
+            # 5. Load required voice models
+            loaded_count = self._load_voice_models()
+
+            if loaded_count > 0:
+                logger.info(
+                    f"Successfully loaded {loaded_count}/{len(REQUIRED_MODEL_FILES)} voice models"
+                )
+                self.core_initialized = True
+            else:
+                logger.error("No voice models could be loaded")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize VOICEVOX Core: {e}")
+            self.core_synthesizer = None
+
+    def _load_voice_models(self) -> int:
+        """
+        Load required voice models for VOICEVOX.
+
+        Returns:
+            int: Number of successfully loaded models
+        """
+        if self.core_synthesizer is None:
+            return 0
+
+        loaded_count = 0
+
+        for model_file in REQUIRED_MODEL_FILES:
+            model_path = self.VOICEVOX_MODELS_PATH / model_file
+
+            if not model_path.exists():
+                logger.warning(f"Required model file not found: {model_file}")
+                continue
+
+            try:
+                with VoiceModelFile.open(str(model_path)) as model:
+                    self.core_synthesizer.load_voice_model(model)
+                    loaded_count += 1
+                    logger.debug(f"Loaded voice model: {model_file}")
+            except Exception as e:
+                logger.error(f"Failed to load model {model_file}: {e}")
+
+        return loaded_count
+
+    def text_to_speech(self, text: str, style_id: int) -> bytes:
+        """
+        Generate audio data from text using VOICEVOX Core.
+
+        Args:
+            text: Text to convert to speech
+            style_id: VOICEVOX style ID
+
+        Returns:
+            bytes: Generated WAV data
+        """
+        if not text.strip() or not self.core_synthesizer:
+            return b""
+
+        try:
+            # Generate audio data from text
+            wav_data: bytes = self.core_synthesizer.tts(text, style_id)
+            logger.debug(f"Audio generation completed: {len(wav_data) // 1024} KB")
+            return wav_data
+        except Exception as e:
+            logger.error(f"Audio generation error: {e}")
+            return b""
+
+    def is_available(self) -> bool:
+        """Check if VOICEVOX Core is available and initialized."""
+        return self.core_initialized
+
+
+# Global VOICEVOX Core manager instance
+# This will be initialized once when the application starts
+_global_voicevox_manager: Optional[VoicevoxCoreManager] = None
+
+
+def get_global_voicevox_manager() -> Optional[VoicevoxCoreManager]:
+    """Get the global VOICEVOX Core manager instance."""
+    return _global_voicevox_manager
+
+
+def initialize_global_voicevox_manager() -> VoicevoxCoreManager:
+    """Initialize the global VOICEVOX Core manager."""
+    global _global_voicevox_manager
+    if _global_voicevox_manager is None:
+        logger.info("Initializing global VOICEVOX Core manager")
+        _global_voicevox_manager = VoicevoxCoreManager()
+    return _global_voicevox_manager
+
+
 # 単語タイプを表すEnum
 class WordType(Enum):
     """単語タイプを表す列挙型"""
@@ -52,14 +196,7 @@ class WordType(Enum):
 
 
 class AudioGenerator:
-    """Class for generating audio from text."""
-
-    # VOICEVOX Core paths as constants (VOICEVOX version is managed in
-    # VOICEVOX_VERSION in Makefile)
-    VOICEVOX_BASE_PATH = Path("voicevox_core/voicevox_core")
-    VOICEVOX_MODELS_PATH = VOICEVOX_BASE_PATH / "models/vvms"
-    VOICEVOX_DICT_PATH = VOICEVOX_BASE_PATH / "dict/open_jtalk_dic_utf_8-1.11"
-    VOICEVOX_LIB_PATH = VOICEVOX_BASE_PATH / "onnxruntime/lib"
+    """Class for generating audio from text using global VOICEVOX Core manager."""
 
     # 単語タイプのリスト
     BE_VERBS = ["am", "is", "are", "was", "were", "be", "been", "being"]
@@ -173,95 +310,15 @@ class AudioGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
 
-        # VOICEVOX Core
-        self.core_initialized = False
-        self.core_synthesizer: Optional[Synthesizer] = None
-
-        # 音声生成の進捗情報を保持する変数
+        # Audio generation progress variables
         self.audio_generation_progress = 0.0
         self.final_audio_path: Optional[str] = None
 
-        # Initialize VOICEVOX Core if available
-        if VOICEVOX_CORE_AVAILABLE:
-            self._init_voicevox_core()
-
-    def _init_voicevox_core(self) -> None:
-        """Initialize VOICEVOX Core if components are available."""
-        # 初期化フラグはデフォルトでFalseに設定
-        self.core_initialized = False
-
-        # 1. 必要なディレクトリの存在確認
-        if (
-            not self.VOICEVOX_MODELS_PATH.exists()
-            or not self.VOICEVOX_DICT_PATH.exists()
-        ):
-            logger.warning(
-                "Required VOICEVOX directories not found. Please run 'make download-voicevox-core'"
-            )
-            return
-
-        try:
-            # 2. OpenJtalkの初期化
-            open_jtalk = OpenJtalk(str(self.VOICEVOX_DICT_PATH))
-
-            # 3. ONNX Runtimeの初期化
-            runtime_path = str(
-                self.VOICEVOX_LIB_PATH / "libvoicevox_onnxruntime.so.1.17.3"
-            )
-
-            if os.path.exists(runtime_path):
-                logger.info("Loading ONNX runtime from local path")
-                ort = Onnxruntime.load_once(filename=runtime_path)
-            else:
-                logger.info("Loading default ONNX runtime")
-                ort = Onnxruntime.load_once()
-
-            # 4. Synthesizerの初期化
-            self.core_synthesizer = Synthesizer(ort, open_jtalk)
-
-            # 5. 必要な音声モデルの読み込み
-            loaded_count = self._load_voice_models()
-
-            if loaded_count > 0:
-                logger.info(
-                    f"Successfully loaded {loaded_count}/{len(REQUIRED_MODEL_FILES)} voice models"
-                )
-                self.core_initialized = True
-            else:
-                logger.error("No voice models could be loaded")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize VOICEVOX Core: {e}")
-            self.core_synthesizer = None
-
-    def _load_voice_models(self) -> int:
-        """
-        Load required voice models for VOICEVOX.
-
-        Returns:
-            int: Number of successfully loaded models
-        """
-        if self.core_synthesizer is None:
-            return 0
-
-        loaded_count = 0
-
-        for model_file in REQUIRED_MODEL_FILES:
-            model_path = self.VOICEVOX_MODELS_PATH / model_file
-
-            if not model_path.exists():
-                logger.warning(f"Required model file not found: {model_file}")
-                continue
-
-            try:
-                with VoiceModelFile.open(str(model_path)) as model:
-                    self.core_synthesizer.load_voice_model(model)
-                    loaded_count += 1
-                    logger.debug(f"Loaded voice model: {model_file}")
-            except Exception as e:
-                logger.error(f"Failed to load model {model_file}: {e}")
-
-        return loaded_count
+    @property
+    def core_initialized(self) -> bool:
+        """Check if VOICEVOX Core is initialized via global manager."""
+        manager = get_global_voicevox_manager()
+        return manager is not None and manager.is_available()
 
     def _convert_english_to_katakana(self, text: str) -> str:
         """
@@ -715,23 +772,18 @@ class AudioGenerator:
 
     def _text_to_speech(self, text: str, style_id: int) -> bytes:
         """
-        テキストから音声データを生成する
+        Generate audio data from text using global VOICEVOX Core manager.
 
         Args:
-            text: 音声に変換するテキスト
-            style_id: VOICEVOXのスタイルID
+            text: Text to convert to speech
+            style_id: VOICEVOX style ID
 
         Returns:
-            bytes: 生成されたWAVデータ
+            bytes: Generated WAV data
         """
-        if not text.strip() or not self.core_synthesizer:
+        manager = get_global_voicevox_manager()
+        if manager is None:
+            logger.error("Global VOICEVOX manager is not available")
             return b""
 
-        try:
-            # テキストから音声データを生成
-            wav_data: bytes = self.core_synthesizer.tts(text, style_id)
-            logger.debug(f"音声生成完了: {len(wav_data) // 1024} KB")
-            return wav_data
-        except Exception as e:
-            logger.error(f"音声生成エラー: {e}")
-            return b""
+        return manager.text_to_speech(text, style_id)

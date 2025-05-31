@@ -99,14 +99,19 @@ class TestAudioGenerator:
         assert hasattr(self.audio_generator, "_text_to_speech")
         assert callable(getattr(self.audio_generator, "_text_to_speech", None))
 
-        # モックを使ってコアが初期化されていてもいなくてもテストが実行されるようにする
-        self.audio_generator.core_synthesizer = MagicMock()
-        self.audio_generator.core_synthesizer.tts.return_value = b"dummy_wav_data"
+        # グローバルVOICEVOXマネージャーをモック
+        with patch(
+            "yomitalk.components.audio_generator.get_global_voicevox_manager"
+        ) as mock_get_manager:
+            mock_manager = MagicMock()
+            mock_manager.is_available.return_value = True
+            mock_manager.text_to_speech.return_value = b"dummy_wav_data"
+            mock_get_manager.return_value = mock_manager
 
-        # テスト実行
-        result = self.audio_generator._text_to_speech("テストテキスト", 1)
-        assert result == b"dummy_wav_data"
-        self.audio_generator.core_synthesizer.tts.assert_called_once_with("テストテキスト", 1)
+            # テスト実行
+            result = self.audio_generator._text_to_speech("テストテキスト", 1)
+            assert result == b"dummy_wav_data"
+            mock_manager.text_to_speech.assert_called_once_with("テストテキスト", 1)
 
     def test_audio_format_conversion(self):
         """オーディオフォーマット変換機能のテスト。"""

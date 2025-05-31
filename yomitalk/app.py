@@ -14,7 +14,10 @@ import gradio as gr
 
 from yomitalk.common import APIType
 from yomitalk.common.character import DISPLAY_NAMES
-from yomitalk.components.audio_generator import AudioGenerator
+from yomitalk.components.audio_generator import (
+    AudioGenerator,
+    initialize_global_voicevox_manager,
+)
 from yomitalk.components.content_extractor import ContentExtractor
 from yomitalk.components.text_processor import TextProcessor
 from yomitalk.models.gemini_model import GeminiModel
@@ -26,6 +29,11 @@ from yomitalk.utils.session_manager import SessionManager
 # Check for base directories
 os.makedirs("data/temp", exist_ok=True)
 os.makedirs("data/output", exist_ok=True)
+
+# Initialize global VOICEVOX Core manager once for all users
+# This is done at application startup, outside of any function
+logger.info("Initializing global VOICEVOX Core manager for all users")
+global_voicevox_manager = initialize_global_voicevox_manager()
 
 # E2E test mode for faster startup
 E2E_TEST_MODE = os.environ.get("E2E_TEST_MODE", "false").lower() == "true"
