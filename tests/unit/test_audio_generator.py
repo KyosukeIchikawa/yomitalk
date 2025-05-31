@@ -229,6 +229,7 @@ class TestAudioGenerator:
             ("AI技術", "AI技術"),
             ("Machine Learning入門", "マシンラーニング入門"),
             ("Vision-Language-Model", "ビジョンランゲージモデル"),
+            ("spacial awareness", "スペイシャルアウエアネス"),
         ],
     )
     def test_convert_english_to_katakana(self, text, expected):
