@@ -5,12 +5,11 @@ from pathlib import Path
 import pytest
 from pytest_bdd import given, parsers, then, when
 
+from yomitalk.app import UserSession
 from yomitalk.components.audio_generator import (
-    AudioGenerator,
     get_global_voicevox_manager,
     initialize_global_voicevox_manager,
 )
-from yomitalk.utils.session_manager import SessionManager
 
 
 @pytest.fixture
@@ -20,18 +19,17 @@ def test_context():
     class TestContext:
         def __init__(self):
             self.sessions = []
-            self.audio_generators = []
             self.availability_results = []
             self.generated_files = []
             self.test_texts = []
             self.generation_results = None
             self.concurrent_results = []
-            self.session_manager = None
+            self.user_session = None
             self.audio_generator = None
             self.manager_instance = None
             self.manager_count = 0
             self.cleaned_session = None
-            self.remaining_generators = []
+            self.remaining_sessions = []
 
     return TestContext()
 
@@ -56,27 +54,18 @@ def voicevox_core_available():
 def multiple_sessions_created(test_context):
     """Create multiple user sessions for testing."""
     test_context.sessions = []
-    test_context.audio_generators = []
 
     # Create 3 test sessions
     for i in range(3):
-        session_manager = SessionManager()
-        audio_generator = AudioGenerator(
-            session_output_dir=session_manager.get_output_dir(),
-            session_temp_dir=session_manager.get_talk_temp_dir(),
-        )
-        test_context.sessions.append(session_manager)
-        test_context.audio_generators.append(audio_generator)
+        user_session = UserSession(f"test_session_{i}")
+        test_context.sessions.append(user_session)
 
 
 @given("a user session with access to shared VOICEVOX")
 def session_with_shared_voicevox(test_context):
     """Create a single user session with access to shared VOICEVOX."""
-    test_context.session_manager = SessionManager()
-    test_context.audio_generator = AudioGenerator(
-        session_output_dir=test_context.session_manager.get_output_dir(),
-        session_temp_dir=test_context.session_manager.get_talk_temp_dir(),
-    )
+    test_context.user_session = UserSession("test_session_shared")
+    test_context.audio_generator = test_context.user_session.audio_generator
     assert test_context.audio_generator.core_initialized
 
 
@@ -84,7 +73,6 @@ def session_with_shared_voicevox(test_context):
 def multiple_active_sessions(test_context):
     """Create multiple active user sessions."""
     test_context.sessions = []
-    test_context.audio_generators = []
     test_context.test_texts = [
         "最初のユーザーのテキストです",
         "二番目のユーザーのテキストです",
@@ -93,33 +81,22 @@ def multiple_active_sessions(test_context):
 
     # Create 3 active sessions
     for i in range(3):
-        session_manager = SessionManager()
-        audio_generator = AudioGenerator(
-            session_output_dir=session_manager.get_output_dir(),
-            session_temp_dir=session_manager.get_talk_temp_dir(),
-        )
-        test_context.sessions.append(session_manager)
-        test_context.audio_generators.append(audio_generator)
+        user_session = UserSession(f"test_session_active_{i}")
+        test_context.sessions.append(user_session)
 
 
 @given("multiple user sessions are using shared VOICEVOX")
 def multiple_sessions_using_shared_voicevox(test_context):
     """Create multiple user sessions using shared VOICEVOX."""
     test_context.sessions = []
-    test_context.audio_generators = []
 
     # Create 3 test sessions
     for i in range(3):
-        session_manager = SessionManager()
-        audio_generator = AudioGenerator(
-            session_output_dir=session_manager.get_output_dir(),
-            session_temp_dir=session_manager.get_talk_temp_dir(),
-        )
-        test_context.sessions.append(session_manager)
-        test_context.audio_generators.append(audio_generator)
+        user_session = UserSession(f"test_session_shared_{i}")
+        test_context.sessions.append(user_session)
 
         # Verify each session can access shared VOICEVOX
-        assert audio_generator.core_initialized
+        assert user_session.audio_generator.core_initialized
 
 
 @given("the global VOICEVOX manager is running")
@@ -140,8 +117,8 @@ def application_starts():
 def each_session_checks_voicevox(test_context):
     """Check VOICEVOX availability for each session."""
     test_context.availability_results = []
-    for generator in test_context.audio_generators:
-        is_available = generator.core_initialized
+    for session in test_context.sessions:
+        is_available = session.audio_generator.core_initialized
         test_context.availability_results.append(is_available)
 
 
@@ -182,11 +159,11 @@ def all_users_generate_simultaneously(test_context):
             test_context.generation_results.put((user_id, False, str(e)))
 
     # Start threads for concurrent generation
-    for i, (generator, text) in enumerate(
-        zip(test_context.audio_generators, test_context.test_texts)
+    for i, (session, text) in enumerate(
+        zip(test_context.sessions, test_context.test_texts)
     ):
         thread = threading.Thread(
-            target=generate_audio_for_user, args=(generator, text, i)
+            target=generate_audio_for_user, args=(session.audio_generator, text, i)
         )
         threads.append(thread)
         thread.start()
@@ -213,7 +190,7 @@ def one_session_cleaned_up(test_context):
 
         # Store reference to check later
         test_context.cleaned_session = session_to_cleanup
-        test_context.remaining_generators = test_context.audio_generators[1:]
+        test_context.remaining_sessions = test_context.sessions[1:]
 
         # Cleanup
         session_to_cleanup.cleanup_session_data()
@@ -256,8 +233,8 @@ def all_sessions_use_same_instance(test_context):
     manager = get_global_voicevox_manager()
     # All generators should reference the same global manager
     if manager is not None:
-        for generator in test_context.audio_generators:
-            assert generator.core_initialized == manager.is_available()
+        for session in test_context.sessions:
+            assert session.audio_generator.core_initialized == manager.is_available()
 
 
 @then("no duplicate VOICEVOX initialization should occur")
@@ -357,8 +334,8 @@ def shared_voicevox_remains_available():
 @then("other user sessions should continue to work normally")
 def other_sessions_work_normally(test_context):
     """Verify other sessions continue to work normally."""
-    for generator in test_context.remaining_generators:
-        assert generator.core_initialized
+    for session in test_context.remaining_sessions:
+        assert session.audio_generator.core_initialized
 
 
 @then("no VOICEVOX reinitialization should occur")

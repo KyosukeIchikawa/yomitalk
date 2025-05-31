@@ -1,12 +1,12 @@
-"""Unit tests for SessionManager class."""
+"""Unit tests for UserSession class."""
 from pathlib import Path
 from unittest.mock import patch
 
-from yomitalk.utils.session_manager import SessionManager
+from yomitalk.app import UserSession
 
 
-class TestSessionManager:
-    """Test class for SessionManager."""
+class TestUserSession:
+    """Test class for UserSession."""
 
     def setup_method(self):
         """Set up test fixtures before each test method is run."""
@@ -19,68 +19,58 @@ class TestSessionManager:
         self.time_patch.stop()
 
     def test_initialization(self):
-        """Test that SessionManager initializes correctly."""
-        session_manager = SessionManager()
+        """Test that UserSession initializes correctly."""
+        user_session = UserSession("test_session_123")
 
-        # Check that a session ID was created
-        assert hasattr(session_manager, "session_id")
-        assert session_manager.session_id is not None
-        assert isinstance(session_manager.session_id, str)
-
-        # Check that the timestamp and unique ID were used
-        assert "1600000000" in session_manager.session_id
-
-    def test_get_session_id(self):
-        """Test getting the session ID."""
-        session_manager = SessionManager()
-        session_id = session_manager.get_session_id()
-
-        # Check that the returned session ID matches the internal one
-        assert session_id == session_manager.session_id
+        # Check that a session ID was set
+        assert hasattr(user_session, "session_id")
+        assert user_session.session_id is not None
+        assert isinstance(user_session.session_id, str)
+        assert user_session.session_id == "test_session_123"
 
     def test_get_output_dir(self):
         """Test getting the output directory path."""
-        session_manager = SessionManager()
-        output_dir = session_manager.get_output_dir()
+        user_session = UserSession("test_session_123")
+        output_dir = user_session.get_output_dir()
 
         # Check that the output directory path is correct
         assert isinstance(output_dir, Path)
         assert "data/output" in str(output_dir)
-        assert session_manager.session_id in str(output_dir)
+        assert "test_session_123" in str(output_dir)
 
     def test_get_temp_dir(self):
         """Test getting the temporary directory path."""
-        session_manager = SessionManager()
-        temp_dir = session_manager.get_temp_dir()
+        user_session = UserSession("test_session_123")
+        temp_dir = user_session.get_temp_dir()
 
         # Check that the temporary directory path is correct
         assert isinstance(temp_dir, Path)
         assert "data/temp" in str(temp_dir)
-        assert session_manager.session_id in str(temp_dir)
+        assert "test_session_123" in str(temp_dir)
 
     def test_get_talk_temp_dir(self):
         """Test getting the talk temporary directory path."""
-        session_manager = SessionManager()
-        temp_dir = session_manager.get_talk_temp_dir()
+        user_session = UserSession("test_session_123")
+        temp_dir = user_session.get_talk_temp_dir()
 
         # Check that the temporary directory path is correct
         assert isinstance(temp_dir, Path)
         assert "data/temp" in str(temp_dir)
         assert "talks" in str(temp_dir)
-        assert session_manager.session_id in str(temp_dir)
+        assert "test_session_123" in str(temp_dir)
 
     @patch("pathlib.Path.mkdir")
     def test_directory_creation(self, mock_mkdir):
         """Test directory creation in the manager."""
-        session_manager = SessionManager()
+        user_session = UserSession("test_session_123")
 
         # Reset the mock call count (since initialization already happened)
         mock_mkdir.reset_mock()
 
         # Get directories which should trigger mkdir
-        session_manager.get_output_dir()
-        session_manager.get_temp_dir()
-        session_manager.get_talk_temp_dir()
+        user_session.get_output_dir()
+        user_session.get_temp_dir()
+        user_session.get_talk_temp_dir()
 
         # Check that mkdir was called
         assert mock_mkdir.call_count >= 3

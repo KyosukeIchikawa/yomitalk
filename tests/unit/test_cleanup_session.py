@@ -1,7 +1,7 @@
 """Unit tests for session cleanup functionality."""
 import shutil
 
-from yomitalk.utils.session_manager import SessionManager
+from yomitalk.app import UserSession
 
 
 class TestSessionCleanup:
@@ -9,13 +9,13 @@ class TestSessionCleanup:
 
     def test_cleanup_session_data(self):
         """Test that cleanup_session_data properly removes session directories."""
-        # セットアップ: SessionManagerインスタンスを作成し、ディレクトリ構造を構築
-        manager = SessionManager()
+        # セットアップ: UserSessionインスタンスを作成し、ディレクトリ構造を構築
+        user_session = UserSession("test_session_cleanup")
 
         # テスト用のディレクトリを作成
-        temp_dir = manager.get_temp_dir()
-        output_dir = manager.get_output_dir()
-        talk_dir = manager.get_talk_temp_dir()
+        temp_dir = user_session.get_temp_dir()
+        output_dir = user_session.get_output_dir()
+        talk_dir = user_session.get_talk_temp_dir()
 
         # ファイルを作成してディレクトリが空でないようにする
         test_file1 = temp_dir / "test.txt"
@@ -38,7 +38,7 @@ class TestSessionCleanup:
         assert test_file3.exists()
 
         # 実行: クリーンアップメソッドを呼び出す
-        success = manager.cleanup_session_data()
+        success = user_session.cleanup_session_data()
 
         # 検証: ディレクトリが正常に削除されたことを確認
         assert success is True
@@ -47,10 +47,10 @@ class TestSessionCleanup:
 
     def test_cleanup_nonexistent_directories(self):
         """Test that cleanup handles non-existent directories gracefully."""
-        # セットアップ: SessionManagerインスタンスを作成
-        manager = SessionManager()
-        temp_dir = manager.get_temp_dir()
-        output_dir = manager.get_output_dir()
+        # セットアップ: UserSessionインスタンスを作成
+        user_session = UserSession("test_session_nonexistent")
+        temp_dir = user_session.get_temp_dir()
+        output_dir = user_session.get_output_dir()
 
         # 事前にディレクトリを削除
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -61,7 +61,7 @@ class TestSessionCleanup:
         assert not output_dir.exists()
 
         # 実行: クリーンアップメソッドを呼び出す
-        success = manager.cleanup_session_data()
+        success = user_session.cleanup_session_data()
 
         # 検証: エラーなしで完了していること
         assert success is True
