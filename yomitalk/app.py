@@ -825,11 +825,9 @@ class PaperPodcastApp:
                     supported_extensions = ContentExtractor.SUPPORTED_EXTENSIONS
 
                     # Step 1: Content Extraction (Left: File, Right: URL)
-                    gr.Markdown("#### 1. コンテンツ抽出")
+                    gr.Markdown("### 解説対象テキストの作成（ファイル抽出 or Webページ抽出 or テキストを直接編集）")
                     with gr.Row(equal_height=True):
                         with gr.Column():
-                            gr.Markdown("**ファイルから抽出**")
-                            # ファイルをアップロードするコンポーネント
                             file_input = gr.File(
                                 file_types=supported_extensions,
                                 type="filepath",
@@ -841,12 +839,10 @@ class PaperPodcastApp:
                             )
 
                         with gr.Column():
-                            gr.Markdown("**Webページから抽出**")
-                            # URL入力コンポーネント
                             url_input = gr.Textbox(
                                 placeholder="https://example.com/page",
                                 label="WebページのURLを入力",
-                                info="YouTube動画、Wikipedia記事、RSS/Atomフィード、Bing検索結果なども抽出可能",
+                                info="YouTube動画、Wikipedia記事なども抽出可能",
                                 lines=2,
                             )
                             url_extract_btn = gr.Button(
@@ -854,14 +850,14 @@ class PaperPodcastApp:
                             )
 
                     # Step 2: Text Management Controls
-                    gr.Markdown("#### 2. テキスト管理")
-                    with gr.Row():
-                        auto_separator_checkbox = gr.Checkbox(
-                            label="追加時に自動で区切りを挿入",
-                            value=True,
-                            info="ファイル名やURLの情報を含む区切り線を自動挿入します",
-                        )
-                        with gr.Column(scale=2):
+                    with gr.Row(equal_height=True):
+                        with gr.Column(scale=2, min_width=300):
+                            auto_separator_checkbox = gr.Checkbox(
+                                label="テキスト抽出時に区切りを自動挿入",
+                                value=True,
+                                info="ファイル名やURLの情報を含む区切り線を自動挿入します",
+                            )
+                        with gr.Column(scale=1, min_width=150):
                             clear_text_btn = gr.ClearButton(
                                 components=[],  # 後でextracted_textを設定
                                 value="テキストをクリア",
