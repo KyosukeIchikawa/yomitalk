@@ -156,11 +156,6 @@ class UserSession:
                     logger.debug(f"Skipping non-directory: {item}")
                     continue
 
-                # セッションフォルダのみを処理（session_で始まるフォルダ名）
-                if not item.name.startswith("session_"):
-                    logger.debug(f"Skipping non-session directory: {item}")
-                    continue
-
                 # フォルダの更新日時を取得
                 mod_time = self._get_folder_modification_time(item)
                 if mod_time == 0:
