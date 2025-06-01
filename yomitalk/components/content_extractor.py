@@ -8,6 +8,7 @@ import io
 import os
 from pathlib import Path
 from typing import Any, Optional, Tuple
+from urllib.parse import urlparse
 
 from markitdown import MarkItDown, StreamInfo
 
@@ -24,6 +25,54 @@ class ContentExtractor:
     SUPPORTED_TEXT_EXTENSIONS = [".txt", ".md", ".text", ".tmp"]
     SUPPORTED_PDF_EXTENSIONS = [".pdf"]
     SUPPORTED_EXTENSIONS = SUPPORTED_TEXT_EXTENSIONS + SUPPORTED_PDF_EXTENSIONS
+
+    @classmethod
+    def is_url(cls, text: Optional[str]) -> bool:
+        """
+        Check if the input text is a valid HTTP/HTTPS URL.
+
+        Args:
+            text (Optional[str]): Text to check
+
+        Returns:
+            bool: True if text is a valid HTTP/HTTPS URL, False otherwise
+        """
+        if not text or not isinstance(text, str):
+            return False
+
+        try:
+            parsed = urlparse(text.strip())
+            # Only accept HTTP and HTTPS schemes for web content extraction
+            return bool(parsed.scheme in ["http", "https"] and parsed.netloc)
+        except Exception:
+            return False
+
+    @classmethod
+    def extract_from_url(cls, url: str) -> str:
+        """
+        Extract text content from a URL using MarkItDown web converters.
+
+        Args:
+            url (str): URL to extract content from
+
+        Returns:
+            str: Extracted text content
+        """
+        if not cls.is_url(url):
+            return "Invalid URL format."
+
+        try:
+            logger.debug(f"Processing URL: {url}")
+            result = _markdown_converter.convert(url)
+
+            # Extract the text content from the conversion result
+            markdown_content = result.text_content
+            logger.debug(f"URL successfully converted to Markdown: {url}")
+            return markdown_content or ""
+
+        except Exception as e:
+            logger.error(f"URL to Markdown conversion failed: {e}")
+            return f"URL conversion error: {str(e)}"
 
     @classmethod
     def extract_file_content(

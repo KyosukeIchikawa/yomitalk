@@ -37,8 +37,9 @@ def text_is_extracted(page: Page):
     Args:
         page: Playwright page object
     """
-    # Text extraction result should be displayed in the text box
-    text_area = page.locator("textarea").first
+    # Text extraction result should be displayed in the specific text box for extracted text
+    # Use the placeholder text to identify the correct textarea
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
 
     # Wait up to 10 seconds for text to appear in the textbox
     expect(text_area).not_to_be_empty(timeout=10000)

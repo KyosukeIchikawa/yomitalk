@@ -1,5 +1,5 @@
 """Unit tests for ContentExtractor class."""
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from yomitalk.components.content_extractor import ContentExtractor
 
@@ -61,3 +61,129 @@ class TestContentExtractor:
 
         # Mock a valid file object for later implementation
         # of more comprehensive tests as needed
+
+    def test_is_url_valid_urls(self):
+        """Test is_url method with valid URLs."""
+        valid_urls = [
+            "https://www.example.com",
+            "http://example.com",
+            "https://youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://en.wikipedia.org/wiki/Test",
+            "https://feeds.feedburner.com/example",
+            "https://www.bing.com/search?q=test",
+        ]
+
+        for url in valid_urls:
+            assert ContentExtractor.is_url(url) is True
+
+    def test_is_url_invalid_urls(self):
+        """Test is_url method with invalid URLs."""
+        invalid_urls = [
+            "",
+            "not a url",
+            "example.com",  # Missing scheme
+            "file://local/path",  # Local file path
+            "ftp://example.com",  # Non-HTTP scheme
+            "https://",  # Missing netloc
+            "://example.com",  # Missing scheme
+        ]
+
+        for url in invalid_urls:
+            assert ContentExtractor.is_url(url) is False
+
+    def test_is_url_edge_cases(self):
+        """Test is_url method with edge cases."""
+        # Test with whitespace
+        assert ContentExtractor.is_url("  https://example.com  ") is True
+
+        # Test with None input
+        assert ContentExtractor.is_url(None) is False
+
+    @patch("yomitalk.components.content_extractor._markdown_converter")
+    def test_extract_from_url_success(self, mock_converter):
+        """Test successful URL text extraction."""
+        # Mock the converter response
+        mock_result = MagicMock()
+        mock_result.text_content = "Extracted content from URL"
+        mock_converter.convert.return_value = mock_result
+
+        url = "https://example.com/article"
+        result = ContentExtractor.extract_from_url(url)
+
+        assert result == "Extracted content from URL"
+        mock_converter.convert.assert_called_once_with(url)
+
+    @patch("yomitalk.components.content_extractor._markdown_converter")
+    def test_extract_from_url_empty_content(self, mock_converter):
+        """Test URL extraction with empty content."""
+        # Mock the converter response with empty content
+        mock_result = MagicMock()
+        mock_result.text_content = None
+        mock_converter.convert.return_value = mock_result
+
+        url = "https://example.com/empty"
+        result = ContentExtractor.extract_from_url(url)
+
+        assert result == ""
+        mock_converter.convert.assert_called_once_with(url)
+
+    @patch("yomitalk.components.content_extractor._markdown_converter")
+    def test_extract_from_url_conversion_error(self, mock_converter):
+        """Test URL extraction with conversion error."""
+        # Mock the converter to raise an exception
+        mock_converter.convert.side_effect = Exception("Connection error")
+
+        url = "https://example.com/error"
+        result = ContentExtractor.extract_from_url(url)
+
+        assert "URL conversion error: Connection error" in result
+        mock_converter.convert.assert_called_once_with(url)
+
+    def test_extract_from_url_invalid_url(self):
+        """Test URL extraction with invalid URL."""
+        invalid_url = "not a url"
+        result = ContentExtractor.extract_from_url(invalid_url)
+
+        assert result == "Invalid URL format."
+
+    @patch("yomitalk.components.content_extractor._markdown_converter")
+    def test_extract_from_url_youtube(self, mock_converter):
+        """Test URL extraction from YouTube."""
+        # Mock the converter response for YouTube
+        mock_result = MagicMock()
+        mock_result.text_content = "YouTube video transcript: How to code"
+        mock_converter.convert.return_value = mock_result
+
+        youtube_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        result = ContentExtractor.extract_from_url(youtube_url)
+
+        assert result == "YouTube video transcript: How to code"
+        mock_converter.convert.assert_called_once_with(youtube_url)
+
+    @patch("yomitalk.components.content_extractor._markdown_converter")
+    def test_extract_from_url_wikipedia(self, mock_converter):
+        """Test URL extraction from Wikipedia."""
+        # Mock the converter response for Wikipedia
+        mock_result = MagicMock()
+        mock_result.text_content = "Wikipedia article about machine learning..."
+        mock_converter.convert.return_value = mock_result
+
+        wikipedia_url = "https://en.wikipedia.org/wiki/Machine_learning"
+        result = ContentExtractor.extract_from_url(wikipedia_url)
+
+        assert result == "Wikipedia article about machine learning..."
+        mock_converter.convert.assert_called_once_with(wikipedia_url)
+
+    @patch("yomitalk.components.content_extractor._markdown_converter")
+    def test_extract_from_url_rss_feed(self, mock_converter):
+        """Test URL extraction from RSS feed."""
+        # Mock the converter response for RSS feed
+        mock_result = MagicMock()
+        mock_result.text_content = "RSS feed content: Latest news articles..."
+        mock_converter.convert.return_value = mock_result
+
+        rss_url = "https://feeds.feedburner.com/example"
+        result = ContentExtractor.extract_from_url(rss_url)
+
+        assert result == "RSS feed content: Latest news articles..."
+        mock_converter.convert.assert_called_once_with(rss_url)

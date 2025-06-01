@@ -391,6 +391,20 @@ class PaperPodcastApp:
         logger.debug(f"Text extraction completed for session {user_session.session_id}")
         return text, user_session
 
+    def extract_url_text(
+        self, url: str, user_session: UserSession
+    ) -> Tuple[str, UserSession]:
+        """Extract text from a URL for the specific user session."""
+        if not url or not url.strip():
+            logger.warning("No URL provided for extraction")
+            return "Please enter a URL.", user_session
+
+        text = ContentExtractor.extract_from_url(url.strip())
+        logger.debug(
+            f"URL text extraction completed for session {user_session.session_id}"
+        )
+        return text, user_session
+
     def generate_podcast_text(
         self, text: str, user_session: UserSession
     ) -> Tuple[str, UserSession]:
@@ -766,16 +780,33 @@ class PaperPodcastApp:
                     # サポートしているファイル形式の拡張子を取得
                     supported_extensions = ContentExtractor.SUPPORTED_EXTENSIONS
 
-                    # ファイルをアップロードするコンポーネント
-                    file_input = gr.File(
-                        file_types=supported_extensions,
-                        type="filepath",
-                        label=f"解説対象ファイルをアップロード（{', '.join(supported_extensions)}）",
-                    )
+                    # ファイル入力とURL入力を横並びに配置（高さを揃える）
+                    with gr.Row(equal_height=True):
+                        with gr.Column():
+                            # ファイルをアップロードするコンポーネント
+                            file_input = gr.File(
+                                file_types=supported_extensions,
+                                type="filepath",
+                                label=f"解説対象ファイルをアップロード（{', '.join(supported_extensions)}）",
+                                height=120,
+                            )
 
+                        with gr.Column():
+                            # URL入力コンポーネント
+                            url_input = gr.Textbox(
+                                placeholder="https://example.com/page",
+                                label="WebページのURLを入力",
+                                info="YouTube動画、Wikipedia記事、RSS/Atomフィード、Bing検索結果なども抽出可能",
+                                lines=2,
+                            )
+                            url_extract_btn = gr.Button(
+                                "URLからテキストを抽出", variant="secondary", size="lg"
+                            )
+
+                    # 抽出結果を両方の下に配置
                     extracted_text = gr.Textbox(
                         label="解説対象テキスト（トークの元ネタ）",
-                        placeholder="ファイルをアップロードするか、直接ここにテキストを貼り付けてください...",
+                        placeholder="ファイルをアップロードするか、URLを入力するか、直接ここにテキストを貼り付けてください...",
                         lines=10,
                     )
 
@@ -952,6 +983,19 @@ class PaperPodcastApp:
                 outputs=[extracted_text, user_session],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="file_queue",  # ファイル処理用キューID
+            ).then(
+                fn=self.enable_process_button,
+                inputs=[extracted_text, user_session],
+                outputs=[process_btn],
+            )
+
+            # URL抽出ボタンのイベントハンドラー
+            url_extract_btn.click(
+                fn=self.extract_url_text,
+                inputs=[url_input, user_session],
+                outputs=[extracted_text, user_session],
+                concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
+                concurrency_id="url_queue",  # URL処理用キューID
             ).then(
                 fn=self.enable_process_button,
                 inputs=[extracted_text, user_session],

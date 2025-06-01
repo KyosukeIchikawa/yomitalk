@@ -9,6 +9,7 @@ from tests.e2e.steps.audio_generation_steps import *  # noqa: F401, F403
 from tests.e2e.steps.common_steps import *  # noqa: F401, F403
 from tests.e2e.steps.file_upload_steps import *  # noqa: F401, F403
 from tests.e2e.steps.script_generation_steps import *  # noqa: F401, F403
+from tests.e2e.steps.url_extraction_steps import *  # noqa: F401, F403
 from tests.e2e.steps.voicevox_sharing_steps import *  # noqa: F401, F403
 
 # Register feature scenarios
