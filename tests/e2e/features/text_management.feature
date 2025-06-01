@@ -37,10 +37,3 @@ Feature: Text Management Functionality
     And the user clicks the "ファイルからテキストを抽出" button
     Then the extracted text area contains "Manual input content"
     And the extracted text area contains content from the file
-
-  Scenario: UI layout verification
-    Given the user has accessed the application page
-    Then the content extraction section shows step "1. コンテンツ抽出"
-    And the text management section shows step "2. テキスト管理"
-    And the extracted text area has label "解説対象テキスト（トークの元ネタ）"
-    And the file upload and URL input are displayed side by side

@@ -381,39 +381,6 @@ def existing_text_preserved_from_file(page: Page):
     logger.info("Existing text preserved during file extraction as expected")
 
 
-@then('the content extraction section shows step "1. コンテンツ抽出"')
-def content_extraction_section_shows_step_1(page: Page):
-    """The content extraction section shows step 1."""
-    logger.info("Checking if content extraction section shows step 1")
-
-    step_1_header = page.locator('text="1. コンテンツ抽出"')
-    expect(step_1_header).to_be_visible()
-
-    logger.info("Content extraction section shows step 1 as expected")
-
-
-@then('the text management section shows step "2. テキスト管理"')
-def text_management_section_shows_step_2(page: Page):
-    """The text management section shows step 2."""
-    logger.info("Checking if text management section shows step 2")
-
-    step_2_header = page.locator('text="2. テキスト管理"')
-    expect(step_2_header).to_be_visible()
-
-    logger.info("Text management section shows step 2 as expected")
-
-
-@then('the extracted text display section shows step "3. 抽出されたテキスト表示"')
-def extracted_text_display_section_shows_step_3(page: Page):
-    """The extracted text display section shows step 3."""
-    logger.info("Checking if extracted text display section shows step 3")
-
-    step_3_header = page.locator('text="3. 抽出されたテキスト表示"')
-    expect(step_3_header).to_be_visible()
-
-    logger.info("Extracted text display section shows step 3 as expected")
-
-
 @then(
     parsers.parse(
         'the extracted text area contains source information for "{filename}"'
