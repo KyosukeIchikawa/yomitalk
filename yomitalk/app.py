@@ -380,30 +380,79 @@ class PaperPodcastApp:
         return user_session
 
     def extract_file_text(
-        self, file_obj, user_session: UserSession
-    ) -> Tuple[str, UserSession]:
-        """Extract text from a file for the specific user session."""
+        self,
+        file_obj,
+        existing_text: str,
+        add_separator: bool,
+        user_session: UserSession,
+    ) -> Tuple[None, str, UserSession]:
+        """Extract text from a file and append to existing text for the specific user session."""
         if file_obj is None:
             logger.warning("No file selected for extraction")
-            return "Please upload a file.", user_session
+            return None, existing_text, user_session
 
-        text = ContentExtractor.extract_text(file_obj)
-        logger.debug(f"Text extraction completed for session {user_session.session_id}")
-        return text, user_session
+        # Extract new text from file
+        new_text = ContentExtractor.extract_text(file_obj)
+
+        # Get source name from file
+        source_name = ContentExtractor.get_source_name_from_file(file_obj)
+
+        # Append to existing text with source information
+        combined_text = ContentExtractor.append_text_with_source(
+            existing_text, new_text, source_name, add_separator
+        )
+
+        logger.debug(
+            f"File text extraction completed for session {user_session.session_id}"
+        )
+        return (
+            None,
+            combined_text,
+            user_session,
+        )  # Return None for file_input to clear it
 
     def extract_url_text(
-        self, url: str, user_session: UserSession
+        self,
+        url: str,
+        existing_text: str,
+        add_separator: bool,
+        user_session: UserSession,
     ) -> Tuple[str, UserSession]:
-        """Extract text from a URL for the specific user session."""
+        """Extract text from a URL and append to existing text for the specific user session."""
         if not url or not url.strip():
             logger.warning("No URL provided for extraction")
-            return "Please enter a URL.", user_session
+            # Return error message for empty URL input
+            error_message = "Please enter a valid URL"
+            if existing_text.strip():
+                # If there's existing text, append error message with separator
+                if add_separator:
+                    combined_text = (
+                        existing_text.rstrip()
+                        + "\n\n---\n**Error**\n\n"
+                        + error_message
+                    )
+                else:
+                    combined_text = existing_text.rstrip() + "\n\n" + error_message
+            else:
+                # If no existing text, just show error message
+                combined_text = error_message
+            return combined_text, user_session
 
-        text = ContentExtractor.extract_from_url(url.strip())
+        # Extract new text from URL
+        new_text = ContentExtractor.extract_from_url(url.strip())
+
+        # Use URL as source name
+        source_name = url.strip()
+
+        # Append to existing text with source information
+        combined_text = ContentExtractor.append_text_with_source(
+            existing_text, new_text, source_name, add_separator
+        )
+
         logger.debug(
             f"URL text extraction completed for session {user_session.session_id}"
         )
-        return text, user_session
+        return combined_text, user_session
 
     def generate_podcast_text(
         self, text: str, user_session: UserSession
@@ -780,18 +829,24 @@ class PaperPodcastApp:
                     # サポートしているファイル形式の拡張子を取得
                     supported_extensions = ContentExtractor.SUPPORTED_EXTENSIONS
 
-                    # ファイル入力とURL入力を横並びに配置（高さを揃える）
+                    # Step 1: Content Extraction (Left: File, Right: URL)
+                    gr.Markdown("#### 1. コンテンツ抽出")
                     with gr.Row(equal_height=True):
                         with gr.Column():
+                            gr.Markdown("**ファイルから抽出**")
                             # ファイルをアップロードするコンポーネント
                             file_input = gr.File(
                                 file_types=supported_extensions,
                                 type="filepath",
-                                label=f"解説対象ファイルをアップロード（{', '.join(supported_extensions)}）",
+                                label=f"ファイルをアップロード（{', '.join(supported_extensions)}）",
                                 height=120,
+                            )
+                            file_extract_btn = gr.Button(
+                                "ファイルからテキストを抽出", variant="secondary", size="lg"
                             )
 
                         with gr.Column():
+                            gr.Markdown("**Webページから抽出**")
                             # URL入力コンポーネント
                             url_input = gr.Textbox(
                                 placeholder="https://example.com/page",
@@ -803,12 +858,31 @@ class PaperPodcastApp:
                                 "URLからテキストを抽出", variant="secondary", size="lg"
                             )
 
-                    # 抽出結果を両方の下に配置
+                    # Step 2: Text Management Controls
+                    gr.Markdown("#### 2. テキスト管理")
+                    with gr.Row():
+                        auto_separator_checkbox = gr.Checkbox(
+                            label="追加時に自動で区切りを挿入",
+                            value=True,
+                            info="ファイル名やURLの情報を含む区切り線を自動挿入します",
+                        )
+                        with gr.Column(scale=2):
+                            clear_text_btn = gr.ClearButton(
+                                components=[],  # 後でextracted_textを設定
+                                value="テキストをクリア",
+                                variant="secondary",
+                                size="sm",
+                            )
+
+                    # Step 3: Extracted Text Display
                     extracted_text = gr.Textbox(
                         label="解説対象テキスト（トークの元ネタ）",
                         placeholder="ファイルをアップロードするか、URLを入力するか、直接ここにテキストを貼り付けてください...",
                         lines=10,
                     )
+
+                    # ClearButtonにextracted_textを設定
+                    clear_text_btn.add([extracted_text])
 
                 with gr.Column(variant="panel"):
                     gr.Markdown("### プロンプト設定")
@@ -976,11 +1050,16 @@ class PaperPodcastApp:
             )
 
             # Set up event handlers
-            # ファイルがアップロードされたら自動的にテキストを抽出（大きなファイルの場合は時間がかかるのでキューイング）
-            file_input.change(
+            # ファイル抽出ボタンのイベントハンドラー
+            file_extract_btn.click(
                 fn=self.extract_file_text,
-                inputs=[file_input, user_session],
-                outputs=[extracted_text, user_session],
+                inputs=[
+                    file_input,
+                    extracted_text,
+                    auto_separator_checkbox,
+                    user_session,
+                ],
+                outputs=[file_input, extracted_text, user_session],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="file_queue",  # ファイル処理用キューID
             ).then(
@@ -992,7 +1071,12 @@ class PaperPodcastApp:
             # URL抽出ボタンのイベントハンドラー
             url_extract_btn.click(
                 fn=self.extract_url_text,
-                inputs=[url_input, user_session],
+                inputs=[
+                    url_input,
+                    extracted_text,
+                    auto_separator_checkbox,
+                    user_session,
+                ],
                 outputs=[extracted_text, user_session],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="url_queue",  # URL処理用キューID

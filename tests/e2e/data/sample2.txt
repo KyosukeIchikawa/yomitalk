@@ -1,0 +1,8 @@
+This is the content of the second test file for testing file accumulation.
+
+It contains different text than the first file to verify that:
+- Multiple file uploads work correctly
+- Content accumulation functions properly
+- Separators are inserted appropriately
+
+Second file content ends here.

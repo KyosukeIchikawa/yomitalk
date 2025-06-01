@@ -187,3 +187,77 @@ class TestContentExtractor:
 
         assert result == "RSS feed content: Latest news articles..."
         mock_converter.convert.assert_called_once_with(rss_url)
+
+    def test_append_text_with_source_no_separator(self):
+        """Test appending text without separator."""
+        existing_text = "Existing content"
+        new_text = "New content"
+        source_name = "test.txt"
+
+        result = ContentExtractor.append_text_with_source(
+            existing_text, new_text, source_name, add_separator=False
+        )
+
+        expected = "Existing content\n\nNew content"
+        assert result == expected
+
+    def test_append_text_with_source_with_separator(self):
+        """Test appending text with separator."""
+        existing_text = "Existing content"
+        new_text = "New content"
+        source_name = "test.txt"
+
+        result = ContentExtractor.append_text_with_source(
+            existing_text, new_text, source_name, add_separator=True
+        )
+
+        expected = "Existing content\n\n---\n**Source: test.txt**\n\nNew content"
+        assert result == expected
+
+    def test_append_text_with_source_empty_existing(self):
+        """Test appending to empty existing text."""
+        existing_text = ""
+        new_text = "New content"
+        source_name = "test.txt"
+
+        result = ContentExtractor.append_text_with_source(
+            existing_text, new_text, source_name, add_separator=True
+        )
+
+        expected = "**Source: test.txt**\n\nNew content"
+        assert result == expected
+
+    def test_append_text_with_source_empty_new_text(self):
+        """Test appending empty new text."""
+        existing_text = "Existing content"
+        new_text = ""
+        source_name = "test.txt"
+
+        result = ContentExtractor.append_text_with_source(
+            existing_text, new_text, source_name, add_separator=True
+        )
+
+        # Should return existing text unchanged when new text is empty
+        assert result == existing_text
+
+    def test_get_source_name_from_file(self):
+        """Test extracting source name from file object."""
+        # Mock file object with name attribute
+        mock_file = MagicMock()
+        mock_file.name = "/path/to/document.pdf"
+
+        result = ContentExtractor.get_source_name_from_file(mock_file)
+        assert result == "document.pdf"
+
+    def test_get_source_name_from_file_none(self):
+        """Test extracting source name from None file object."""
+        result = ContentExtractor.get_source_name_from_file(None)
+        assert result == "Unknown File"
+
+    def test_get_source_name_from_file_no_name(self):
+        """Test extracting source name from file object without name."""
+        mock_file = MagicMock()
+        del mock_file.name  # Remove name attribute
+
+        result = ContentExtractor.get_source_name_from_file(mock_file)
+        assert result == "Uploaded File"

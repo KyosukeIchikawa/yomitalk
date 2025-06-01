@@ -219,3 +219,69 @@ class ContentExtractor:
                 return f"PDF conversion error: {str(e)}"
         else:
             return f"Unsupported file type: {file_ext}. Supported types: {', '.join(cls.SUPPORTED_EXTENSIONS)}"
+
+    @classmethod
+    def append_text_with_source(
+        cls, existing_text: str, new_text: str, source: str, add_separator: bool = True
+    ) -> str:
+        """
+        Append new text to existing text with source information.
+
+        Args:
+            existing_text (str): Current text content
+            new_text (str): New text to append
+            source (str): Source name (filename or URL)
+            add_separator (bool): Whether to add separator with source info
+
+        Returns:
+            str: Combined text with source information
+        """
+        if not new_text or not new_text.strip():
+            return existing_text
+
+        # Prepare the new text content
+        content_to_append = new_text.strip()
+
+        if add_separator:
+            # Create markdown-style separator with source information
+            separator = f"\n\n---\n**Source: {source}**\n\n"
+            if existing_text.strip():
+                # If there's existing text, add separator before new content
+                result = existing_text.rstrip() + separator + content_to_append
+            else:
+                # If no existing text, add source info at the beginning
+                result = f"**Source: {source}**\n\n" + content_to_append
+        else:
+            # Just append with minimal spacing
+            if existing_text.strip():
+                result = existing_text.rstrip() + "\n\n" + content_to_append
+            else:
+                result = content_to_append
+
+        return result
+
+    @classmethod
+    def get_source_name_from_file(cls, file_obj: Any) -> str:
+        """
+        Extract source name from file object.
+
+        Args:
+            file_obj: Gradio file object
+
+        Returns:
+            str: Source name for display
+        """
+        if file_obj is None:
+            return "Unknown File"
+
+        # Handle list format
+        if isinstance(file_obj, list) and len(file_obj) > 0:
+            file_obj = file_obj[0]
+
+        if hasattr(file_obj, "name"):
+            # Get just the filename from the path
+            from pathlib import Path
+
+            return Path(file_obj.name).name
+
+        return "Uploaded File"

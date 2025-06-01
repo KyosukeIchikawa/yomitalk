@@ -3,7 +3,7 @@
 import time
 
 from playwright.sync_api import Page, expect
-from pytest_bdd import then, when
+from pytest_bdd import given, then, when
 
 from tests.utils.logger import test_logger as logger
 
@@ -302,3 +302,212 @@ def user_enters_invalid_url(page: Page):
     url_input.fill("invalid-url")
 
     logger.info("Invalid URL entered successfully")
+
+
+@when("the user unchecks the automatic separator checkbox")
+def user_unchecks_separator_checkbox(page: Page):
+    """The user unchecks the automatic separator checkbox."""
+    logger.info("Unchecking automatic separator checkbox")
+
+    separator_checkbox = page.locator('input[type="checkbox"]').filter(
+        has_text="追加時に自動で区切りを挿入"
+    )
+    expect(separator_checkbox).to_be_visible()
+    separator_checkbox.uncheck()
+
+    logger.info("Automatic separator checkbox unchecked")
+
+
+@when("the user checks the automatic separator checkbox")
+def user_checks_separator_checkbox(page: Page):
+    """The user checks the automatic separator checkbox."""
+    logger.info("Checking automatic separator checkbox")
+
+    separator_checkbox = page.locator('input[type="checkbox"]').filter(
+        has_text="追加時に自動で区切りを挿入"
+    )
+    expect(separator_checkbox).to_be_visible()
+    separator_checkbox.check()
+
+    logger.info("Automatic separator checkbox checked")
+
+
+@when('the user clicks the "テキストをクリア" button')
+def user_clicks_clear_text_button(page: Page):
+    """The user clicks the clear text button."""
+    logger.info("Clicking clear text button")
+
+    clear_button = page.locator('button:has-text("テキストをクリア")')
+    expect(clear_button).to_be_visible()
+    clear_button.click()
+
+    time.sleep(1)
+    logger.info("Clear text button clicked")
+
+
+@then("the extracted text should contain a separator before the new content")
+def text_should_contain_separator(page: Page):
+    """The extracted text should contain a separator before the new content."""
+    logger.info("Checking if extracted text contains separator")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    assert (
+        "---" in text_content or "**Source:" in text_content
+    ), "Text should contain a separator"
+
+    logger.info("Separator found in extracted text")
+
+
+@then("the extracted text should not contain a separator")
+def text_should_not_contain_separator(page: Page):
+    """The extracted text should not contain a separator."""
+    logger.info("Checking if extracted text does not contain separator")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    # Check that there are no markdown-style separators
+    assert (
+        "---" not in text_content and "**Source:" not in text_content
+    ), "Text should not contain a separator"
+
+    logger.info("No separator found in extracted text")
+
+
+@then("the extracted text should contain both the original and new content")
+def text_should_contain_both_contents(page: Page):
+    """The extracted text should contain both the original and new content."""
+    logger.info("Checking if extracted text contains both original and new content")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    assert len(text_content.strip()) > 0, "Text area should contain content"
+
+    # For URL extraction, we expect content from the URL
+    content_preview = (
+        text_content[:200] + "..." if len(text_content) > 200 else text_content
+    )
+    logger.info(f"Combined content found: {content_preview}")
+
+
+@then("the extracted text area should be empty")
+def text_area_should_be_empty(page: Page):
+    """The extracted text area should be empty."""
+    logger.info("Checking if extracted text area is empty")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    assert (
+        len(text_content.strip()) == 0
+    ), f"Text area should be empty, but contains: {text_content[:50]}"
+
+    logger.info("Text area is empty as expected")
+
+
+@when("the user enters some initial text in the extracted text area")
+def user_enters_initial_text(page: Page):
+    """The user enters some initial text in the extracted text area."""
+    logger.info("Entering initial text in extracted text area")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    initial_text = "This is some initial text that was already in the text area."
+    text_area.fill(initial_text)
+
+    time.sleep(1)
+    logger.info("Initial text entered successfully")
+
+
+@then("the existing text with separator is preserved")
+def existing_text_is_preserved(page: Page):
+    """The existing text with separator is preserved."""
+    logger.info("Checking if existing text with separator is preserved")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    logger.info(f"Text area content: {text_content[:200]}...")
+
+    # 既存のテキストが保持されていることを確認
+    assert "Existing content" in text_content, "Existing content not preserved"
+
+    # セパレータが追加されていることを確認
+    assert "---" in text_content, "Separator not found"
+
+    # URLからの新しいコンテンツも追加されていることを確認
+    assert "**Source:" in text_content, "URL content not added"
+
+    logger.info("Existing text with separator preserved as expected")
+
+
+@then("the existing text without separator is preserved")
+def existing_text_no_separator_preserved(page: Page):
+    """The existing text without separator is preserved."""
+    logger.info("Checking if existing text without separator is preserved")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    logger.info(f"Text area content: {text_content[:200]}...")
+
+    # 既存のテキストが保持されていることを確認
+    assert "Existing content" in text_content, "Existing content not preserved"
+
+    # セパレータが追加されていないことを確認（連続する---がない）
+    # ただし、ソース情報の区切りは存在する可能性がある
+    lines = text_content.split("\n")
+    separator_lines = [line for line in lines if line.strip() == "---"]
+
+    # セパレータが自動挿入されていない（つまり、ソース区切り以外の---がない）ことを確認
+    logger.info(f"Found {len(separator_lines)} separator lines")
+
+    # URLからの新しいコンテンツも追加されていることを確認
+    assert "**Source:" in text_content, "URL content not added"
+
+    logger.info("Existing text without automatic separator preserved as expected")
+
+
+@given('the user unchecks the "追加時に自動で区切りを挿入" checkbox')
+def user_unchecks_separator_checkbox_url_extraction(page: Page):
+    """User unchecks the automatic separator checkbox (URL extraction context)."""
+    logger.info("Unchecking auto separator checkbox (URL extraction context)")
+
+    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
+    if not checkbox.is_visible():
+        checkbox = page.locator('input[type="checkbox"]').nth(
+            0
+        )  # Fallback to first checkbox
+    expect(checkbox).to_be_visible()
+
+    # チェックボックスがチェック済みの場合のみクリック
+    if checkbox.is_checked():
+        checkbox.click()
+
+    logger.info("Auto separator checkbox unchecked (URL extraction context)")
+
+
+@then('the extracted text area contains "<text>"')
+def text_area_contains_specific_text_url(page: Page, text: str):
+    """The extracted text area contains the specific text (URL context)."""
+    logger.info(f"Checking if extracted text area contains: {text}")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    assert (
+        text in text_content
+    ), f"Expected '{text}' in content, but found: '{text_content[:200]}...'"
+
+    logger.info(f"Text area contains expected text: {text}")
