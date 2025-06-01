@@ -862,7 +862,7 @@ class PaperPodcastApp:
                                 components=[],  # 後でextracted_textを設定
                                 value="テキストをクリア",
                                 variant="secondary",
-                                size="sm",
+                                size="lg",
                             )
 
                     # Step 3: Extracted Text Display
