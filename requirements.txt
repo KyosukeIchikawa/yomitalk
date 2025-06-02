@@ -19,10 +19,7 @@ attrs==25.3.0
     # via
     #   outcome
     #   trio
-    #   wemake-python-styleguide
 autoflake==2.3.1
-    # via -r requirements.in
-autopep8==2.3.2
     # via -r requirements.in
 beautifulsoup4==4.13.4
     # via
@@ -89,9 +86,7 @@ filelock==3.18.0
     #   transformers
     #   virtualenv
 flake8==7.2.0
-    # via
-    #   -r requirements.in
-    #   wemake-python-styleguide
+    # via -r requirements.in
 flatbuffers==25.2.10
     # via onnxruntime
 fsspec==2025.5.1
@@ -289,7 +284,6 @@ platformdirs==4.3.8
     #   black
     #   pytoolconfig
     #   virtualenv
-    #   yapf
 playwright==1.52.0
     # via
     #   -r requirements.in
@@ -309,10 +303,7 @@ pyasn1==0.6.1
 pyasn1-modules==0.4.2
     # via google-auth
 pycodestyle==2.13.0
-    # via
-    #   -r requirements.in
-    #   autopep8
-    #   flake8
+    # via flake8
 pycparser==2.22
     # via cffi
 pydantic==2.11.5
@@ -333,9 +324,7 @@ pyflakes==3.3.2
     #   autoflake
     #   flake8
 pygments==2.19.1
-    # via
-    #   rich
-    #   wemake-python-styleguide
+    # via rich
 pyproject-hooks==1.2.0
     # via
     #   build
@@ -378,11 +367,8 @@ pyyaml==6.0.2
     #   huggingface-hub
     #   pre-commit
     #   transformers
-    #   xenon
 radon==6.0.1
-    # via
-    #   -r requirements.in
-    #   xenon
+    # via -r requirements.in
 regex==2024.11.6
     # via transformers
 reportlab==4.4.1
@@ -396,7 +382,6 @@ requests==2.32.3
     #   pytest-base-url
     #   transformers
     #   webdriver-manager
-    #   xenon
     #   youtube-transcript-api
 rich==14.0.0
     # via typer
@@ -506,16 +491,10 @@ websockets==15.0.1
     # via
     #   google-genai
     #   gradio-client
-wemake-python-styleguide==1.1.0
-    # via -r requirements.in
 wheel==0.45.1
     # via pip-tools
 wsproto==1.2.0
     # via trio-websocket
-xenon==0.9.3
-    # via -r requirements.in
-yapf==0.43.0
-    # via -r requirements.in
 youtube-transcript-api==1.0.3
     # via markitdown
 

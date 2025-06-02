@@ -1,6 +1,4 @@
 autoflake
-autopep8
-pycodestyle
 black
 e2k
 ffmpeg-python
@@ -35,6 +33,3 @@ torch>=2.2.0
 transformers>=4.40.0
 types-requests
 webdriver-manager
-wemake-python-styleguide
-xenon
-yapf
