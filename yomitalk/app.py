@@ -1214,7 +1214,7 @@ class PaperPodcastApp:
             audio_events = disable_btn_event.then(
                 fn=self.reset_audio_state_and_components,
                 inputs=[user_session],
-                outputs=[streaming_audio_output],
+                outputs=[streaming_audio_output, audio_output],
                 concurrency_id="audio_reset",
                 concurrency_limit=1,  # 同時実行数を1に制限
                 api_name="reset_audio_state",
@@ -1233,7 +1233,7 @@ class PaperPodcastApp:
 
             # 2. 波形表示用のコンポーネントを更新 (進捗表示とともに最終波形表示)
             # こちらは独立したイベントとして実行し、音声生成の進捗を表示してから最終ファイルを返す
-            wave_display_event = generate_btn.click(
+            wave_display_event = audio_events.then(
                 fn=self.wait_for_audio_completion,
                 inputs=[podcast_text, user_session],
                 outputs=[audio_output],
