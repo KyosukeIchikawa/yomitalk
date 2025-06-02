@@ -547,13 +547,17 @@ class PaperPodcastApp:
                 # 'part_'を含むものは部分音声ファイル、'audio_'から始まるものは最終結合ファイル
                 if "part_" in filename:
                     parts_paths.append(audio_path)
-                    logger.debug(f"ストリーム音声パーツ ({len(parts_paths)}): {audio_path}")
+                    logger.debug(
+                        f"ストリーム音声パーツ ({len(parts_paths)}): {audio_path}"
+                    )
                     yield audio_path  # ストリーミング再生用にyield
                     time.sleep(0.05)  # 連続再生のタイミング調整
                 elif filename.startswith("audio_"):
                     # 最終結合ファイルの場合
                     final_combined_path = audio_path
-                    logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
+                    logger.info(
+                        f"結合済み最終音声ファイルを受信: {final_combined_path}"
+                    )
 
             # 音声生成の完了処理
             self._finalize_audio_generation(
@@ -562,7 +566,9 @@ class PaperPodcastApp:
 
         except Exception as e:
             logger.error(f"Streaming audio generation exception: {str(e)}")
-            user_session.audio_generator.audio_generation_progress = 0.0  # エラー時は進捗をリセット
+            user_session.audio_generator.audio_generation_progress = (
+                0.0  # エラー時は進捗をリセット
+            )
             yield None
 
     def _finalize_audio_generation(
@@ -611,7 +617,9 @@ class PaperPodcastApp:
         """
         # 部分音声ファイルがある場合は最後のパートを使用
         if parts_paths:
-            logger.warning("結合音声ファイルを取得できなかったため、最後のパートを使用します")
+            logger.warning(
+                "結合音声ファイルを取得できなかったため、最後のパートを使用します"
+            )
             user_session.audio_generator.final_audio_path = parts_paths[-1]
             user_session.audio_generator.audio_generation_progress = 1.0
 
@@ -825,7 +833,9 @@ class PaperPodcastApp:
                     supported_extensions = ContentExtractor.SUPPORTED_EXTENSIONS
 
                     # Step 1: Content Extraction (Left: File, Right: URL)
-                    gr.Markdown("### 解説対象テキストの作成（ファイル抽出 or Webページ抽出 or テキストを直接編集）")
+                    gr.Markdown(
+                        "### 解説対象テキストの作成（ファイル抽出 or Webページ抽出 or テキストを直接編集）"
+                    )
                     with gr.Row(equal_height=True):
                         with gr.Column():
                             file_input = gr.File(
@@ -835,7 +845,9 @@ class PaperPodcastApp:
                                 height=120,
                             )
                             file_extract_btn = gr.Button(
-                                "ファイルからテキストを抽出", variant="secondary", size="lg"
+                                "ファイルからテキストを抽出",
+                                variant="secondary",
+                                size="lg",
                             )
 
                         with gr.Column():
@@ -969,7 +981,8 @@ class PaperPodcastApp:
 
                     # トークン使用状況の表示
                     token_usage_info = gr.HTML(
-                        "<div>トークン使用状況: まだ生成されていません</div>", elem_id="token-usage-info"
+                        "<div>トークン使用状況: まだ生成されていません</div>",
+                        elem_id="token-usage-info",
                     )
 
             with gr.Column():
@@ -1564,7 +1577,9 @@ class PaperPodcastApp:
                         progress(1.0, desc="⚠️ 音声生成に問題が発生しました")
                         return None
                     filesize = os.path.getsize(abs_path)
-                    logger.info(f"最終音声ファイルを返します: {abs_path} (サイズ: {filesize} bytes)")
+                    logger.info(
+                        f"最終音声ファイルを返します: {abs_path} (サイズ: {filesize} bytes)"
+                    )
                     progress(1.0, desc="✅ 音声ファイル取得完了!")
                     return abs_path
 
@@ -1584,7 +1599,9 @@ class PaperPodcastApp:
                     emoji = "🔊"
 
                 # 進捗を更新
-                progress(current_value, desc=f"{emoji} 音声生成中... {progress_percent}%")
+                progress(
+                    current_value, desc=f"{emoji} 音声生成中... {progress_percent}%"
+                )
 
             # 一定時間待機してから再チェック
             time.sleep(0.5)

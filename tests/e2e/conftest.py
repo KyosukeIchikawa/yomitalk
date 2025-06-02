@@ -3,6 +3,7 @@
 テスト環境の初期化とページオブジェクトを提供します。
 元々 tests/e2e/steps/conftest.py に分かれていた機能を統合しています。
 """
+
 import os
 import time
 from pathlib import Path

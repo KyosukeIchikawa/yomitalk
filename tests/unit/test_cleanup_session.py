@@ -1,4 +1,5 @@
 """Unit tests for session cleanup functionality."""
+
 import shutil
 
 from yomitalk.app import UserSession

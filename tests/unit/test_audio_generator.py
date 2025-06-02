@@ -1,4 +1,5 @@
 """Unit tests for AudioGenerator class."""
+
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -173,7 +174,10 @@ class TestAudioGenerator:
             ("were", WordType.BE_VERB),
             ("in", WordType.PREPOSITION),
             ("to", WordType.PREPOSITION),
-            ("for", WordType.CONJUNCTION),  # forは前置詞と接続詞の両方に含まれるが、ここでは接続詞としてテスト
+            (
+                "for",
+                WordType.CONJUNCTION,
+            ),  # forは前置詞と接続詞の両方に含まれるが、ここでは接続詞としてテスト
             ("and", WordType.CONJUNCTION),
             ("hello", WordType.OTHER),
             ("world", WordType.OTHER),

@@ -1,4 +1,5 @@
 """Unit tests for ContentExtractor class."""
+
 from unittest.mock import MagicMock, patch
 
 from yomitalk.components.content_extractor import ContentExtractor

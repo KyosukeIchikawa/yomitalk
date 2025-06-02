@@ -1,4 +1,5 @@
 """Module implementing test steps for podcast script generation functionality."""
+
 import os
 
 import pytest
@@ -67,7 +68,9 @@ def openai_api_key_is_set(page: Page):
         if success_msg.is_visible():
             logger.info("APIキーが正常に設定されました")
     else:
-        logger.info("APIキー入力欄が見つかりません。既に設定されているか、UIが変更されている可能性があります。")
+        logger.info(
+            "APIキー入力欄が見つかりません。既に設定されているか、UIが変更されている可能性があります。"
+        )
 
 
 @when('I click the "トーク原稿を生成" button')

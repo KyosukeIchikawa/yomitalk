@@ -2,6 +2,7 @@
 
 This file ensures that pytest-bdd can properly discover and run feature files.
 """
+
 import os
 
 from pytest_bdd import scenarios

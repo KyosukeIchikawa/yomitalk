@@ -35,7 +35,9 @@ class DocumentType(Enum):
         for doc_type in cls:
             if doc_type.label_name == label_name:
                 return doc_type
-        raise ValueError(f"ラベル名 '{label_name}' に該当するドキュメントタイプが見つかりません。")
+        raise ValueError(
+            f"ラベル名 '{label_name}' に該当するドキュメントタイプが見つかりません。"
+        )
 
     @classmethod
     def get_all_label_names(cls) -> List[str]:
@@ -59,7 +61,9 @@ class PodcastMode(Enum):
         for mode in cls:
             if mode.label_name == label_name:
                 return mode
-        raise ValueError(f"ラベル名 '{label_name}' に該当するポッドキャストモードが見つかりません。")
+        raise ValueError(
+            f"ラベル名 '{label_name}' に該当するポッドキャストモードが見つかりません。"
+        )
 
     @classmethod
     def get_all_label_names(cls) -> List[str]:
@@ -102,12 +106,16 @@ class PromptManager:
                     f"テンプレートファイルが見つかりません: {template_path} (モード: {mode.value})"
                 )
         else:
-            logger.info(f"テンプレートファイル確認: {template_path} (モード: {mode.value})")
+            logger.info(
+                f"テンプレートファイル確認: {template_path} (モード: {mode.value})"
+            )
 
         # 共通ユーティリティテンプレートの存在を確認
         utils_template = cls.TEMPLATE_DIR / "common_podcast_utils.j2"
         if not utils_template.exists():
-            logger.warning(f"共通ユーティリティテンプレートファイルが見つかりません: {utils_template}")
+            logger.warning(
+                f"共通ユーティリティテンプレートファイルが見つかりません: {utils_template}"
+            )
         else:
             logger.info(f"共通ユーティリティテンプレートファイル確認: {utils_template}")
 

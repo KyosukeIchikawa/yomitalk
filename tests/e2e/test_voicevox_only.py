@@ -3,6 +3,7 @@ VOICEVOX sharing tests - Backend only execution.
 
 This test module runs VOICEVOX sharing scenarios without requiring Playwright.
 """
+
 import pytest
 from pytest_bdd import scenarios
 

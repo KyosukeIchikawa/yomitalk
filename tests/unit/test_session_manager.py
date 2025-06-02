@@ -1,4 +1,5 @@
 """Unit tests for UserSession class."""
+
 from pathlib import Path
 from unittest.mock import patch
 

@@ -1,4 +1,5 @@
 """Module implementing common test steps shared across all scenarios."""
+
 from playwright.sync_api import Page, expect
 from pytest_bdd import given, then
 

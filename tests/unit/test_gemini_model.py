@@ -1,4 +1,5 @@
 """Test for GeminiModel class."""
+
 from unittest.mock import MagicMock, patch
 
 from yomitalk.models.gemini_model import GeminiModel
@@ -41,7 +42,9 @@ class TestGeminiModel:
         assert model.set_max_tokens(70000) is False
         assert model.max_tokens == 1000  # Should not change
         # Invalid type
-        assert model.set_max_tokens(int("0")) is False  # 0は無効な値なのでFalseが返るはず
+        assert (
+            model.set_max_tokens(int("0")) is False
+        )  # 0は無効な値なのでFalseが返るはず
         assert model.max_tokens == 1000  # Should not change
 
     def test_set_model_name(self):

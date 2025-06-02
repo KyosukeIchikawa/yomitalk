@@ -24,7 +24,9 @@ def is_romaji_readable(word: str) -> bool:
     """
     if not isinstance(word, str) or not word:  # 空文字列やNoneはFalse
         return False
-    if not re.fullmatch(r"[A-Z]+", word):  # 大文字アルファベット以外が含まれている場合はFalse
+    if not re.fullmatch(
+        r"[A-Z]+", word
+    ):  # 大文字アルファベット以外が含まれている場合はFalse
         return False
 
     # 単一の母音のケース（1文字の場合はパターン照合前に判定）

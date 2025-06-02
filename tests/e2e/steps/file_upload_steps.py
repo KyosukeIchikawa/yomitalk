@@ -61,7 +61,9 @@ def text_is_extracted(page: Page):
     """
     # Text extraction result should be displayed in the specific text box for extracted text
     # Use the placeholder text to identify the correct textarea
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator(
+        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
+    )
 
     # Wait up to 10 seconds for text to appear in the textbox
     expect(text_area).not_to_be_empty(timeout=10000)
@@ -138,7 +140,9 @@ def text_should_contain_file_content(page: Page):
 
     logger.info("Checking if extracted text contains file content")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator(
+        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
+    )
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -184,7 +188,9 @@ def text_should_accumulate_contents(page: Page):
 
     logger.info("Checking if extracted text accumulates content from multiple files")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator(
+        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
+    )
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -211,7 +217,9 @@ def text_extracted_with_source_separator(page: Page):
 
     logger.info("Checking if text is extracted with source separator")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator(
+        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
+    )
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -237,7 +245,9 @@ def text_extracted_without_separator(page: Page):
 
     logger.info("Checking if text is extracted without separator")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator(
+        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
+    )
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -299,7 +309,9 @@ def user_unchecks_separator_checkbox(page: Page):
 
     logger.info("Unchecking auto separator checkbox (file upload context)")
 
-    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
+    checkbox = page.locator(
+        'label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]'
+    )
     if not checkbox.is_visible():
         checkbox = page.locator('input[type="checkbox"]').nth(
             0

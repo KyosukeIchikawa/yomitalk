@@ -1,4 +1,5 @@
 """Unit tests for TextProcessor class."""
+
 from unittest.mock import MagicMock, patch
 
 from yomitalk.common import APIType

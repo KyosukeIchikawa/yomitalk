@@ -1,4 +1,5 @@
 """Unit tests for text utility functions."""
+
 import pytest
 
 from yomitalk.utils.text_utils import is_romaji_readable
