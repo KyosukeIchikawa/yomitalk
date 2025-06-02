@@ -65,7 +65,9 @@ coloredlogs==15.0.1
 cryptography==45.0.3
     # via pdfminer-six
 defusedxml==0.7.1
-    # via markitdown
+    # via
+    #   markitdown
+    #   youtube-transcript-api
 distlib==0.3.9
     # via virtualenv
 distro==1.9.0
@@ -103,7 +105,7 @@ gherkin-official==29.0.0
     # via pytest-bdd
 google-auth==2.40.2
     # via google-genai
-google-genai==1.17.0
+google-genai==1.18.0
     # via -r requirements.in
 gradio==5.32.0
     # via -r requirements.in
@@ -168,7 +170,7 @@ markdown-it-py==3.0.0
     # via rich
 markdownify==1.1.0
     # via markitdown
-markitdown[pdf]==0.1.2
+markitdown[pdf,youtube-transcription]==0.1.2
     # via -r requirements.in
 markupsafe==3.0.2
     # via
@@ -296,7 +298,7 @@ pluggy==1.6.0
     # via pytest
 pre-commit==4.2.0
     # via -r requirements.in
-protobuf==5.29.5
+protobuf==6.31.1
     # via
     #   -r requirements.in
     #   onnxruntime
@@ -395,6 +397,7 @@ requests==2.32.3
     #   transformers
     #   webdriver-manager
     #   xenon
+    #   youtube-transcript-api
 rich==14.0.0
     # via typer
 rope==1.13.0
@@ -461,7 +464,7 @@ triton==3.3.0
     # via torch
 typer==0.16.0
     # via gradio
-types-requests==2.32.0.20250515
+types-requests==2.32.0.20250602
     # via -r requirements.in
 typing-extensions==4.13.2
     # via
@@ -491,7 +494,7 @@ urllib3[socks]==2.4.0
     #   requests
     #   selenium
     #   types-requests
-uvicorn==0.34.2
+uvicorn==0.34.3
     # via gradio
 virtualenv==20.31.2
     # via pre-commit
@@ -513,6 +516,8 @@ xenon==0.9.3
     # via -r requirements.in
 yapf==0.43.0
     # via -r requirements.in
+youtube-transcript-api==1.0.3
+    # via markitdown
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
