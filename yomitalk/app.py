@@ -854,7 +854,7 @@ class PaperPodcastApp:
                             url_input = gr.Textbox(
                                 placeholder="https://example.com/page",
                                 label="WebページのURLを入力",
-                                info="YouTube動画、Wikipedia記事なども抽出可能",
+                                info="注: Hugging Face Spacesで利用する場合はYouTubeなどの一部サイトからの抽出ができません",
                                 lines=2,
                             )
                             url_extract_btn = gr.Button(
