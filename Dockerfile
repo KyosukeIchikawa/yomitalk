@@ -29,7 +29,7 @@ RUN set -e && \
 RUN pip install --upgrade pip
 
 # 大きなパッケージを段階的にインストール
-# PyTorch関連のパッケージを先にインストール（GPU版は大きいため）
+# PyTorch関連のパッケージを先にインストール
 RUN pip install --timeout 600 --retries 5 torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # 残りの依存関係をインストール
