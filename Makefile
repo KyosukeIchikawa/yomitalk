@@ -165,12 +165,12 @@ pre-commit-run-ci: setup-lint
 # Run all tests
 test: venv
 	@echo "Running tests..."
-	$(VENV_PYTHON) -m pytest tests/ --durations=10 -v
+	$(VENV_PYTHON) -m pytest tests/ --durations=10
 
 # Run unit tests only
 test-unit: venv
 	@echo "Running unit tests..."
-	$(VENV_PYTHON) -m pytest tests/unit/ --durations=10 -v
+	$(VENV_PYTHON) -m pytest tests/unit/ --durations=10
 
 # Run E2E tests only
 test-e2e: venv

@@ -16,8 +16,8 @@ def podcast_script_is_generated(page: Page):
         page: Playwright page object
     """
 
-    # Enter test text in the input field
-    text_area = page.locator("textarea").first
+    # Enter test text in the extracted text area
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
     test_text = """
     機械学習の最新研究によれば、大規模言語モデルは自然言語処理タスクにおいて
     人間に匹敵する性能を発揮することが可能になっています。

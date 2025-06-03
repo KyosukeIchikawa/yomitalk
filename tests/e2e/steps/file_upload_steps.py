@@ -116,19 +116,62 @@ def user_clicks_file_extract_button(page: Page):
     logger.info("File extraction button clicked successfully")
 
 
+@when('the user clicks on the "ファイルアップロード" tab')
+def user_clicks_file_upload_tab(page: Page):
+    """The user clicks on the file upload tab."""
+    from tests.utils.logger import test_logger as logger
+
+    logger.info("Clicking file upload tab")
+
+    # Look for the tab using different possible selectors
+    tab_selectors = [
+        'button[role="tab"]:has-text("ファイルアップロード")',
+        '.tab-nav button:has-text("ファイルアップロード")',
+        'button:has-text("ファイルアップロード")',
+        '*[data-testid*="tab"]:has-text("ファイルアップロード")',
+    ]
+
+    tab_clicked = False
+    for selector in tab_selectors:
+        tab = page.locator(selector)
+        if tab.count() > 0 and tab.first.is_visible():
+            tab.first.click()
+            tab_clicked = True
+            break
+
+    if not tab_clicked:
+        # Fallback: look for any clickable element with the text
+        tab = page.get_by_text("ファイルアップロード")
+        if tab.count() > 0:
+            tab.first.click()
+            tab_clicked = True
+
+    if not tab_clicked:
+        raise Exception("File upload tab not found")
+
+    page.wait_for_timeout(1000)
+    logger.info("File upload tab clicked successfully")
+
+
 @then("the file input should be cleared")
 def file_input_should_be_cleared(page: Page):
-    """The file input should be cleared after extraction."""
+    """The file input should be cleared after upload."""
     from tests.utils.logger import test_logger as logger
 
     logger.info("Checking if file input is cleared")
 
-    file_input = page.locator('input[type="file"]').first
+    # Look for file input element
+    file_input = page.locator('input[type="file"]')
+    expect(file_input).to_be_visible()
 
-    # Check if the file input has been cleared
-    # In Gradio, this might show as empty or with a default placeholder
-    files = file_input.input_value()
-    assert files == "" or files is None, "File input should be cleared after extraction"
+    # Check if file input has no value (cleared)
+    input_value = file_input.input_value()
+    logger.info(f"File input value: '{input_value}'")
+
+    # File input should be empty after automatic extraction
+    assert (
+        input_value == "" or input_value is None
+    ), "File input should be cleared after extraction"
 
     logger.info("File input is cleared as expected")
 

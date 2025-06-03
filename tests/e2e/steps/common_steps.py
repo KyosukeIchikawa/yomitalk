@@ -74,17 +74,22 @@ def user_has_accessed_application_page(page: Page, app_environment):
     heading = page.locator('text="トーク原稿の生成"')
     expect(heading).to_be_visible(timeout=10000)
 
-    # Verify file input element is displayed
+    # Verify tabs are present
+    file_upload_tab = page.get_by_role("tab", name="ファイルアップロード")
+    expect(file_upload_tab).to_be_visible()
+
+    web_extraction_tab = page.get_by_role("tab", name="Webページ抽出")
+    expect(web_extraction_tab).to_be_visible()
+
+    # Verify file input element is available (may be hidden initially due to tabs)
     file_input = page.locator('input[type="file"]')
     expect(file_input).to_be_attached()
 
-    # Verify URL input element is displayed
-    url_input = page.locator('textarea[placeholder="https://example.com/page"]')
-    expect(url_input).to_be_visible()
-
-    # Verify URL extraction button is displayed
-    extract_button = page.locator('button:has-text("URLからテキストを抽出")')
-    expect(extract_button).to_be_visible()
+    # Verify extracted text area is visible
+    extracted_text_area = page.locator(
+        'textarea[placeholder*="ファイルをアップロードするか"]'
+    )
+    expect(extracted_text_area).to_be_visible()
 
     logger.info("All main UI elements are visible and accessible")
 

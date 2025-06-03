@@ -138,6 +138,76 @@ def user_clicks_clear_text_button(page: Page):
     logger.info("Clear text button clicked successfully")
 
 
+@when('the user clicks on the "ファイルアップロード" tab')
+def user_clicks_file_upload_tab(page: Page):
+    """The user clicks on the file upload tab."""
+    logger.info("Clicking file upload tab")
+
+    # Look for the tab using different possible selectors
+    tab_selectors = [
+        'button[role="tab"]:has-text("ファイルアップロード")',
+        '.tab-nav button:has-text("ファイルアップロード")',
+        'button:has-text("ファイルアップロード")',
+        '*[data-testid*="tab"]:has-text("ファイルアップロード")',
+    ]
+
+    tab_clicked = False
+    for selector in tab_selectors:
+        tab = page.locator(selector)
+        if tab.count() > 0 and tab.first.is_visible():
+            tab.first.click()
+            tab_clicked = True
+            break
+
+    if not tab_clicked:
+        # Fallback: look for any clickable element with the text
+        tab = page.get_by_text("ファイルアップロード")
+        if tab.count() > 0:
+            tab.first.click()
+            tab_clicked = True
+
+    if not tab_clicked:
+        raise Exception("File upload tab not found")
+
+    time.sleep(1)
+    logger.info("File upload tab clicked successfully")
+
+
+@when('the user clicks on the "Webページ抽出" tab')
+def user_clicks_web_extraction_tab(page: Page):
+    """The user clicks on the web page extraction tab."""
+    logger.info("Clicking web page extraction tab")
+
+    # Look for the tab using different possible selectors
+    tab_selectors = [
+        'button[role="tab"]:has-text("Webページ抽出")',
+        '.tab-nav button:has-text("Webページ抽出")',
+        'button:has-text("Webページ抽出")',
+        '*[data-testid*="tab"]:has-text("Webページ抽出")',
+    ]
+
+    tab_clicked = False
+    for selector in tab_selectors:
+        tab = page.locator(selector)
+        if tab.count() > 0 and tab.first.is_visible():
+            tab.first.click()
+            tab_clicked = True
+            break
+
+    if not tab_clicked:
+        # Fallback: look for any clickable element with the text
+        tab = page.get_by_text("Webページ抽出")
+        if tab.count() > 0:
+            tab.first.click()
+            tab_clicked = True
+
+    if not tab_clicked:
+        raise Exception("Web page extraction tab not found")
+
+    time.sleep(1)
+    logger.info("Web page extraction tab clicked successfully")
+
+
 @when('the user clicks the "ファイルからテキストを抽出" button')
 def user_clicks_file_extract_button(page: Page):
     """The user clicks the file text extraction button."""
@@ -271,34 +341,21 @@ def text_area_contains_source_info(page: Page, source: str):
 
 @then("the file input should be cleared")
 def file_input_should_be_cleared(page: Page):
-    """The file input should be cleared after extraction."""
+    """The file input should be cleared after upload."""
     logger.info("Checking if file input is cleared")
 
-    # ファイル入力フィールドを見つける（存在することを確認）
+    # Look for file input element
     file_input = page.locator('input[type="file"]')
-    expect(file_input).to_be_attached()
+    expect(file_input).to_be_attached()  # Check element exists, not visibility
 
-    # Gradioは extraction後に一時的にfile inputを非表示にするため、
-    # 少し待ってから再度表示されることを確認
-    page.wait_for_timeout(1000)  # 1秒待機
+    # Check if file input has no value (cleared)
+    input_value = file_input.input_value()
+    logger.info(f"File input value: '{input_value}'")
 
-    # ファイル入力が再び利用可能になることを確認
-    # または非表示状態でもクリアされていることを確認
-    try:
-        # まず表示状態を確認
-        expect(file_input).to_be_visible(timeout=3000)
-        input_value = file_input.input_value()
-        logger.info(f"File input value: '{input_value}'")
-        assert (
-            input_value == ""
-        ), f"Expected empty file input, but found: '{input_value}'"
-    except AssertionError:
-        # 非表示の場合でも、要素は存在し、クリアされた状態であることを確認
-        logger.info(
-            "File input is hidden after extraction, which is expected Gradio behavior"
-        )
-        # 代わりに、新しいファイルアップロードが可能であることを確認
-        expect(file_input).to_be_attached()
+    # File input should be empty after automatic extraction
+    assert (
+        input_value == "" or input_value is None
+    ), "File input should be cleared after extraction"
 
     logger.info("File input is cleared as expected")
 
@@ -631,6 +688,62 @@ def text_area_contains_existing_content(page: Page):
         "Existing content" in text_content
     ), f"Expected 'Existing content' in content, but found: '{text_content}'"
     logger.info("Text area contains 'Existing content' as expected")
+
+
+@then("the file upload area should be visible")
+def file_upload_area_should_be_visible(page: Page):
+    """The file upload area should be visible."""
+    logger.info("Checking if file upload area is visible")
+
+    file_upload = page.locator('input[type="file"]')
+    expect(file_upload).to_be_visible()
+    logger.info("File upload area is visible")
+
+
+@then("the file upload area should be hidden")
+def file_upload_area_should_be_hidden(page: Page):
+    """The file upload area should be hidden."""
+    logger.info("Checking if file upload area is hidden")
+
+    file_upload = page.locator('input[type="file"]')
+    expect(file_upload).to_be_hidden()
+    logger.info("File upload area is hidden")
+
+
+@then("the URL input area should be visible")
+def url_input_area_should_be_visible(page: Page):
+    """The URL input area should be visible."""
+    logger.info("Checking if URL input area is visible")
+
+    url_input = page.locator('textarea[placeholder="https://example.com/page"]')
+    expect(url_input).to_be_visible()
+    logger.info("URL input area is visible")
+
+
+@then("the URL input area should be hidden")
+def url_input_area_should_be_hidden(page: Page):
+    """The URL input area should be hidden."""
+    logger.info("Checking if URL input area is hidden")
+
+    url_input = page.locator('textarea[placeholder="https://example.com/page"]')
+    expect(url_input).to_be_hidden()
+    logger.info("URL input area is hidden")
+
+
+@then("the extracted text area contains content from the URL")
+def text_area_contains_url_content(page: Page):
+    """The extracted text area contains content from the URL."""
+    logger.info("Checking if text area contains URL content")
+
+    text_area = page.locator(
+        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
+    )
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    assert len(text_content.strip()) > 0, "Text area should contain URL content"
+
+    logger.info("Text area contains URL content as expected")
 
 
 @then('the extracted text area contains "Manual input content"')

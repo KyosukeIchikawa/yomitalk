@@ -335,6 +335,10 @@ class PaperPodcastApp:
         session_id = request.session_hash
         return UserSession(session_id)
 
+    def clear_extracted_text(self) -> str:
+        """Clear the extracted text area."""
+        return ""
+
     def set_openai_api_key(self, api_key: str, user_session: UserSession):
         """Set the OpenAI API key for the specific user session."""
         if not api_key or api_key.strip() == "":
@@ -499,6 +503,35 @@ class PaperPodcastApp:
             error_msg = f"Podcast text generation error: {str(e)}"
             logger.error(error_msg)
             return f"Error: {str(e)}", user_session
+
+    def extract_file_text_auto(
+        self,
+        file_obj,
+        existing_text: str,
+        add_separator: bool,
+        user_session: UserSession,
+    ) -> Tuple[None, str, UserSession]:
+        """Extract text from uploaded file automatically (for file upload mode)."""
+        if file_obj is None:
+            logger.warning("No file provided for automatic extraction")
+            return None, existing_text, user_session
+
+        # Extract new text from file
+        new_text = ContentExtractor.extract_text(file_obj)
+
+        # Get source name from file
+        source_name = ContentExtractor.get_source_name_from_file(file_obj)
+
+        # Append to existing text with source information
+        combined_text = ContentExtractor.append_text_with_source(
+            existing_text, new_text, source_name, add_separator
+        )
+
+        logger.debug(
+            f"Auto file text extraction completed for session {user_session.session_id}"
+        )
+        # Return None for file_input to clear it after extraction
+        return None, combined_text, user_session
 
     def generate_podcast_audio_streaming(
         self, text: str, user_session: UserSession, progress=gr.Progress()
@@ -832,25 +865,20 @@ class PaperPodcastApp:
                     # サポートしているファイル形式の拡張子を取得
                     supported_extensions = ContentExtractor.SUPPORTED_EXTENSIONS
 
-                    # Step 1: Content Extraction (Left: File, Right: URL)
-                    gr.Markdown(
-                        "### 解説対象テキストの作成（ファイル抽出 or Webページ抽出 or テキストを直接編集）"
-                    )
-                    with gr.Row(equal_height=True):
-                        with gr.Column():
+                    # Content extraction tabs
+                    gr.Markdown("### 解説対象テキストの作成")
+
+                    extraction_tabs = gr.Tabs()
+                    with extraction_tabs:
+                        with gr.TabItem("ファイルアップロード"):
                             file_input = gr.File(
                                 file_types=supported_extensions,
                                 type="filepath",
                                 label=f"ファイルをアップロード（{', '.join(supported_extensions)}）",
                                 height=120,
                             )
-                            file_extract_btn = gr.Button(
-                                "ファイルからテキストを抽出",
-                                variant="secondary",
-                                size="lg",
-                            )
 
-                        with gr.Column():
+                        with gr.TabItem("Webページ抽出"):
                             url_input = gr.Textbox(
                                 placeholder="https://example.com/page",
                                 label="WebページのURLを入力",
@@ -858,34 +886,28 @@ class PaperPodcastApp:
                                 lines=2,
                             )
                             url_extract_btn = gr.Button(
-                                "URLからテキストを抽出", variant="secondary", size="lg"
+                                "URLからテキストを抽出", variant="primary", size="lg"
                             )
 
-                    # Step 2: Text Management Controls
+                    # Auto separator checkbox and clear button in the same row
                     with gr.Row(equal_height=True):
-                        with gr.Column(scale=2, min_width=300):
+                        with gr.Column(scale=3):
                             auto_separator_checkbox = gr.Checkbox(
                                 label="テキスト抽出時に区切りを自動挿入",
                                 value=True,
                                 info="ファイル名やURLの情報を含む区切り線を自動挿入します",
                             )
-                        with gr.Column(scale=1, min_width=150):
-                            clear_text_btn = gr.ClearButton(
-                                components=[],  # 後でextracted_textを設定
-                                value="テキストをクリア",
-                                variant="secondary",
-                                size="lg",
+                        with gr.Column(scale=1):
+                            clear_text_btn = gr.Button(
+                                "テキストをクリア", variant="secondary", size="sm"
                             )
 
-                    # Step 3: Extracted Text Display
+                    # Extracted text display
                     extracted_text = gr.Textbox(
                         label="解説対象テキスト（トークの元ネタ）",
-                        placeholder="ファイルをアップロードするか、URLを入力するか、直接ここにテキストを貼り付けてください...",
+                        placeholder="ファイルをアップロードするか、URLを入力するか、直接ここにテキストを入力してください...",
                         lines=10,
                     )
-
-                    # ClearButtonにextracted_textを設定
-                    clear_text_btn.add([extracted_text])
 
                 with gr.Column(variant="panel"):
                     gr.Markdown("### プロンプト設定")
@@ -1054,9 +1076,16 @@ class PaperPodcastApp:
             )
 
             # Set up event handlers
-            # ファイル抽出ボタンのイベントハンドラー
-            file_extract_btn.click(
-                fn=self.extract_file_text,
+            # Clear text button
+            clear_text_btn.click(
+                fn=self.clear_extracted_text,
+                outputs=[extracted_text],
+                queue=False,
+            )
+
+            # Auto file extraction when file is uploaded (file upload mode)
+            file_input.change(
+                fn=self.extract_file_text_auto,
                 inputs=[
                     file_input,
                     extracted_text,

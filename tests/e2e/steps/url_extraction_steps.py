@@ -13,6 +13,12 @@ def user_enters_url(page: Page, url: str):
     """The user enters a URL into the URL input field."""
     logger.info(f"Entering URL: {url}")
 
+    # Make sure the Web page extraction tab is active first
+    web_tab = page.get_by_role("tab", name="Webページ抽出")
+    if web_tab.is_visible():
+        web_tab.click()
+        time.sleep(1)
+
     # URL入力フィールドを見つけて入力
     url_input = page.locator('textarea[placeholder="https://example.com/page"]')
     expect(url_input).to_be_visible()
@@ -29,6 +35,12 @@ def user_enters_github_readme_url(page: Page):
     )
     logger.info(f"Entering GitHub README URL: {github_readme_url}")
 
+    # Make sure the Web page extraction tab is active first
+    web_tab = page.get_by_role("tab", name="Webページ抽出")
+    if web_tab.is_visible():
+        web_tab.click()
+        time.sleep(1)
+
     url_input = page.locator('textarea[placeholder="https://example.com/page"]')
     expect(url_input).to_be_visible()
     url_input.fill(github_readme_url)
@@ -40,6 +52,12 @@ def user_enters_github_readme_url(page: Page):
 def user_leaves_url_field_empty(page: Page):
     """The user leaves the URL input field empty."""
     logger.info("Leaving URL field empty")
+
+    # Make sure the Web page extraction tab is active first
+    web_tab = page.get_by_role("tab", name="Webページ抽出")
+    if web_tab.is_visible():
+        web_tab.click()
+        time.sleep(1)
 
     # URL入力フィールドが存在することを確認（何も入力しない）
     url_input = page.locator('textarea[placeholder="https://example.com/page"]')
