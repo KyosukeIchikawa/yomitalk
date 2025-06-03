@@ -1029,7 +1029,7 @@ class PaperPodcastApp:
                         type="filepath",
                         format="wav",
                         interactive=False,
-                        show_download_button=True,
+                        show_download_button=False,
                         show_label=True,
                         label="プレビュー",
                         value=None,
