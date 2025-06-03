@@ -1648,7 +1648,7 @@ class PaperPodcastApp:
 
         # ストリーミングコンポーネントをリセット - gradio UIの更新のためNoneを返す
         logger.debug("Audio components and generation state reset")
-        return None
+        return None, None
 
     def cleanup_session(self, user_session: UserSession):
         """
