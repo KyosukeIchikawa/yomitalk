@@ -1492,9 +1492,6 @@ class PaperPodcastApp:
                 outputs=[streaming_audio_output, audio_output, generate_btn],
             )
 
-            # Note: Gradio's unload event doesn't support session-specific cleanup
-            # Session cleanup will be handled by garbage collection or periodic cleanup
-
         return app
 
     def set_openai_model_name(
