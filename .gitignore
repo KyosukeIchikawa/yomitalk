@@ -62,3 +62,6 @@ dist/
 
 # VOICEVOX Core
 voicevox_core/
+
+# その他の一時ファイル
+*.png

@@ -839,21 +839,17 @@ class PaperPodcastApp:
         """
         return gr.update(interactive=False, value="音声生成中...")
 
-    def enable_generate_button(self, podcast_text):
+    def enable_generate_button(self, terms_agreed: bool, podcast_text: str):
         """音声生成ボタンを再び有効化します。
 
         Args:
+            terms_agreed (bool): VOICEVOX利用規約への同意状態
             podcast_text (str): 生成されたトーク原稿（状態確認用）
 
         Returns:
             Dict[str, Any]: gr.update()の結果
         """
-        has_text = podcast_text and podcast_text.strip() != ""
-        return gr.update(
-            interactive=True,
-            value="音声を生成",
-            variant="primary" if has_text else "secondary",
-        )
+        return self.update_audio_button_state(terms_agreed, podcast_text)
 
     def disable_process_button(self):
         """トーク原稿生成ボタンを無効化します。
@@ -1461,7 +1457,7 @@ class PaperPodcastApp:
             # 3. 処理完了後にボタンを再度有効化
             wave_display_event.then(
                 fn=self.enable_generate_button,
-                inputs=[podcast_text],
+                inputs=[terms_checkbox, podcast_text],
                 outputs=[generate_btn],
                 queue=False,  # 即時実行
                 api_name="enable_generate_button",
@@ -1492,7 +1488,7 @@ class PaperPodcastApp:
             audio_monitor_timer = gr.Timer(value=3.0, active=True)
             audio_monitor_timer.tick(
                 fn=self.monitor_audio_generation_progress,
-                inputs=[user_session],
+                inputs=[user_session, terms_checkbox, podcast_text],
                 outputs=[streaming_audio_output, audio_output, generate_btn],
             )
 
@@ -1703,8 +1699,8 @@ class PaperPodcastApp:
         Returns:
             Dict[str, Any]: gr.update()の結果
         """
-        has_text = podcast_text and podcast_text.strip() != ""
-        is_enabled = checked and has_text
+        has_text = bool(podcast_text and podcast_text.strip() != "")
+        is_enabled = bool(checked and has_text)
 
         message = ""
         if not checked:
@@ -1980,13 +1976,15 @@ class PaperPodcastApp:
         }
 
     def monitor_audio_generation_progress(
-        self, user_session: UserSession
+        self, user_session: UserSession, terms_agreed: bool, podcast_text: str
     ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
         """
         音声生成の進捗を監視し、状態を更新する
 
         Args:
             user_session: ユーザーセッション
+            terms_agreed: VOICEVOX利用規約への同意状態
+            podcast_text: 生成されたトーク原稿
 
         Returns:
             Tuple[Optional[str], Optional[str], Dict[str, Any]]:
@@ -2001,11 +1999,16 @@ class PaperPodcastApp:
                     final_audio = status.get("final_audio_path")
 
                     streaming_audio = streaming_parts[-1] if streaming_parts else None
-                    button_state = gr.update(interactive=True, value="音声を生成")
-
+                    button_state = self.update_audio_button_state(
+                        terms_agreed, podcast_text
+                    )
                     return streaming_audio, final_audio, button_state
                 else:
-                    return None, None, gr.update(interactive=True, value="音声を生成")
+                    return (
+                        None,
+                        None,
+                        self.update_audio_button_state(terms_agreed, podcast_text),
+                    )
 
             # 音声生成が進行中の場合
             status = user_session.get_audio_generation_status()
@@ -2018,7 +2021,9 @@ class PaperPodcastApp:
 
             # ボタンの状態を更新
             if progress >= 1.0:
-                button_state = gr.update(interactive=True, value="音声を生成")
+                button_state = self.update_audio_button_state(
+                    terms_agreed, podcast_text
+                )
             else:
                 progress_percent = int(progress * 100)
                 button_state = gr.update(
@@ -2029,7 +2034,11 @@ class PaperPodcastApp:
 
         except Exception as e:
             logger.error(f"Error monitoring audio generation progress: {e}")
-            return None, None, gr.update(interactive=True, value="音声を生成")
+            return (
+                None,
+                None,
+                self.update_audio_button_state(terms_agreed, podcast_text),
+            )
 
 
 def main() -> None:

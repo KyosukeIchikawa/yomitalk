@@ -171,7 +171,9 @@ class TestPaperPodcastAppAudioRecovery:
         )
 
         streaming_audio, final_audio, button_state = (
-            self.app.monitor_audio_generation_progress(self.user_session)
+            self.app.monitor_audio_generation_progress(
+                self.user_session, terms_agreed=True, podcast_text="Test script"
+            )
         )
 
         assert streaming_audio == "part1.wav"
@@ -190,13 +192,59 @@ class TestPaperPodcastAppAudioRecovery:
         )
 
         streaming_audio, final_audio, button_state = (
-            self.app.monitor_audio_generation_progress(self.user_session)
+            self.app.monitor_audio_generation_progress(
+                self.user_session, terms_agreed=True, podcast_text="Test script"
+            )
         )
 
         assert streaming_audio == "part1.wav"
         assert final_audio is None
         assert button_state["interactive"] is False
         assert "30%" in button_state["value"]
+
+    def test_monitor_audio_generation_progress_terms_not_agreed(self):
+        """Test monitoring progress when terms are not agreed after completion."""
+        # Set up completed state
+        self.user_session.update_audio_generation_state(
+            is_generating=False,
+            status="completed",
+            progress=1.0,
+            streaming_parts=["part1.wav"],
+            final_audio_path="final_audio.wav",
+        )
+
+        streaming_audio, final_audio, button_state = (
+            self.app.monitor_audio_generation_progress(
+                self.user_session, terms_agreed=False, podcast_text="Test script"
+            )
+        )
+
+        assert streaming_audio == "part1.wav"
+        assert final_audio == "final_audio.wav"
+        assert button_state["interactive"] is False
+        assert button_state["value"] == "音声を生成（VOICEVOX利用規約に同意が必要です）"
+
+    def test_monitor_audio_generation_progress_no_text(self):
+        """Test monitoring progress when no text is available after completion."""
+        # Set up completed state
+        self.user_session.update_audio_generation_state(
+            is_generating=False,
+            status="completed",
+            progress=1.0,
+            streaming_parts=["part1.wav"],
+            final_audio_path="final_audio.wav",
+        )
+
+        streaming_audio, final_audio, button_state = (
+            self.app.monitor_audio_generation_progress(
+                self.user_session, terms_agreed=True, podcast_text=""
+            )
+        )
+
+        assert streaming_audio == "part1.wav"
+        assert final_audio == "final_audio.wav"
+        assert button_state["interactive"] is False
+        assert button_state["value"] == "音声を生成（トーク原稿が必要です）"
 
     def test_reset_audio_state_and_components(self):
         """Test resetting audio state and components."""
@@ -219,3 +267,48 @@ class TestPaperPodcastAppAudioRecovery:
         assert state["is_generating"] is False
         assert state["progress"] == 0.0
         assert state["status"] == "idle"
+
+    def test_enable_generate_button_both_conditions_met(self):
+        """Test enable button when both conditions are met."""
+        button_state = self.app.enable_generate_button(
+            terms_agreed=True, podcast_text="Test script content"
+        )
+
+        assert button_state["interactive"] is True
+        assert button_state["value"] == "音声を生成"
+
+    def test_enable_generate_button_terms_not_agreed(self):
+        """Test enable button when terms are not agreed."""
+        button_state = self.app.enable_generate_button(
+            terms_agreed=False, podcast_text="Test script content"
+        )
+
+        assert button_state["interactive"] is False
+        assert button_state["value"] == "音声を生成（VOICEVOX利用規約に同意が必要です）"
+
+    def test_enable_generate_button_no_text(self):
+        """Test enable button when no text is provided."""
+        button_state = self.app.enable_generate_button(
+            terms_agreed=True, podcast_text=""
+        )
+
+        assert button_state["interactive"] is False
+        assert button_state["value"] == "音声を生成（トーク原稿が必要です）"
+
+    def test_enable_generate_button_neither_condition_met(self):
+        """Test enable button when neither condition is met."""
+        button_state = self.app.enable_generate_button(
+            terms_agreed=False, podcast_text=""
+        )
+
+        assert button_state["interactive"] is False
+        assert button_state["value"] == "音声を生成（VOICEVOX利用規約に同意が必要です）"
+
+    def test_enable_generate_button_whitespace_text(self):
+        """Test enable button with whitespace-only text."""
+        button_state = self.app.enable_generate_button(
+            terms_agreed=True, podcast_text="   \n\t   "
+        )
+
+        assert button_state["interactive"] is False
+        assert button_state["value"] == "音声を生成（トーク原稿が必要です）"
