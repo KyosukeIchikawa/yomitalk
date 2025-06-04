@@ -1035,17 +1035,22 @@ class PaperPodcastApp:
                                 type="filepath",
                                 label=f"ファイルをアップロード（{', '.join(supported_extensions)}）",
                                 height=120,
+                                interactive=False,
                             )
 
                         with gr.TabItem("Webページ抽出"):
                             url_input = gr.Textbox(
-                                placeholder="https://example.com/page",
+                                placeholder="初期化中です。少しお待ちください...",
                                 label="WebページのURLを入力",
                                 info="注: Hugging Face Spacesで利用する場合はYouTubeなどの一部サイトからの抽出ができません",
                                 lines=2,
+                                interactive=False,
                             )
                             url_extract_btn = gr.Button(
-                                "URLからテキストを抽出", variant="primary", size="lg"
+                                "初期化中...",
+                                variant="secondary",
+                                size="lg",
+                                interactive=False,
                             )
 
                     # Auto separator checkbox and clear button in the same row
@@ -1055,17 +1060,22 @@ class PaperPodcastApp:
                                 label="テキスト抽出時に区切りを自動挿入",
                                 value=True,
                                 info="ファイル名やURLの情報を含む区切り線を自動挿入します",
+                                interactive=False,
                             )
                         with gr.Column(scale=1):
                             clear_text_btn = gr.Button(
-                                "テキストをクリア", variant="secondary", size="sm"
+                                "初期化中...",
+                                variant="secondary",
+                                size="sm",
+                                interactive=False,
                             )
 
                     # Extracted text display
                     extracted_text = gr.Textbox(
                         label="解説対象テキスト（トークの元ネタ）",
-                        placeholder="ファイルをアップロードするか、URLを入力するか、直接ここにテキストを入力してください...",
+                        placeholder="初期化中です。少しお待ちください...",
                         lines=10,
+                        interactive=False,
                     )
 
                 with gr.Column(variant="panel"):
@@ -1075,6 +1085,7 @@ class PaperPodcastApp:
                         value=PromptManager.DEFAULT_DOCUMENT_TYPE.label_name,  # 後でユーザーセッションの値で更新される
                         label="ドキュメントタイプ",
                         elem_id="document_type_radio_group",
+                        interactive=False,
                     )
 
                     podcast_mode_radio = gr.Radio(
@@ -1082,6 +1093,7 @@ class PaperPodcastApp:
                         value=PromptManager.DEFAULT_MODE.label_name,  # 後でユーザーセッションの値で更新される
                         label="生成モード",
                         elem_id="podcast_mode_radio_group",
+                        interactive=False,
                     )
 
                     # キャラクター設定
@@ -1091,11 +1103,13 @@ class PaperPodcastApp:
                                 choices=DISPLAY_NAMES,
                                 value=PromptManager.DEFAULT_CHARACTER1.display_name,  # 後でユーザーセッションの値で更新される
                                 label="キャラクター1（専門家役）",
+                                interactive=False,
                             )
                             character2_dropdown = gr.Dropdown(
                                 choices=DISPLAY_NAMES,
                                 value=PromptManager.DEFAULT_CHARACTER2.display_name,  # 後でユーザーセッションの値で更新される
                                 label="キャラクター2（初学者役）",
+                                interactive=False,
                             )
 
                 with gr.Column(variant="panel"):
@@ -1106,16 +1120,18 @@ class PaperPodcastApp:
                             with gr.Row():
                                 with gr.Column(scale=3):
                                     gemini_api_key_input = gr.Textbox(
-                                        placeholder="AIza...",
+                                        placeholder="初期化中...",
                                         type="password",
                                         label="Google Gemini APIキー",
                                         info="APIキーの取得: https://aistudio.google.com/app/apikey",
+                                        interactive=False,
                                     )
                                 with gr.Column(scale=2):
                                     gemini_model_dropdown = gr.Dropdown(
                                         choices=GeminiModel.AVAILABLE_MODELS,
                                         value=GeminiModel.DEFAULT_MODEL,
                                         label="モデル",
+                                        interactive=False,
                                     )
                             with gr.Row():
                                 gemini_max_tokens_slider = gr.Slider(
@@ -1124,22 +1140,25 @@ class PaperPodcastApp:
                                     value=GeminiModel.DEFAULT_MAX_TOKENS,
                                     step=100,
                                     label="最大トークン数",
+                                    interactive=False,
                                 )
 
                         with gr.TabItem("OpenAI") as openai_tab:
                             with gr.Row():
                                 with gr.Column(scale=3):
                                     openai_api_key_input = gr.Textbox(
-                                        placeholder="sk-...",
+                                        placeholder="初期化中...",
                                         type="password",
                                         label="OpenAI APIキー",
                                         info="APIキーの取得: https://platform.openai.com/api-keys",
+                                        interactive=False,
                                     )
                                 with gr.Column(scale=2):
                                     openai_model_dropdown = gr.Dropdown(
                                         choices=OpenAIModel.AVAILABLE_MODELS,
                                         value=OpenAIModel.DEFAULT_MODEL,
                                         label="モデル",
+                                        interactive=False,
                                     )
                             with gr.Row():
                                 openai_max_tokens_slider = gr.Slider(
@@ -1148,16 +1167,18 @@ class PaperPodcastApp:
                                     value=OpenAIModel.DEFAULT_MAX_TOKENS,
                                     step=100,
                                     label="最大トークン数",
+                                    interactive=False,
                                 )
 
                     # トーク原稿を生成ボタン
                     process_btn = gr.Button(
-                        "トーク原稿を生成", variant="secondary", interactive=False
+                        "初期化中...", variant="secondary", interactive=False
                     )
                     podcast_text = gr.Textbox(
                         label="生成されたトーク原稿",
-                        placeholder="テキストを処理してトーク原稿を生成してください...",
+                        placeholder="初期化中です。少しお待ちください...",
                         lines=15,
+                        interactive=False,
                     )
 
                     # トークン使用状況の表示
@@ -1178,9 +1199,10 @@ class PaperPodcastApp:
                         label="VOICEVOX 音源利用規約に同意する",
                         value=False,
                         info=msg,
+                        interactive=False,
                     )
                     generate_btn = gr.Button(
-                        "音声を生成", variant="primary", interactive=False
+                        "初期化中...", variant="secondary", interactive=False
                     )
 
                     # ストリーミング再生用のオーディオコンポーネント
@@ -1230,6 +1252,33 @@ class PaperPodcastApp:
                     character2_dropdown,
                     openai_max_tokens_slider,
                     gemini_max_tokens_slider,
+                ],
+                queue=False,
+            ).then(
+                # Enable UI components after initialization is complete
+                fn=self.enable_ui_components_after_initialization,
+                inputs=[user_session],
+                outputs=[
+                    file_input,
+                    url_input,
+                    url_extract_btn,
+                    auto_separator_checkbox,
+                    clear_text_btn,
+                    extracted_text,
+                    document_type_radio,
+                    podcast_mode_radio,
+                    character1_dropdown,
+                    character2_dropdown,
+                    gemini_api_key_input,
+                    gemini_model_dropdown,
+                    gemini_max_tokens_slider,
+                    openai_api_key_input,
+                    openai_model_dropdown,
+                    openai_max_tokens_slider,
+                    process_btn,
+                    podcast_text,
+                    terms_checkbox,
+                    generate_btn,
                 ],
                 queue=False,
             ).then(
@@ -1822,6 +1871,127 @@ class PaperPodcastApp:
 
         # 音声コンポーネントをクリア
         return None, None
+
+    def enable_ui_components_after_initialization(
+        self, user_session: UserSession
+    ) -> Tuple[
+        Dict[str, Any],  # file_input
+        Dict[str, Any],  # url_input
+        Dict[str, Any],  # url_extract_btn
+        Dict[str, Any],  # auto_separator_checkbox
+        Dict[str, Any],  # clear_text_btn
+        Dict[str, Any],  # extracted_text
+        Dict[str, Any],  # document_type_radio
+        Dict[str, Any],  # podcast_mode_radio
+        Dict[str, Any],  # character1_dropdown
+        Dict[str, Any],  # character2_dropdown
+        Dict[str, Any],  # gemini_api_key_input
+        Dict[str, Any],  # gemini_model_dropdown
+        Dict[str, Any],  # gemini_max_tokens_slider
+        Dict[str, Any],  # openai_api_key_input
+        Dict[str, Any],  # openai_model_dropdown
+        Dict[str, Any],  # openai_max_tokens_slider
+        Dict[str, Any],  # process_btn
+        Dict[str, Any],  # podcast_text
+        Dict[str, Any],  # terms_checkbox
+        Dict[str, Any],  # generate_btn
+    ]:
+        """Initialize UI components after session creation is complete.
+
+        Args:
+            user_session: User session
+
+        Returns:
+            Tuple of gr.update() objects to enable all UI components
+        """
+        logger.info(f"Enabling UI components for session {user_session.session_id}")
+
+        # Enable file input
+        file_input_update = gr.update(interactive=True)
+
+        # Enable URL input
+        url_input_update = gr.update(
+            placeholder="https://example.com/page", interactive=True
+        )
+
+        # Enable URL extract button
+        url_extract_btn_update = gr.update(
+            value="URLからテキストを抽出", variant="primary", interactive=True
+        )
+
+        # Enable auto separator checkbox
+        auto_separator_checkbox_update = gr.update(interactive=True)
+
+        # Enable clear text button
+        clear_text_btn_update = gr.update(value="テキストをクリア", interactive=True)
+
+        # Enable extracted text
+        extracted_text_update = gr.update(
+            placeholder="ファイルをアップロードするか、URLを入力するか、直接ここにテキストを入力してください...",
+            interactive=True,
+        )
+
+        # Enable document type radio
+        document_type_radio_update = gr.update(interactive=True)
+
+        # Enable podcast mode radio
+        podcast_mode_radio_update = gr.update(interactive=True)
+
+        # Enable character dropdowns
+        character1_dropdown_update = gr.update(interactive=True)
+        character2_dropdown_update = gr.update(interactive=True)
+
+        # Enable API key inputs
+        gemini_api_key_input_update = gr.update(placeholder="AIza...", interactive=True)
+        openai_api_key_input_update = gr.update(placeholder="sk-...", interactive=True)
+
+        # Enable model dropdowns
+        gemini_model_dropdown_update = gr.update(interactive=True)
+        openai_model_dropdown_update = gr.update(interactive=True)
+
+        # Enable token sliders
+        gemini_max_tokens_slider_update = gr.update(interactive=True)
+        openai_max_tokens_slider_update = gr.update(interactive=True)
+
+        # Enable process button (but check API key status)
+        process_btn_update = gr.update(
+            interactive=False, variant="secondary", value="トーク原稿を生成"
+        )
+
+        # Enable podcast text
+        podcast_text_update = gr.update(
+            placeholder="テキストを処理してトーク原稿を生成してください...",
+            interactive=True,
+        )
+
+        # Enable terms checkbox
+        terms_checkbox_update = gr.update(interactive=True)
+
+        # Enable generate button (but check conditions)
+        generate_btn_update = self.update_audio_button_state(False, "")
+
+        return (
+            file_input_update,
+            url_input_update,
+            url_extract_btn_update,
+            auto_separator_checkbox_update,
+            clear_text_btn_update,
+            extracted_text_update,
+            document_type_radio_update,
+            podcast_mode_radio_update,
+            character1_dropdown_update,
+            character2_dropdown_update,
+            gemini_api_key_input_update,
+            gemini_model_dropdown_update,
+            gemini_max_tokens_slider_update,
+            openai_api_key_input_update,
+            openai_model_dropdown_update,
+            openai_max_tokens_slider_update,
+            process_btn_update,
+            podcast_text_update,
+            terms_checkbox_update,
+            generate_btn_update,
+        )
 
     def cleanup_session(self, user_session: UserSession):
         """
