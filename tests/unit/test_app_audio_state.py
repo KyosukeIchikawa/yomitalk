@@ -197,8 +197,11 @@ class TestPaperPodcastAppAudioRecovery:
             )
         )
 
-        assert streaming_audio == "part1.wav"
-        assert final_audio is None
+        # During active generation, audio components should return gr.update() to avoid race conditions
+        import gradio as gr
+
+        assert isinstance(streaming_audio, gr.update().__class__)
+        assert isinstance(final_audio, gr.update().__class__)
         assert button_state["interactive"] is False
         assert "30%" in button_state["value"]
 
@@ -245,6 +248,131 @@ class TestPaperPodcastAppAudioRecovery:
         assert final_audio == "final_audio.wav"
         assert button_state["interactive"] is False
         assert button_state["value"] == "音声を生成（トーク原稿が必要です）"
+
+    def test_get_audio_generation_recovery_state_no_audio(self):
+        """Test getting recovery state when no audio exists."""
+        recovery_state = self.app.get_audio_generation_recovery_state(self.user_session)
+
+        assert recovery_state["has_audio_to_restore"] is False
+        assert recovery_state["streaming_audio"] is None
+        assert recovery_state["final_audio"] is None
+        assert recovery_state["status_message"] == ""
+        assert recovery_state["button_state"]["value"] == "音声を生成"
+        assert recovery_state["button_state"]["interactive"] is True
+
+    def test_get_audio_generation_recovery_state_with_completed_audio(self):
+        """Test getting recovery state when audio is completed."""
+        # Set up completed audio state
+        self.user_session.update_audio_generation_state(
+            status="completed",
+            is_generating=False,
+            streaming_parts=["part1.wav", "part2.wav"],
+            final_audio_path="final_audio.wav",
+        )
+
+        recovery_state = self.app.get_audio_generation_recovery_state(self.user_session)
+
+        assert recovery_state["has_audio_to_restore"] is True
+        assert recovery_state["streaming_audio"] == "part2.wav"
+        assert recovery_state["final_audio"] == "final_audio.wav"
+        assert "復帰" in recovery_state["status_message"]
+        assert recovery_state["button_state"]["interactive"] is True
+
+    def test_get_audio_generation_recovery_state_with_active_generation(self):
+        """Test getting recovery state when generation is active."""
+        # Set up active generation state
+        self.user_session.update_audio_generation_state(
+            is_generating=True,
+            status="generating",
+            progress=0.6,
+            streaming_parts=["part1.wav"],
+        )
+
+        recovery_state = self.app.get_audio_generation_recovery_state(self.user_session)
+
+        assert recovery_state["has_audio_to_restore"] is True
+        assert recovery_state["streaming_audio"] == "part1.wav"
+        assert recovery_state["final_audio"] is None
+        assert "60%" in recovery_state["status_message"]
+        assert "復帰" in recovery_state["status_message"]
+        assert recovery_state["button_state"]["interactive"] is False
+
+    def test_handle_connection_recovery_no_audio(self):
+        """Test connection recovery when no audio exists."""
+        streaming_audio, final_audio, button_state = (
+            self.app.handle_connection_recovery(
+                self.user_session, terms_agreed=True, podcast_text="Test script"
+            )
+        )
+
+        assert streaming_audio is None
+        assert final_audio is None
+        assert button_state["interactive"] is True
+        assert button_state["value"] == "音声を生成"
+
+    def test_handle_connection_recovery_with_completed_audio(self):
+        """Test connection recovery when audio is completed."""
+        # Set up completed audio state
+        self.user_session.update_audio_generation_state(
+            status="completed",
+            is_generating=False,
+            streaming_parts=["part1.wav", "part2.wav"],
+            final_audio_path="final_audio.wav",
+        )
+
+        streaming_audio, final_audio, button_state = (
+            self.app.handle_connection_recovery(
+                self.user_session, terms_agreed=True, podcast_text="Test script"
+            )
+        )
+
+        assert streaming_audio == "part2.wav"
+        assert final_audio == "final_audio.wav"
+        assert button_state["interactive"] is True
+
+    def test_handle_connection_recovery_with_active_generation(self):
+        """Test connection recovery when generation is active."""
+        # Set up active generation state
+        self.user_session.update_audio_generation_state(
+            is_generating=True,
+            status="generating",
+            progress=0.6,
+            streaming_parts=["part1.wav"],
+        )
+
+        streaming_audio, final_audio, button_state = (
+            self.app.handle_connection_recovery(
+                self.user_session, terms_agreed=True, podcast_text="Test script"
+            )
+        )
+
+        # During active generation, audio components should return gr.update() to avoid race conditions
+        import gradio as gr
+
+        assert isinstance(streaming_audio, gr.update().__class__)
+        assert isinstance(final_audio, gr.update().__class__)
+        assert button_state["interactive"] is False
+
+    def test_handle_connection_recovery_terms_not_agreed(self):
+        """Test connection recovery when terms are not agreed."""
+        # Set up completed audio state
+        self.user_session.update_audio_generation_state(
+            status="completed",
+            is_generating=False,
+            streaming_parts=["part1.wav"],
+            final_audio_path="final_audio.wav",
+        )
+
+        streaming_audio, final_audio, button_state = (
+            self.app.handle_connection_recovery(
+                self.user_session, terms_agreed=False, podcast_text="Test script"
+            )
+        )
+
+        assert streaming_audio == "part1.wav"
+        assert final_audio == "final_audio.wav"
+        assert button_state["interactive"] is False
+        assert "VOICEVOX利用規約に同意が必要です" in button_state["value"]
 
     def test_reset_audio_state_and_components(self):
         """Test resetting audio state and components."""

@@ -1484,6 +1484,14 @@ class PaperPodcastApp:
                 outputs=[generate_btn],
             )
 
+            # Connection recovery on page load/reconnection
+            app.load(
+                fn=self.handle_connection_recovery,
+                inputs=[user_session, terms_checkbox, podcast_text],
+                outputs=[streaming_audio_output, audio_output, generate_btn],
+                api_name="connection_recovery",
+            )
+
             # 定期的に音声生成の進捗を監視（3秒間隔）
             audio_monitor_timer = gr.Timer(value=3.0, active=True)
             audio_monitor_timer.tick(
@@ -1970,6 +1978,7 @@ class PaperPodcastApp:
             "final_audio": final_audio,
             "status_message": status_message,
             "button_state": button_state,
+            "is_generating": user_session.is_audio_generation_active(),
         }
 
     def monitor_audio_generation_progress(
@@ -1977,6 +1986,7 @@ class PaperPodcastApp:
     ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
         """
         音声生成の進捗を監視し、状態を更新する
+        音声コンポーネントの更新はイベント処理に任せ、ボタン状態のみを監視する
 
         Args:
             user_session: ユーザーセッション
@@ -1989,48 +1999,101 @@ class PaperPodcastApp:
         """
         try:
             if not user_session.is_audio_generation_active():
-                # 生成が完了または停止している場合
+                # 生成が完了または停止している場合のみ、音声コンポーネントを更新
                 if user_session.has_generated_audio():
                     status = user_session.get_audio_generation_status()
                     streaming_parts = status.get("streaming_parts", [])
                     final_audio = status.get("final_audio_path")
-
                     streaming_audio = streaming_parts[-1] if streaming_parts else None
+
                     button_state = self.update_audio_button_state(
                         terms_agreed, podcast_text
                     )
                     return streaming_audio, final_audio, button_state
                 else:
+                    # 音声が生成されていない場合は何も更新しない
                     return (
-                        None,
-                        None,
+                        gr.update(),  # 現在の値を維持
+                        gr.update(),  # 現在の値を維持
                         self.update_audio_button_state(terms_agreed, podcast_text),
                     )
-
-            # 音声生成が進行中の場合
-            status = user_session.get_audio_generation_status()
-            progress = status.get("progress", 0.0)
-            streaming_parts = status.get("streaming_parts", [])
-            final_audio = status.get("final_audio_path")
-
-            # 最新のストリーミング音声
-            streaming_audio = streaming_parts[-1] if streaming_parts else None
-
-            # ボタンの状態を更新
-            if progress >= 1.0:
-                button_state = self.update_audio_button_state(
-                    terms_agreed, podcast_text
-                )
             else:
+                # 音声生成中は音声コンポーネントの更新を避け、ボタン状態のみを更新
+                status = user_session.get_audio_generation_status()
+                progress = status.get("progress", 0.0)
+
                 progress_percent = int(progress * 100)
                 button_state = gr.update(
                     interactive=False, value=f"音声生成中... {progress_percent}%"
                 )
 
-            return streaming_audio, final_audio, button_state
+                # 音声コンポーネントは更新しない（イベント処理に任せる）
+                return gr.update(), gr.update(), button_state
 
         except Exception as e:
             logger.error(f"Error monitoring audio generation progress: {e}")
+            return (
+                gr.update(),
+                gr.update(),
+                self.update_audio_button_state(terms_agreed, podcast_text),
+            )
+
+    def handle_connection_recovery(
+        self, user_session: UserSession, terms_agreed: bool, podcast_text: str
+    ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
+        """
+        Handle connection recovery when page loads/reconnects
+
+        Args:
+            user_session: User session
+            terms_agreed: Whether VOICEVOX terms are agreed
+            podcast_text: Generated podcast text
+
+        Returns:
+            Tuple[Optional[str], Optional[str], Dict[str, Any]]:
+                (streaming_audio, final_audio, button_update)
+        """
+        logger.info("Connection recovery triggered - checking audio state")
+
+        try:
+            # Check if there's audio to restore
+            recovery_state = self.get_audio_generation_recovery_state(user_session)
+
+            if recovery_state["has_audio_to_restore"]:
+                logger.info("Audio state detected - restoring components")
+
+                # If audio generation is active, avoid race conditions with timer and events
+                if recovery_state["is_generating"]:
+                    logger.debug(
+                        "Audio generation active - avoiding race condition with timer"
+                    )
+                    # Return gr.update() for audio components to avoid conflicts with ongoing processes
+                    return (
+                        gr.update(),  # Preserve current streaming audio state
+                        gr.update(),  # Preserve current final audio state
+                        recovery_state["button_state"],  # Only update button state
+                    )
+                else:
+                    # Audio generation completed - safe to restore audio components
+                    button_state = self.update_audio_button_state(
+                        terms_agreed, podcast_text
+                    )
+                    return (
+                        recovery_state["streaming_audio"],
+                        recovery_state["final_audio"],
+                        button_state,
+                    )
+            else:
+                # No audio to restore - return normal button state
+                logger.debug("No audio to restore - setting normal button state")
+                return (
+                    None,
+                    None,
+                    self.update_audio_button_state(terms_agreed, podcast_text),
+                )
+
+        except Exception as e:
+            logger.error(f"Error in connection recovery: {e}")
             return (
                 None,
                 None,
