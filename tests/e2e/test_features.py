@@ -21,3 +21,6 @@ feature_dir = os.path.join(os.path.dirname(__file__), "features")
 
 # Register feature scenarios with absolute path
 scenarios(feature_dir)
+
+# Register specific scenarios for audio recovery
+scenarios(os.path.join(feature_dir, "audio_recovery.feature"))
