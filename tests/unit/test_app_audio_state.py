@@ -249,19 +249,8 @@ class TestPaperPodcastAppAudioRecovery:
         assert button_state["interactive"] is False
         assert button_state["value"] == "音声を生成（トーク原稿が必要です）"
 
-    def test_get_audio_generation_recovery_state_no_audio(self):
-        """Test getting recovery state when no audio exists."""
-        recovery_state = self.app.get_audio_generation_recovery_state(self.user_session)
-
-        assert recovery_state["has_audio_to_restore"] is False
-        assert recovery_state["streaming_audio"] is None
-        assert recovery_state["final_audio"] is None
-        assert recovery_state["status_message"] == ""
-        assert recovery_state["button_state"]["value"] == "音声を生成"
-        assert recovery_state["button_state"]["interactive"] is True
-
-    def test_get_audio_generation_recovery_state_with_completed_audio(self):
-        """Test getting recovery state when audio is completed."""
+    def test_check_and_restore_audio_generation_integration(self):
+        """Test that audio restoration is properly integrated into connection recovery."""
         # Set up completed audio state
         self.user_session.update_audio_generation_state(
             status="completed",
@@ -270,32 +259,26 @@ class TestPaperPodcastAppAudioRecovery:
             final_audio_path="final_audio.wav",
         )
 
-        recovery_state = self.app.get_audio_generation_recovery_state(self.user_session)
-
-        assert recovery_state["has_audio_to_restore"] is True
-        assert recovery_state["streaming_audio"] == "part2.wav"
-        assert recovery_state["final_audio"] == "final_audio.wav"
-        assert "復帰" in recovery_state["status_message"]
-        assert recovery_state["button_state"]["interactive"] is True
-
-    def test_get_audio_generation_recovery_state_with_active_generation(self):
-        """Test getting recovery state when generation is active."""
-        # Set up active generation state
-        self.user_session.update_audio_generation_state(
-            is_generating=True,
-            status="generating",
-            progress=0.6,
-            streaming_parts=["part1.wav"],
+        # Test direct audio restoration
+        streaming_audio, final_audio, status = (
+            self.app.check_and_restore_audio_generation(self.user_session)
         )
 
-        recovery_state = self.app.get_audio_generation_recovery_state(self.user_session)
+        assert streaming_audio == "part2.wav"
+        assert final_audio == "final_audio.wav"
+        assert "復帰" in status
 
-        assert recovery_state["has_audio_to_restore"] is True
-        assert recovery_state["streaming_audio"] == "part1.wav"
-        assert recovery_state["final_audio"] is None
-        assert "60%" in recovery_state["status_message"]
-        assert "復帰" in recovery_state["status_message"]
-        assert recovery_state["button_state"]["interactive"] is False
+        # Test connection recovery integration
+        streaming_audio_recovery, final_audio_recovery, button_state = (
+            self.app.handle_connection_recovery(
+                self.user_session, terms_agreed=True, podcast_text="Test script"
+            )
+        )
+
+        # Both should return the same audio content
+        assert streaming_audio_recovery == streaming_audio
+        assert final_audio_recovery == final_audio
+        assert button_state["interactive"] is True
 
     def test_handle_connection_recovery_no_audio(self):
         """Test connection recovery when no audio exists."""

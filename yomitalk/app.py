@@ -1233,14 +1233,11 @@ class PaperPodcastApp:
                 ],
                 queue=False,
             ).then(
-                # 音声生成の復帰状態をチェック
-                fn=self.check_and_restore_audio_generation,
-                inputs=[user_session],
-                outputs=[
-                    streaming_audio_output,
-                    audio_output,
-                    gr.Textbox(visible=False),
-                ],
+                # Connection recovery on page load/reconnection (includes audio state restoration)
+                fn=self.handle_connection_recovery,
+                inputs=[user_session, terms_checkbox, podcast_text],
+                outputs=[streaming_audio_output, audio_output, generate_btn],
+                api_name="connection_recovery",
                 queue=False,
             )
 
@@ -1482,14 +1479,6 @@ class PaperPodcastApp:
                 fn=self.update_audio_button_state,
                 inputs=[terms_checkbox, podcast_text],
                 outputs=[generate_btn],
-            )
-
-            # Connection recovery on page load/reconnection
-            app.load(
-                fn=self.handle_connection_recovery,
-                inputs=[user_session, terms_checkbox, podcast_text],
-                outputs=[streaming_audio_output, audio_output, generate_btn],
-                api_name="connection_recovery",
             )
 
             # 定期的に音声生成の進捗を監視（3秒間隔）
@@ -1937,50 +1926,6 @@ class PaperPodcastApp:
 
         return streaming_audio, final_audio, status_message
 
-    def get_audio_generation_recovery_state(
-        self, user_session: UserSession
-    ) -> Dict[str, Any]:
-        """
-        音声生成の復帰状態を取得する
-
-        Args:
-            user_session: ユーザーセッション
-
-        Returns:
-            Dict[str, Any]: 復帰状態情報
-        """
-        if (
-            not user_session.is_audio_generation_active()
-            and not user_session.has_generated_audio()
-        ):
-            return {
-                "has_audio_to_restore": False,
-                "streaming_audio": None,
-                "final_audio": None,
-                "status_message": "",
-                "button_state": gr.update(interactive=True, value="音声を生成"),
-            }
-
-        streaming_audio, final_audio, status_message = (
-            self.check_and_restore_audio_generation(user_session)
-        )
-
-        # ボタンの状態を決定
-        if user_session.is_audio_generation_active():
-            button_state = gr.update(interactive=False, value="音声生成中...（復帰）")
-        else:
-            button_state = gr.update(interactive=True, value="音声を生成")
-
-        return {
-            "has_audio_to_restore": streaming_audio is not None
-            or final_audio is not None,
-            "streaming_audio": streaming_audio,
-            "final_audio": final_audio,
-            "status_message": status_message,
-            "button_state": button_state,
-            "is_generating": user_session.is_audio_generation_active(),
-        }
-
     def monitor_audio_generation_progress(
         self, user_session: UserSession, terms_agreed: bool, podcast_text: str
     ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
@@ -2043,6 +1988,7 @@ class PaperPodcastApp:
     ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
         """
         Handle connection recovery when page loads/reconnects
+        Combines audio state restoration and button state management
 
         Args:
             user_session: User session
@@ -2056,41 +2002,42 @@ class PaperPodcastApp:
         logger.info("Connection recovery triggered - checking audio state")
 
         try:
-            # Check if there's audio to restore
-            recovery_state = self.get_audio_generation_recovery_state(user_session)
-
-            if recovery_state["has_audio_to_restore"]:
-                logger.info("Audio state detected - restoring components")
-
-                # If audio generation is active, avoid race conditions with timer and events
-                if recovery_state["is_generating"]:
-                    logger.debug(
-                        "Audio generation active - avoiding race condition with timer"
-                    )
-                    # Return gr.update() for audio components to avoid conflicts with ongoing processes
-                    return (
-                        gr.update(),  # Preserve current streaming audio state
-                        gr.update(),  # Preserve current final audio state
-                        recovery_state["button_state"],  # Only update button state
-                    )
-                else:
-                    # Audio generation completed - safe to restore audio components
-                    button_state = self.update_audio_button_state(
-                        terms_agreed, podcast_text
-                    )
-                    return (
-                        recovery_state["streaming_audio"],
-                        recovery_state["final_audio"],
-                        button_state,
-                    )
-            else:
-                # No audio to restore - return normal button state
+            # Check if there's any audio to restore
+            if (
+                not user_session.is_audio_generation_active()
+                and not user_session.has_generated_audio()
+            ):
                 logger.debug("No audio to restore - setting normal button state")
                 return (
                     None,
                     None,
                     self.update_audio_button_state(terms_agreed, podcast_text),
                 )
+
+            # Restore audio state using the existing restoration logic
+            streaming_audio, final_audio, status_message = (
+                self.check_and_restore_audio_generation(user_session)
+            )
+
+            logger.info("Audio state detected - restoring components")
+
+            # If audio generation is active, avoid race conditions with timer and events
+            if user_session.is_audio_generation_active():
+                logger.debug(
+                    "Audio generation active - avoiding race condition with timer"
+                )
+                # Return gr.update() for audio components to avoid conflicts with ongoing processes
+                return (
+                    gr.update(),  # Preserve current streaming audio state
+                    gr.update(),  # Preserve current final audio state
+                    gr.update(interactive=False, value="音声生成中...（復帰）"),
+                )
+            else:
+                # Audio generation completed - safe to restore audio components
+                button_state = self.update_audio_button_state(
+                    terms_agreed, podcast_text
+                )
+                return (streaming_audio, final_audio, button_state)
 
         except Exception as e:
             logger.error(f"Error in connection recovery: {e}")
