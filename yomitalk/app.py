@@ -1530,16 +1530,6 @@ class PaperPodcastApp:
                 outputs=[generate_btn],
             )
 
-            # 定期的に音声生成の進捗を監視（3秒間隔）
-            # 音声生成中は audio_output の更新を避けてボタン状態のみ監視
-            audio_monitor_timer = gr.Timer(value=3.0, active=True)
-            audio_monitor_timer.tick(
-                fn=self.monitor_audio_generation_progress,
-                inputs=[user_session, terms_checkbox, podcast_text],
-                outputs=[streaming_audio_output, audio_output, generate_btn],
-                show_progress=False,  # タイマーイベントでは進捗バーを表示しない
-            )
-
         return app
 
     def set_openai_model_name(
@@ -2098,64 +2088,6 @@ class PaperPodcastApp:
 
         return streaming_audio, final_audio, status_message
 
-    def monitor_audio_generation_progress(
-        self, user_session: UserSession, terms_agreed: bool, podcast_text: str
-    ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
-        """
-        音声生成の進捗を監視し、状態を更新する
-        進捗表示中はaudio_outputの更新を避け、wait_for_audio_completionに任せる
-
-        Args:
-            user_session: ユーザーセッション
-            terms_agreed: VOICEVOX利用規約への同意状態
-            podcast_text: 生成されたトーク原稿
-
-        Returns:
-            Tuple[Optional[str], Optional[str], Dict[str, Any]]:
-                (streaming_audio, final_audio, button_update)
-        """
-        try:
-            if not user_session.is_audio_generation_active():
-                # 生成が完了または停止している場合のみ、音声コンポーネントを更新
-                if user_session.has_generated_audio():
-                    status = user_session.get_audio_generation_status()
-                    streaming_parts = status.get("streaming_parts", [])
-                    final_audio = status.get("final_audio_path")
-                    streaming_audio = streaming_parts[-1] if streaming_parts else None
-
-                    button_state = self.update_audio_button_state(
-                        terms_agreed, podcast_text
-                    )
-                    return streaming_audio, final_audio, button_state
-                else:
-                    # 音声が生成されていない場合は何も更新しない
-                    return (
-                        gr.update(),  # 現在の値を維持
-                        gr.update(),  # 現在の値を維持
-                        self.update_audio_button_state(terms_agreed, podcast_text),
-                    )
-            else:
-                # 音声生成中はaudio_outputの更新を避け、ボタン状態のみを更新
-                # wait_for_audio_completion が進捗バーを管理するため競合を避ける
-                status = user_session.get_audio_generation_status()
-                progress = status.get("progress", 0.0)
-
-                progress_percent = int(progress * 100)
-                button_state = gr.update(
-                    interactive=False, value=f"音声生成中... {progress_percent}%"
-                )
-
-                # 音声コンポーネントは更新しない（wait_for_audio_completionに任せる）
-                return gr.update(), gr.update(), button_state
-
-        except Exception as e:
-            logger.error(f"Error monitoring audio generation progress: {e}")
-            return (
-                gr.update(),
-                gr.update(),
-                self.update_audio_button_state(terms_agreed, podcast_text),
-            )
-
     def handle_connection_recovery(
         self, user_session: UserSession, terms_agreed: bool, podcast_text: str
     ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
@@ -2219,6 +2151,55 @@ class PaperPodcastApp:
                 None,
                 self.update_audio_button_state(terms_agreed, podcast_text),
             )
+
+    def monitor_audio_session_state(
+        self, user_session: UserSession
+    ) -> Tuple[Dict[str, Any], Optional[str], Optional[str]]:
+        """
+        Monitor and update audio generation state from user session.
+
+        Note: This method is deprecated and no longer used.
+        Timer-based monitoring was removed to avoid conflicts with progress display.
+        Audio generation now directly updates user_session state in
+        self.generate_podcast_audio_streaming method without timer monitoring.
+
+        Args:
+            user_session: User session containing audio state
+
+        Returns:
+            Tuple[Dict[str, Any], Optional[str], Optional[str]]:
+                (timer_update, streaming_audio_update, final_audio_update)
+        """
+        try:
+            # Get current audio generation status
+            status = user_session.get_audio_generation_status()
+
+            # Check if audio generation is active
+            if not user_session.is_audio_generation_active():
+                # Stop timer if no active generation
+                logger.debug("No active audio generation - stopping timer")
+                return gr.update(active=False), None, None
+
+            # Update streaming audio if new parts are available
+            streaming_parts = status.get("streaming_parts", [])
+            streaming_audio = streaming_parts[-1] if streaming_parts else None
+
+            # Update final audio if available
+            final_audio = status.get("final_audio_path")
+
+            # Check if generation is completed
+            if status.get("status") == "completed":
+                logger.debug("Audio generation completed - stopping timer")
+                return gr.update(active=False), streaming_audio, final_audio
+
+            # Continue monitoring
+            progress = status.get("progress", 0.0)
+            logger.debug(f"Audio generation progress: {progress:.1%}")
+
+            return gr.update(active=True), streaming_audio, final_audio
+        except Exception as e:
+            logger.error(f"Error monitoring audio session state: {e}")
+            return gr.update(active=False), None, None
 
 
 def main() -> None:
