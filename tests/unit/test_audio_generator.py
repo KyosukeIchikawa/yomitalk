@@ -240,3 +240,16 @@ class TestAudioGenerator:
         """_convert_english_to_katakanaメソッドのテスト"""
         result = self.audio_generator._convert_english_to_katakana(text)
         assert result == expected
+
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("REINFORCE", "リンホース"),
+            ("PIXCELTHINK", "ピクセルシンク"),
+            ("ATTENTION", "アテンション"),
+        ],
+    )
+    def test_convert_long_uppercase_words(self, text, expected):
+        """7文字以上の大文字アルファベット文字列の変換テスト"""
+        result = self.audio_generator._convert_english_to_katakana(text)
+        assert result == expected

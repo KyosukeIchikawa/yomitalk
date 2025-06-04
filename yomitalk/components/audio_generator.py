@@ -409,6 +409,7 @@ class AudioGenerator:
 
             word_count += 1
             is_english_word = bool(re.match(r"^[A-Za-z]+$", part))
+            is_all_uppercase = bool(re.match(r"^[A-Z]+$", part))
 
             # 空白挿入条件の判定
             if is_last_part_english and is_english_word:
@@ -434,12 +435,13 @@ class AudioGenerator:
             elif not is_english_word:
                 # 英単語でない場合はそのまま
                 part_to_add = part
-            elif re.match(r"^[A-Z]+$", part) and not is_romaji_readable(part):
-                # 大文字のみで構成され、ローマ字読みできない場合はそのまま
+            elif is_all_uppercase and len(part) < 7 and not is_romaji_readable(part):
+                # 大文字のみで構成され、字数が少なく、ローマ字読みできない場合はアルファベット読みして欲しいためそのまま
                 part_to_add = part
             else:
+                part_to_add = part.capitalize() if is_all_uppercase else part
                 # 英単語をカタカナに変換
-                part_to_add = converter(part)
+                part_to_add = converter(part_to_add)
 
             result.append(part_to_add)
             last_part = part_to_add
