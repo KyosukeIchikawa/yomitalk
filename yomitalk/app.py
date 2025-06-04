@@ -450,7 +450,7 @@ class PaperPodcastApp:
     def set_openai_api_key(self, api_key: str, user_session: UserSession):
         """Set the OpenAI API key for the specific user session."""
         if not api_key or api_key.strip() == "":
-            logger.warning("OpenAI API key is empty")
+            logger.debug("OpenAI API key is empty")
             return user_session
 
         success = user_session.text_processor.set_openai_api_key(api_key)
@@ -462,7 +462,7 @@ class PaperPodcastApp:
     def set_gemini_api_key(self, api_key: str, user_session: UserSession):
         """Set the Google Gemini API key for the specific user session."""
         if not api_key or api_key.strip() == "":
-            logger.warning("Gemini API key is empty")
+            logger.debug("Gemini API key is empty")
             return user_session
 
         success = user_session.text_processor.set_gemini_api_key(api_key)
@@ -481,7 +481,7 @@ class PaperPodcastApp:
                 f"LLM type switched to {api_type.display_name} for session {user_session.session_id}"
             )
         else:
-            logger.warning(
+            logger.debug(
                 f"{api_type.display_name} API key not set for session {user_session.session_id}"
             )
         return user_session
@@ -495,7 +495,7 @@ class PaperPodcastApp:
     ) -> Tuple[None, str, UserSession]:
         """Extract text from a file and append to existing text for the specific user session."""
         if file_obj is None:
-            logger.warning("No file selected for extraction")
+            logger.debug("No file selected for extraction")
             return None, existing_text, user_session
 
         # Extract new text from file
@@ -1531,11 +1531,13 @@ class PaperPodcastApp:
             )
 
             # 定期的に音声生成の進捗を監視（3秒間隔）
+            # 音声生成中は audio_output の更新を避けてボタン状態のみ監視
             audio_monitor_timer = gr.Timer(value=3.0, active=True)
             audio_monitor_timer.tick(
                 fn=self.monitor_audio_generation_progress,
                 inputs=[user_session, terms_checkbox, podcast_text],
                 outputs=[streaming_audio_output, audio_output, generate_btn],
+                show_progress=False,  # タイマーイベントでは進捗バーを表示しない
             )
 
         return app
@@ -2101,7 +2103,7 @@ class PaperPodcastApp:
     ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
         """
         音声生成の進捗を監視し、状態を更新する
-        音声コンポーネントの更新はイベント処理に任せ、ボタン状態のみを監視する
+        進捗表示中はaudio_outputの更新を避け、wait_for_audio_completionに任せる
 
         Args:
             user_session: ユーザーセッション
@@ -2133,7 +2135,8 @@ class PaperPodcastApp:
                         self.update_audio_button_state(terms_agreed, podcast_text),
                     )
             else:
-                # 音声生成中は音声コンポーネントの更新を避け、ボタン状態のみを更新
+                # 音声生成中はaudio_outputの更新を避け、ボタン状態のみを更新
+                # wait_for_audio_completion が進捗バーを管理するため競合を避ける
                 status = user_session.get_audio_generation_status()
                 progress = status.get("progress", 0.0)
 
@@ -2142,7 +2145,7 @@ class PaperPodcastApp:
                     interactive=False, value=f"音声生成中... {progress_percent}%"
                 )
 
-                # 音声コンポーネントは更新しない（イベント処理に任せる）
+                # 音声コンポーネントは更新しない（wait_for_audio_completionに任せる）
                 return gr.update(), gr.update(), button_state
 
         except Exception as e:
