@@ -158,6 +158,11 @@ class TestAudioGenerator:
             ("HelloWorldAPI", ["Hello", "World", "API"]),
             ("OpenAI is great", ["Open", "AI", " ", "is", " ", "great"]),
             ("PythonProgrammingLanguage", ["Python", "Programming", "Language"]),
+            (
+                "LLMs are large language models",
+                ["LLM", "ズ", " ", "are", " ", "large", " ", "language", " ", "models"],
+            ),
+            ("TRANSFORMERs are great", ["TRANSFORMER", "ズ", " ", "are", " ", "great"]),
         ],
     )
     def test_split_capitalized_parts(self, text, expected):
@@ -234,6 +239,7 @@ class TestAudioGenerator:
             ("Machine Learning入門", "マシンラーニング入門"),
             ("Vision-Language-Model", "ビジョンランゲージモデル"),
             ("spacial awareness", "スペイシャルアウエアネス"),
+            ("LLMs", "LLMズ"),
         ],
     )
     def test_convert_english_to_katakana(self, text, expected):

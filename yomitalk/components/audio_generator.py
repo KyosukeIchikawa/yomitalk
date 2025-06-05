@@ -361,11 +361,17 @@ class AudioGenerator:
 
         for part in word_parts:
             if re.match(r"^[A-Za-z]+$", part):
-                # 英単語のパターンに基づいて分割（キャメルケース対応）
-                segments = re.findall(
-                    r"([A-Z]{2,}(?=[A-Z][a-z]|$)|[A-Z][a-z]*|[a-z]+)", part
-                )
-                result.extend(segments)
+                # 大文字が続いて最後が小文字の"s"1文字の場合（複数形）を特別処理
+                if re.match(r"^[A-Z]{2,}s$", part):
+                    # 大文字部分とsを分離し、sは「ズ」に変換
+                    uppercase_part = part[:-1]
+                    result.extend([uppercase_part, "ズ"])
+                else:
+                    # 英単語のパターンに基づいて分割（キャメルケース対応）
+                    segments = re.findall(
+                        r"([A-Z]{2,}(?=[A-Z][a-z]|$)|[A-Z][a-z]*|[a-z]+)", part
+                    )
+                    result.extend(segments)
             else:
                 # 英単語以外はそのまま追加
                 result.append(part)
