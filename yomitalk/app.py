@@ -1496,7 +1496,7 @@ class PaperPodcastApp:
                 outputs=[audio_output],
                 concurrency_limit=1,  # 同時実行数を1に制限
                 concurrency_id="progress_queue",  # 進捗表示用キューID
-                show_progress=True,  # 進捗バーを表示（関数内で更新）
+                show_progress="full",  # 進捗バーを表示（関数内で更新）
                 api_name="update_progress_display",  # APIエンドポイント名（デバッグ用）
             )
 
