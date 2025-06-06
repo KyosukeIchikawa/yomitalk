@@ -3,15 +3,17 @@
 This module contains the UserSession class for managing per-user session data.
 """
 
+import json
 import re
 import shutil
 import time
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from yomitalk.common import APIType
 from yomitalk.components.audio_generator import AudioGenerator
 from yomitalk.components.text_processor import TextProcessor
+from yomitalk.prompt_manager import DocumentType, PodcastMode
 from yomitalk.utils.logger import logger
 
 # Global base directories for all users
@@ -349,6 +351,9 @@ class UserSession:
         # Update last update time
         self.audio_generation_state["last_update"] = time.time()
 
+        # Auto-save session state
+        self.auto_save()
+
     def reset_audio_generation_state(self) -> None:
         """Reset audio generation state to initial values."""
         self.audio_generation_state = {
@@ -364,6 +369,9 @@ class UserSession:
             "last_update": None,
         }
         logger.debug("Audio generation state reset")
+
+        # Auto-save session state
+        self.auto_save()
 
     def is_audio_generation_active(self) -> bool:
         """Check if audio generation is currently active.
@@ -394,3 +402,183 @@ class UserSession:
             self.audio_generation_state["final_audio_path"] is not None
             or len(list(self.audio_generation_state["streaming_parts"])) > 0
         )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize session state to dictionary for persistence.
+
+        Returns:
+            Dict[str, Any]: Serializable session state
+        """
+        return {
+            "session_id": self.session_id,
+            "audio_generation_state": self.audio_generation_state.copy(),
+            "text_processor_state": {
+                "current_api_type": (
+                    self.text_processor.current_api_type.value
+                    if self.text_processor.current_api_type
+                    else None
+                ),
+                "openai_api_key_set": bool(self.text_processor.openai_model.api_key),
+                "gemini_api_key_set": bool(self.text_processor.gemini_model.api_key),
+                "openai_max_tokens": self.text_processor.openai_model.get_max_tokens(),
+                "gemini_max_tokens": self.text_processor.gemini_model.get_max_tokens(),
+                "openai_model_name": self.text_processor.openai_model.model_name,
+                "gemini_model_name": self.text_processor.gemini_model.model_name,
+                "prompt_manager_state": {
+                    "current_document_type": self.text_processor.prompt_manager.current_document_type.value,
+                    "current_mode": self.text_processor.prompt_manager.current_mode.value,
+                    "char_mapping": self.text_processor.prompt_manager.char_mapping.copy(),
+                },
+            },
+            "last_save_time": time.time(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "UserSession":
+        """Restore session state from dictionary.
+
+        Args:
+            data: Serialized session state
+
+        Returns:
+            UserSession: Restored session instance
+        """
+        session = cls(data["session_id"])
+
+        # Restore audio generation state
+        if "audio_generation_state" in data:
+            session.audio_generation_state.update(data["audio_generation_state"])
+
+        # Restore text processor state
+        if "text_processor_state" in data:
+            text_state = data["text_processor_state"]
+
+            # Restore API type
+            if text_state.get("current_api_type"):
+                # Find APIType by value and set directly (bypass API key validation)
+                for api_type in APIType:
+                    if api_type.value == text_state["current_api_type"]:
+                        session.text_processor.current_api_type = api_type
+                        break
+
+            # Restore model settings
+            if "openai_max_tokens" in text_state:
+                session.text_processor.openai_model.set_max_tokens(
+                    text_state["openai_max_tokens"]
+                )
+            if "gemini_max_tokens" in text_state:
+                session.text_processor.gemini_model.set_max_tokens(
+                    text_state["gemini_max_tokens"]
+                )
+            if "openai_model_name" in text_state:
+                session.text_processor.openai_model.set_model_name(
+                    text_state["openai_model_name"]
+                )
+            if "gemini_model_name" in text_state:
+                session.text_processor.gemini_model.set_model_name(
+                    text_state["gemini_model_name"]
+                )
+
+            # Restore prompt manager state
+            if "prompt_manager_state" in text_state:
+                pm_state = text_state["prompt_manager_state"]
+                if "current_document_type" in pm_state:
+                    # Find DocumentType by value
+                    for doc_type in DocumentType:
+                        if doc_type.value == pm_state["current_document_type"]:
+                            session.text_processor.prompt_manager.set_document_type(
+                                doc_type
+                            )
+                            break
+                if "current_mode" in pm_state:
+                    # Find PodcastMode by value
+                    for mode in PodcastMode:
+                        if mode.value == pm_state["current_mode"]:
+                            session.text_processor.prompt_manager.set_podcast_mode(mode)
+                            break
+                if "char_mapping" in pm_state:
+                    session.text_processor.prompt_manager.char_mapping = pm_state[
+                        "char_mapping"
+                    ].copy()
+
+        logger.info(f"Session restored from saved state: {session.session_id}")
+        return session
+
+    def save_to_file(self) -> bool:
+        """Save session state to file.
+
+        Returns:
+            bool: True if save was successful
+        """
+        try:
+            session_file = self.get_temp_dir() / "session_state.json"
+            with open(session_file, "w", encoding="utf-8") as f:
+                json.dump(self.to_dict(), f, indent=2, ensure_ascii=False)
+            logger.debug(f"Session state saved to file: {session_file}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save session state: {str(e)}")
+            return False
+
+    @classmethod
+    def load_from_file(cls, session_id: str) -> Optional["UserSession"]:
+        """Load session state from file.
+
+        Args:
+            session_id: Session ID to load
+
+        Returns:
+            UserSession: Restored session or None if not found
+        """
+        try:
+            session_file = BASE_TEMP_DIR / session_id / "session_state.json"
+            if not session_file.exists():
+                logger.debug(f"No saved session state found: {session_file}")
+                return None
+
+            with open(session_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            session = cls.from_dict(data)
+            logger.info(f"Session state loaded from file: {session_file}")
+            return session
+        except Exception as e:
+            logger.error(f"Failed to load session state: {str(e)}")
+            return None
+
+    def auto_save(self) -> None:
+        """Automatically save session state if significant changes occurred."""
+        try:
+            self.save_to_file()
+        except Exception as e:
+            logger.error(f"Auto-save failed for session {self.session_id}: {str(e)}")
+
+    def needs_api_key_restoration(self) -> Dict[str, bool]:
+        """Check which API keys need to be restored after session reload.
+
+        Returns:
+            Dict[str, bool]: Dictionary indicating which API keys are missing
+        """
+        return {
+            "openai": not self.text_processor.openai_model.has_api_key(),
+            "gemini": not self.text_processor.gemini_model.has_api_key(),
+        }
+
+    def get_session_restoration_info(self) -> Dict[str, Any]:
+        """Get information about session restoration status.
+
+        Returns:
+            Dict[str, Any]: Session restoration information
+        """
+        missing_keys = self.needs_api_key_restoration()
+        return {
+            "session_id": self.session_id,
+            "missing_api_keys": missing_keys,
+            "current_api_type": (
+                self.text_processor.current_api_type.value
+                if self.text_processor.current_api_type
+                else None
+            ),
+            "has_generated_audio": self.has_generated_audio(),
+            "last_save_time": time.time(),
+        }

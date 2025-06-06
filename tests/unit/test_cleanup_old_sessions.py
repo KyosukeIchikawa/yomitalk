@@ -47,8 +47,8 @@ class TestSessionCleanup:
         user_session = UserSession("test_session_cleanup")
 
         # グローバル変数をパッチしてテスト用ディレクトリを使用
-        with patch("yomitalk.session.BASE_TEMP_DIR", test_temp_dir), patch(
-            "yomitalk.session.BASE_OUTPUT_DIR", test_output_dir
+        with patch("yomitalk.user_session.BASE_TEMP_DIR", test_temp_dir), patch(
+            "yomitalk.user_session.BASE_OUTPUT_DIR", test_output_dir
         ):
             # 現在の時刻を取得
             current_time = int(time.time())
