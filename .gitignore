@@ -17,16 +17,22 @@ __pycache__/
 venv/
 ENV/
 
-# IDE
+# IDE関連
 .idea/
-.vscode/
+.vscode/settings.json  # User-specific settings only
 *.swp
 *.swo
-.vscode/settings.json
+
+# Dev Container
+.devcontainer/.env
 
 # Project specific
 data/temp/*
 data/output/*
+data/logs/*
+!data/temp/.gitkeep
+!data/output/.gitkeep
+!data/logs/.gitkeep
 voicevox_core/
 *.log
 .env
@@ -37,20 +43,6 @@ voicevox_core/
 htmlcov/
 tests/e2e/screenshots/
 
-# データ・キャッシュディレクトリ
-data/temp/*
-data/output/*
-data/logs/*
-!data/temp/.gitkeep
-!data/output/.gitkeep
-!data/logs/.gitkeep
-
-# IDE関連
-.idea/
-.vscode/
-*.swp
-*.swo
-
 # システム関連
 .DS_Store
 Thumbs.db
@@ -59,9 +51,6 @@ Thumbs.db
 build/
 dist/
 *.spec
-
-# VOICEVOX Core
-voicevox_core/
 
 # その他の一時ファイル
 *.png

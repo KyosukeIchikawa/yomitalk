@@ -1,0 +1,97 @@
+{
+  "name": "Yomitalk Development Environment",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "yomitalk-dev",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+
+  // Features to add to the dev container. More info: https://containers.dev/features.
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": true
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  // Configure tool-specific properties.
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.terminal.activateEnvironment": false,
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.linting.flake8Enabled": true,
+        "python.linting.mypyEnabled": true,
+        "python.formatting.provider": "black",
+        "python.sortImports.provider": "isort",
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": [
+          "tests/"
+        ],
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        },
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/.pytest_cache": true,
+          "**/data/temp": true,
+          "**/data/output": true,
+          "**/voicevox_core": true
+        },
+        "git.enableCommitSigning": false,
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.flake8",
+        "ms-python.mypy-type-checker",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-toolsai.jupyter",
+        "wholroyd.jinja",
+        "redhat.vscode-yaml",
+        "ms-vscode.makefile-tools",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "ms-playwright.playwright",
+        "ms-vscode.test-adapter-converter",
+        "littlefoxteam.vscode-python-test-adapter",
+        "streetsidesoftware.code-spell-checker"
+      ]
+    }
+  },
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  "forwardPorts": [7860],
+  "portsAttributes": {
+    "7860": {
+      "label": "Yomitalk Web App",
+      "onAutoForward": "notify"
+    }
+  },
+
+  // Use 'postCreateCommand' to run commands after the container is created.
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  // Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+  "remoteUser": "vscode",
+
+  // Environment variables
+  "containerEnv": {
+    "VOICEVOX_ACCEPT_AGREEMENT": "true",
+    "PAGER": "cat",
+    "LESSCHARSET": "utf-8",
+    "E2E_TEST_MODE": "false"
+  },
+
+  // Mounts for persistent data
+  "mounts": [
+    "source=yomitalk-data,target=/workspace/data,type=volume",
+    "source=yomitalk-voicevox,target=/workspace/voicevox_core,type=volume"
+  ]
+}

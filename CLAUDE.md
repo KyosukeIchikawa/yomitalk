@@ -12,34 +12,54 @@ Before working on this codebase, **read [docs/design.md](docs/design.md)** for c
 
 ## Essential Commands
 
-### Setup and Environment
+### Dev Container Setup (Recommended)
+
+**Open in VS Code Dev Container:**
+- Press `F1` → "Dev Containers: Reopen in Container"
+- Automatic setup: dependencies, VOICEVOX Core, pre-commit hooks
+
+**Development Commands:**
 ```bash
+python app.py                    # Start the Gradio application on port 7860
+pytest tests/                    # Run all tests (unit + E2E)
+pytest tests/unit/               # Run unit tests only
+E2E_TEST_MODE=true pytest tests/e2e/  # Run E2E tests
+flake8 . && mypy .              # Run static analysis
+black . && isort .              # Auto-format code
+pre-commit run --all-files      # Run pre-commit hooks manually
+```
+
+**VS Code Integration:** Use `Ctrl+Shift+P` → "Tasks: Run Task" for GUI access to all commands
+
+### Traditional Setup (Legacy)
+
+<details>
+<summary>Makefile/venv commands (still supported)</summary>
+
+```bash
+# Setup and Environment
 make setup              # Complete setup: deps, VOICEVOX, lint tools, pre-commit
 make venv              # Create virtual environment only
 make install           # Install Python packages only
 make download-voicevox-core  # Download VOICEVOX Core for audio generation
-```
 
-### Development
-```bash
+# Development
 make run               # Start the Gradio application on port 7860
 make lint              # Run flake8 and mypy static analysis
 make format            # Auto-format code with black, isort, autoflake, autopep8
-```
 
-### Testing
-```bash
+# Testing
 make test              # Run all tests (unit + E2E)
 make test-unit         # Run unit tests only
 make test-e2e          # Run E2E tests (sets E2E_TEST_MODE=true)
 make test-staged       # Run tests only for staged files
-```
 
-### Pre-commit Hooks
-```bash
+# Pre-commit Hooks
 make pre-commit-install  # Install pre-commit hooks
 make pre-commit-run     # Run pre-commit hooks manually
 ```
+
+</details>
 
 ## Architecture Overview
 

@@ -1,0 +1,140 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Yomitalk App",
+            "type": "shell",
+            "command": "python",
+            "args": ["app.py"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run All Tests",
+            "type": "shell",
+            "command": "pytest",
+            "args": ["tests/", "--durations=10"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Unit Tests",
+            "type": "shell",
+            "command": "pytest",
+            "args": ["tests/unit/", "--durations=10"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run E2E Tests",
+            "type": "shell",
+            "command": "pytest",
+            "args": ["tests/e2e/", "--durations=10"],
+            "group": "test",
+            "env": {
+                "E2E_TEST_MODE": "true"
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Format Code",
+            "type": "shell",
+            "command": "bash",
+            "args": ["-c", "black . && isort . && autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive ."],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Linting",
+            "type": "shell",
+            "command": "bash",
+            "args": ["-c", "flake8 . && mypy ."],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": [
+                "$flake8",
+                "$mypy-python"
+            ]
+        },
+        {
+            "label": "Run Pre-commit",
+            "type": "shell",
+            "command": "pre-commit",
+            "args": ["run", "--all-files"],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Compile Requirements",
+            "type": "shell",
+            "command": "pip-compile",
+            "args": ["-v", "requirements.in"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Install VOICEVOX Core",
+            "type": "shell",
+            "command": "bash",
+            "args": ["scripts/download_voicevox.sh", "--version", "0.16.0", "--dir", "voicevox_core", "--accept-agreement"],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
