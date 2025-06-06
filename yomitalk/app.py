@@ -1484,7 +1484,7 @@ class PaperPodcastApp:
                 outputs=[streaming_audio_output],
                 concurrency_limit=1,  # 音声生成は1つずつ実行
                 concurrency_id="audio_queue",  # 音声生成用キューID
-                show_progress=False,  # ストリーミング表示では独自の進捗バーを表示しない
+                show_progress="hidden",  # ストリーミング表示では独自の進捗バーを表示しない
                 api_name="generate_streaming_audio",  # APIエンドポイント名（デバッグ用）
             )
 
