@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from yomitalk.app import UserSession
+from yomitalk.user_session import UserSession
 
 
 class TestSessionCleanup:
@@ -47,8 +47,8 @@ class TestSessionCleanup:
         user_session = UserSession("test_session_cleanup")
 
         # グローバル変数をパッチしてテスト用ディレクトリを使用
-        with patch("yomitalk.app.BASE_TEMP_DIR", test_temp_dir), patch(
-            "yomitalk.app.BASE_OUTPUT_DIR", test_output_dir
+        with patch("yomitalk.session.BASE_TEMP_DIR", test_temp_dir), patch(
+            "yomitalk.session.BASE_OUTPUT_DIR", test_output_dir
         ):
             # 現在の時刻を取得
             current_time = int(time.time())

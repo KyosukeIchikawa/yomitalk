@@ -5,11 +5,11 @@ from pathlib import Path
 import pytest
 from pytest_bdd import given, parsers, then, when
 
-from yomitalk.app import UserSession
 from yomitalk.components.audio_generator import (
     get_global_voicevox_manager,
     initialize_global_voicevox_manager,
 )
+from yomitalk.user_session import UserSession
 
 
 @pytest.fixture
