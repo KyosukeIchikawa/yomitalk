@@ -270,13 +270,13 @@ class PaperPodcastApp:
         self, text: str, user_session: UserSession, progress=gr.Progress()
     ):
         """
-        Generate streaming audio from podcast text.
-        最終的な音声ファイルも生成し、クラス変数に保持する
-        進捗情報もクラス変数に保存する（進捗表示は行わない）
+        Generate streaming audio from podcast text with progress tracking.
+        Saves intermediate results to user_session and updates audio_output.
 
         Args:
             text (str): Generated podcast text
-            progress (gr.Progress): Gradio Progress object (not used directly)
+            user_session (UserSession): User session instance
+            progress (gr.Progress): Gradio Progress object
 
         Yields:
             str: Path to audio file chunks for streaming playback
@@ -349,6 +349,7 @@ class PaperPodcastApp:
                     logger.debug(
                         f"ストリーム音声パーツ ({len(parts_paths)}): {audio_path}"
                     )
+
                     yield audio_path  # ストリーミング再生用にyield
                     time.sleep(0.05)  # 連続再生のタイミング調整
                 elif filename.startswith("audio_"):
@@ -382,6 +383,10 @@ class PaperPodcastApp:
         Args:
             final_combined_path (str): 結合された最終音声ファイルのパス
             parts_paths (List[str]): 部分音声ファイルのパスのリスト
+            user_session (UserSession): ユーザーセッションインスタンス
+
+        Returns:
+            str: 最終的な音声ファイルの情報、またはNone
         """
         # 最終結合ファイルのパスが取得できた場合
         if final_combined_path and os.path.exists(final_combined_path):
@@ -409,13 +414,14 @@ class PaperPodcastApp:
                 logger.info(
                     f"音声生成完了: {final_combined_path} (ファイルサイズ: {filesize} bytes)"
                 )
+                return final_combined_path  # 最終的な音声ファイルパスを返す
             else:
                 logger.error(f"ファイルが存在しなくなりました: {final_combined_path}")
-                self._use_fallback_audio(parts_paths, user_session)
+                return self._use_fallback_audio(parts_paths, user_session)
 
         # 最終結合ファイルがない場合はフォールバック処理
         else:
-            self._use_fallback_audio(parts_paths, user_session)
+            return self._use_fallback_audio(parts_paths, user_session)
 
     def _use_fallback_audio(self, parts_paths, user_session: UserSession):
         """
@@ -423,6 +429,10 @@ class PaperPodcastApp:
 
         Args:
             parts_paths (List[str]): 部分音声ファイルのパスのリスト
+            user_session (UserSession): ユーザーセッションインスタンス
+
+        Returns:
+            str: フォールバックで使用する音声ファイルパス、またはNone
         """
         # 部分音声ファイルがある場合は最後のパートを使用
         if parts_paths:
@@ -443,6 +453,7 @@ class PaperPodcastApp:
                 logger.info(
                     f"部分音声ファイル使用: {parts_paths[-1]} (ファイルサイズ: {filesize} bytes)"
                 )
+                return parts_paths[-1]  # フォールバック音声ファイルパスを返す
             else:
                 logger.error(f"フォールバックファイルも存在しません: {parts_paths[-1]}")
                 user_session.audio_generator.audio_generation_progress = 0.0
@@ -455,6 +466,37 @@ class PaperPodcastApp:
             user_session.update_audio_generation_state(
                 status="failed", is_generating=False, progress=0.0
             )
+        return None  # エラー時はNoneを返す
+
+    def _format_progress_info(
+        self, user_session: UserSession, status_message: str = ""
+    ) -> Optional[str]:
+        """
+        音声生成の進捗情報をフォーマットします。
+
+        Args:
+            user_session (UserSession): ユーザーセッションインスタンス
+            status_message (str): ステータスメッセージ
+
+        Returns:
+            Optional[str]: フォーマットされた音声ファイルパス、またはNone
+        """
+        state = user_session.audio_generation_state
+
+        # 音声生成が完了している場合は最終ファイルを返す
+        if (
+            state.get("status") == "completed"
+            and state.get("final_audio_path")
+            and os.path.exists(state["final_audio_path"])
+        ):
+            logger.debug(f"Returning final audio file: {state['final_audio_path']}")
+            return str(state["final_audio_path"])
+
+        # 進行中または失敗時はNoneを返す
+        # (audio_outputはファイルパスまたはNoneのみ受け入れるため)
+        # status_messageはロギング用にのみ使用
+        logger.debug(f"Progress status: {status_message}")
+        return None
 
     def disable_generate_button(self):
         """音声生成ボタンを無効化します。
