@@ -12,3 +12,9 @@ Feature: Audio Generation
     When I click the "音声を生成" button
     Then audio should be generated
     And an audio player should be displayed
+
+  Scenario: Audio progress is displayed during generation
+    When I click the "音声を生成" button
+    Then audio generation progress should be visible
+    And progress information should update during generation
+    And final audio should be displayed when complete

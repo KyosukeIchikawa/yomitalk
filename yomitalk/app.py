@@ -243,11 +243,11 @@ class PaperPodcastApp:
         existing_text: str,
         add_separator: bool,
         user_session: UserSession,
-    ) -> Tuple[None, str, UserSession]:
+    ) -> Tuple[str, UserSession]:
         """Extract text from uploaded file automatically (for file upload mode)."""
         if file_obj is None:
             logger.warning("No file provided for automatic extraction")
-            return None, existing_text, user_session
+            return existing_text, user_session
 
         # Extract new text from file
         new_text = ContentExtractor.extract_text(file_obj)
@@ -263,15 +263,188 @@ class PaperPodcastApp:
         logger.debug(
             f"Auto file text extraction completed for session {user_session.session_id}"
         )
-        # Return None for file_input to clear it after extraction
-        return None, combined_text, user_session
+        return combined_text, user_session
+
+    def clear_file_input(self) -> None:
+        """Clear the file input after successful extraction."""
+        return None
+
+    def _estimate_audio_parts_count(self, text: str) -> int:
+        """
+        Estimate the number of audio parts that will be generated based on the script.
+
+        Args:
+            text (str): The podcast script text
+
+        Returns:
+            int: Estimated number of audio parts
+        """
+        import re
+
+        # Count the number of character dialogue lines (四国めたん:, ずんだもん:, etc.)
+        character_lines = re.findall(r"^[^:]+:", text, re.MULTILINE)
+        estimated_parts = len(character_lines)
+
+        # Minimum 1 part, and add some buffer for safety
+        return max(1, estimated_parts)
+
+    def _create_progress_html(
+        self,
+        current_part: int,
+        total_parts: int,
+        status_message: str,
+        is_completed: bool = False,
+        start_time: Optional[float] = None,
+    ) -> str:
+        """
+        Create comprehensive progress display with progress bar, elapsed time, and estimated remaining time.
+
+        Args:
+            current_part (int): Current part number
+            total_parts (int): Total number of parts
+            status_message (str): Status message to display
+            is_completed (bool): Whether the generation is completed
+            start_time (float): Start time timestamp for calculating elapsed time
+
+        Returns:
+            str: HTML string for progress display
+        """
+        import time
+
+        if is_completed:
+            progress_percent = 100
+            emoji = "✅"
+        else:
+            progress_percent = int(
+                min(95, (current_part / total_parts) * 100) if total_parts > 0 else 0
+            )
+            emoji = "🎵"
+
+        # 経過時間と推定残り時間を計算
+        time_info = ""
+        if start_time is not None:
+            elapsed_time = time.time() - start_time
+            elapsed_minutes = int(elapsed_time // 60)
+            elapsed_seconds = int(elapsed_time % 60)
+
+            if is_completed:
+                time_info = f" | 完了時間: {elapsed_minutes:02d}:{elapsed_seconds:02d}"
+            elif current_part > 0 and not is_completed:
+                # 推定残り時間を計算（現在のペースに基づく）
+                avg_time_per_part = elapsed_time / current_part
+                remaining_parts = total_parts - current_part
+                estimated_remaining = avg_time_per_part * remaining_parts
+                remaining_minutes = int(estimated_remaining // 60)
+                remaining_seconds = int(estimated_remaining % 60)
+
+                time_info = f" | 経過: {elapsed_minutes:02d}:{elapsed_seconds:02d} | 推定残り: {remaining_minutes:02d}:{remaining_seconds:02d}"
+            else:
+                time_info = f" | 経過: {elapsed_minutes:02d}:{elapsed_seconds:02d}"
+
+        # プログレスバーのCSS（余分な枠線なし）
+        progress_bar_html = f"""
+        <div style="width: 100%; background-color: var(--neutral-100, #f3f4f6);
+                    border-radius: 8px; height: 6px; margin: 4px 0; overflow: hidden;
+                    border: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+            <div style="width: {progress_percent}%; background: linear-gradient(90deg,
+                        var(--color-accent, #2563eb) 0%, var(--color-accent-soft, #3b82f6) 100%);
+                        height: 100%; border-radius: 8px; transition: width 0.3s ease;">
+            </div>
+        </div>
+        """
+
+        # Gradio Softテーマに合わせたクリーンな進捗表示（余分な枠線なし）
+        return f"""
+        <div style="padding: 12px 8px; margin: 8px 0; font-family: var(--font, 'Source Sans Pro', sans-serif);
+                    color: var(--body-text-color, #111827);
+                    background: var(--background-fill-secondary, #f8f9fa);
+                    border-radius: var(--radius-sm, 4px);
+                    border: none;
+                    box-shadow: none;">
+            <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                <span style="margin-right: 8px; font-size: 16px;">{emoji}</span>
+                <span style="font-weight: 500; flex-grow: 1;">{status_message}</span>
+                <span style="color: var(--body-text-color-subdued, #6b7280); font-size: 13px;">
+                    パート {current_part}/{total_parts} ({progress_percent:.1f}%){time_info}
+                </span>
+            </div>
+            {progress_bar_html}
+        </div>
+        """
+
+    def _create_error_html(self, error_message: str) -> str:
+        """
+        Create simple error display compatible with Gradio Soft theme.
+
+        Args:
+            error_message (str): Error message to display
+
+        Returns:
+            str: HTML string for error display
+        """
+        return f"""
+        <div style="padding: 12px; margin: 4px 0; font-family: var(--font, 'Source Sans Pro', sans-serif);
+                    background: var(--error-background-fill, #fef2f2);
+                    border-radius: var(--radius-md, 6px);
+                    border: 1px solid var(--error-border-color, #fecaca);">
+            <span style="margin-right: 8px;">❌</span>
+            <span style="font-weight: 500; color: var(--error-text-color, #dc2626);">{error_message}</span>
+        </div>
+        """
+
+    def _create_recovery_progress_html(
+        self, user_session: UserSession, status_message: str, is_active: bool = False
+    ) -> str:
+        """
+        Create progress HTML for connection recovery scenarios.
+
+        Args:
+            user_session (UserSession): User session instance
+            status_message (str): Status message to display
+            is_active (bool): Whether generation is currently active
+
+        Returns:
+            str: HTML string for recovery progress display
+        """
+        if not status_message:
+            return ""
+
+        state = user_session.get_audio_generation_status()
+        streaming_parts = state.get("streaming_parts", [])
+        estimated_total_parts = state.get(
+            "estimated_total_parts", len(streaming_parts) if streaming_parts else 1
+        )
+        current_part_count = len(streaming_parts)
+        start_time = state.get("start_time")
+
+        # 推定パーツ数が実際のパーツ数より少ない場合は調整
+        if current_part_count > estimated_total_parts:
+            estimated_total_parts = current_part_count
+
+        if is_active:
+            # 進行中の場合
+            return self._create_progress_html(
+                current_part_count,
+                estimated_total_parts,
+                status_message,
+                start_time=start_time,
+            )
+        else:
+            # 完了済みの場合
+            return self._create_progress_html(
+                estimated_total_parts,
+                estimated_total_parts,
+                status_message,
+                is_completed=True,
+                start_time=start_time,
+            )
 
     def generate_podcast_audio_streaming(
         self, text: str, user_session: UserSession, progress=gr.Progress()
     ):
         """
         Generate streaming audio from podcast text with progress tracking.
-        Saves intermediate results to user_session and updates audio_output.
+        Saves intermediate results to user_session and displays progress.
 
         Args:
             text (str): Generated podcast text
@@ -279,14 +452,15 @@ class PaperPodcastApp:
             progress (gr.Progress): Gradio Progress object
 
         Yields:
-            str: Path to audio file chunks for streaming playback
+            Tuple[str, UserSession, str, str]: (streaming_audio_path, updated_user_session, progress_html, final_audio_path)
         """
         if not text:
             logger.warning("Streaming audio generation: Text is empty")
             user_session.update_audio_generation_state(
                 status="failed", is_generating=False
             )
-            yield None
+            error_html = self._create_error_html("テキストが空のため音声生成できません")
+            yield None, user_session, error_html, None
             return
 
         # Check if VOICEVOX Core is available
@@ -295,10 +469,15 @@ class PaperPodcastApp:
             user_session.update_audio_generation_state(
                 status="failed", is_generating=False
             )
-            yield None
+            error_html = self._create_error_html("VOICEVOX Coreが利用できません")
+            yield None, user_session, error_html, None
             return
 
         try:
+            # スクリプトからパーツ数を推定
+            estimated_total_parts = self._estimate_audio_parts_count(text)
+            logger.info(f"Estimated total audio parts: {estimated_total_parts}")
+
             # 音声生成状態を初期化
             generation_id = str(uuid.uuid4())
             user_session.update_audio_generation_state(
@@ -311,13 +490,23 @@ class PaperPodcastApp:
                 generated_parts=[],
                 streaming_parts=[],
                 final_audio_path=None,
+                estimated_total_parts=estimated_total_parts,  # 推定パーツ数を保存
             )
 
             # 初回のyieldを行って、Gradioのストリーミングモードを確実に有効化
             logger.debug(
                 f"Initializing streaming audio generation (ID: {generation_id})"
             )
-            yield None
+            start_html = self._create_progress_html(
+                0,
+                estimated_total_parts,
+                "音声生成を開始しています...",
+                start_time=time.time(),
+            )
+            yield None, user_session, start_html, None
+
+            # gr.Progressも使用（Gradio標準の進捗バー）
+            progress(0, desc="🎤 音声生成を開始しています...")
 
             # ストリーミング用の各パートのパスを保存
             parts_paths = []
@@ -341,16 +530,36 @@ class PaperPodcastApp:
                         user_session.audio_generation_state["streaming_parts"]
                     )
                     current_parts.append(audio_path)
+                    current_part_count = len(current_parts)
+                    progress_ratio = min(
+                        0.95, current_part_count / estimated_total_parts
+                    )
+
                     user_session.update_audio_generation_state(
                         streaming_parts=current_parts,
-                        progress=min(0.9, len(current_parts) * 0.1),  # 部分的な進捗
+                        progress=progress_ratio,
                     )
 
                     logger.debug(
-                        f"ストリーム音声パーツ ({len(parts_paths)}): {audio_path}"
+                        f"ストリーム音声パーツ ({current_part_count}/{estimated_total_parts}): {audio_path}"
                     )
 
-                    yield audio_path  # ストリーミング再生用にyield
+                    # 進捗情報を生成してyield（新しい詳細進捗表示）
+                    start_time = user_session.audio_generation_state.get("start_time")
+                    progress_html = self._create_progress_html(
+                        current_part_count,
+                        estimated_total_parts,
+                        f"音声パート {current_part_count} を生成中...",
+                        start_time=start_time,
+                    )
+
+                    # gr.Progressも更新
+                    progress(
+                        progress_ratio,
+                        desc=f"🎵 音声パート {current_part_count}/{estimated_total_parts} 生成中...",
+                    )
+
+                    yield audio_path, user_session, progress_html, None  # ストリーミング再生用にyield
                     time.sleep(0.05)  # 連続再生のタイミング調整
                 elif filename.startswith("audio_"):
                     # 最終結合ファイルの場合
@@ -362,6 +571,21 @@ class PaperPodcastApp:
                         f"結合済み最終音声ファイルを受信: {final_combined_path}"
                     )
 
+                    # 最終音声完成の進捗を表示
+                    start_time = user_session.audio_generation_state.get("start_time")
+                    complete_html = self._create_progress_html(
+                        estimated_total_parts,
+                        estimated_total_parts,
+                        "音声生成完了！",
+                        is_completed=True,
+                        start_time=start_time,
+                    )
+
+                    # gr.Progressも完了状態に
+                    progress(1.0, desc="✅ 音声生成完了！")
+
+                    yield None, user_session, complete_html, final_combined_path
+
             # 音声生成の完了処理
             self._finalize_audio_generation(
                 final_combined_path, parts_paths, user_session
@@ -372,7 +596,11 @@ class PaperPodcastApp:
             user_session.update_audio_generation_state(
                 status="failed", is_generating=False, progress=0.0
             )
-            yield None
+            error_html = self._create_error_html(
+                f"音声生成でエラーが発生しました: {str(e)}"
+            )
+            progress(0, desc="❌ 音声生成エラー")
+            yield None, user_session, error_html, None
 
     def _finalize_audio_generation(
         self, final_combined_path, parts_paths, user_session: UserSession
@@ -479,7 +707,7 @@ class PaperPodcastApp:
             status_message (str): ステータスメッセージ
 
         Returns:
-            Optional[str]: フォーマットされた音声ファイルパス、またはNone
+            Optional[str]: 最終音声ファイルパス、またはNone（進行中の場合）
         """
         state = user_session.audio_generation_state
 
@@ -489,13 +717,23 @@ class PaperPodcastApp:
             and state.get("final_audio_path")
             and os.path.exists(state["final_audio_path"])
         ):
-            logger.debug(f"Returning final audio file: {state['final_audio_path']}")
+            logger.info(
+                f"Audio generation completed, returning file: {state['final_audio_path']}"
+            )
             return str(state["final_audio_path"])
 
-        # 進行中または失敗時はNoneを返す
-        # (audio_outputはファイルパスまたはNoneのみ受け入れるため)
-        # status_messageはロギング用にのみ使用
-        logger.debug(f"Progress status: {status_message}")
+        # 進行中の場合はストリーミング音声があれば最新のものを返す
+        streaming_parts = state.get("streaming_parts", [])
+        if streaming_parts:
+            latest_part = streaming_parts[-1]
+            if os.path.exists(latest_part):
+                logger.info(
+                    f"Progress update - latest streaming part: {latest_part} | {status_message}"
+                )
+                return str(latest_part)
+
+        # それ以外の場合はNoneを返す
+        logger.info(f"Progress update - no audio yet: {status_message}")
         return None
 
     def disable_generate_button(self):
@@ -647,6 +885,39 @@ class PaperPodcastApp:
                 font-size: 0.9em !important;
                 line-height: 1.4 !important;
                 max-width: 100% !important;
+            }
+
+            /* 音声生成進捗表示のスタイル調整 - 完全にクリーンな表示 */
+            #audio_progress {
+                margin: 8px 0 !important;
+                font-size: 14px !important;
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+
+            /* Gradioのすべてのデフォルト装飾を除去 */
+            #audio_progress,
+            #audio_progress > *,
+            #audio_progress .block,
+            #audio_progress .prose,
+            #audio_progress .gradio-html {
+                border: none !important;
+                box-shadow: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                outline: none !important;
+            }
+
+            /* コンテナの余白とボーダーを完全除去 */
+            #audio_progress .gradio-container {
+                border: none !important;
+                box-shadow: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+                margin: 0 !important;
             }
 
             /* オーディオ出力のスタイル調整 */
@@ -872,6 +1143,15 @@ class PaperPodcastApp:
                         "初期化中...", variant="secondary", interactive=False
                     )
 
+                    # 音声生成進捗表示
+                    audio_progress = gr.HTML(
+                        value="",
+                        elem_id="audio_progress",
+                        visible=True,
+                        show_label=False,
+                        container=False,
+                    )
+
                     # ストリーミング再生用のオーディオコンポーネント
                     streaming_audio_output = gr.Audio(
                         type="filepath",
@@ -952,7 +1232,12 @@ class PaperPodcastApp:
                 # Connection recovery on page load/reconnection (includes audio state restoration)
                 fn=self.handle_connection_recovery,
                 inputs=[user_session, terms_checkbox, podcast_text],
-                outputs=[streaming_audio_output, audio_output, generate_btn],
+                outputs=[
+                    streaming_audio_output,
+                    audio_progress,
+                    audio_output,
+                    generate_btn,
+                ],
                 api_name="connection_recovery",
                 queue=False,
             )
@@ -966,7 +1251,7 @@ class PaperPodcastApp:
             )
 
             # Auto file extraction when file is uploaded (file upload mode)
-            file_input.change(
+            file_upload_event = file_input.change(
                 fn=self.extract_file_text_auto,
                 inputs=[
                     file_input,
@@ -974,10 +1259,19 @@ class PaperPodcastApp:
                     auto_separator_checkbox,
                     user_session,
                 ],
-                outputs=[file_input, extracted_text, user_session],
+                outputs=[extracted_text, user_session],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="file_queue",  # ファイル処理用キューID
-            ).then(
+            )
+
+            # Clear file input after successful extraction
+            file_upload_event.then(
+                fn=self.clear_file_input,
+                outputs=[file_input],
+            )
+
+            # Enable process button after file extraction
+            file_upload_event.then(
                 fn=self.enable_process_button,
                 inputs=[extracted_text, user_session],
                 outputs=[process_btn],
@@ -1138,37 +1432,31 @@ class PaperPodcastApp:
             audio_events = disable_btn_event.then(
                 fn=self.reset_audio_state_and_components,
                 inputs=[user_session],
-                outputs=[streaming_audio_output, audio_output],
+                outputs=[streaming_audio_output, audio_progress, audio_output],
                 concurrency_id="audio_reset",
                 concurrency_limit=1,  # 同時実行数を1に制限
                 api_name="reset_audio_state",
             )
 
             # 1. ストリーミング再生開始 (音声パーツ生成とストリーミング再生)
-            audio_events.then(
+            streaming_event = audio_events.then(
                 fn=self.generate_podcast_audio_streaming,
                 inputs=[podcast_text, user_session],
-                outputs=[streaming_audio_output],
+                outputs=[
+                    streaming_audio_output,
+                    user_session,
+                    audio_progress,
+                    audio_output,
+                ],
                 concurrency_limit=1,  # 音声生成は1つずつ実行
                 concurrency_id="audio_queue",  # 音声生成用キューID
                 show_progress="hidden",  # ストリーミング表示では独自の進捗バーを表示しない
                 api_name="generate_streaming_audio",  # APIエンドポイント名（デバッグ用）
             )
 
-            # 2. 波形表示用のコンポーネントを更新 (進捗表示とともに最終波形表示)
-            # こちらは独立したイベントとして実行し、音声生成の進捗を表示してから最終ファイルを返す
-            wave_display_event = audio_events.then(
-                fn=self.wait_for_audio_completion,
-                inputs=[podcast_text, user_session],
-                outputs=[audio_output],
-                concurrency_limit=1,  # 同時実行数を1に制限
-                concurrency_id="progress_queue",  # 進捗表示用キューID
-                show_progress="full",  # 進捗バーを表示（関数内で更新）
-                api_name="update_progress_display",  # APIエンドポイント名（デバッグ用）
-            )
-
-            # 3. 処理完了後にボタンを再度有効化
-            wave_display_event.then(
+            # 2. 処理完了後にボタンを再度有効化
+            # Note: audio_outputはgenerate_podcast_audio_streamingで直接更新される
+            streaming_event.then(
                 fn=self.enable_generate_button,
                 inputs=[terms_checkbox, podcast_text],
                 outputs=[generate_btn],
@@ -1529,14 +1817,14 @@ class PaperPodcastApp:
             user_session: ユーザーセッション
 
         Returns:
-            Tuple[None, None]: (streaming_audio_clear, audio_output_clear)
+            Tuple[None, str, None]: (streaming_audio_clear, progress_clear, audio_output_clear)
         """
         # 音声生成状態をリセット
         user_session.reset_audio_generation_state()
         logger.debug("Audio generation state and components reset")
 
-        # 音声コンポーネントをクリア
-        return None, None
+        # 音声コンポーネントと進捗表示をクリア
+        return None, "", None
 
     def enable_ui_components_after_initialization(
         self, user_session: UserSession
@@ -1764,7 +2052,7 @@ class PaperPodcastApp:
 
     def handle_connection_recovery(
         self, user_session: UserSession, terms_agreed: bool, podcast_text: str
-    ) -> Tuple[Optional[str], Optional[str], Dict[str, Any]]:
+    ) -> Tuple[Optional[str], str, Optional[str], Dict[str, Any]]:
         """
         Handle connection recovery when page loads/reconnects
         Combines audio state restoration and button state management
@@ -1775,8 +2063,8 @@ class PaperPodcastApp:
             podcast_text: Generated podcast text
 
         Returns:
-            Tuple[Optional[str], Optional[str], Dict[str, Any]]:
-                (streaming_audio, final_audio, button_update)
+            Tuple[Optional[str], str, Optional[str], Dict[str, Any]]:
+                (streaming_audio, progress_html, final_audio, button_update)
         """
         logger.info("Connection recovery triggered - checking audio state")
 
@@ -1789,6 +2077,7 @@ class PaperPodcastApp:
                 logger.debug("No audio to restore - setting normal button state")
                 return (
                     None,
+                    "",
                     None,
                     self.update_audio_button_state(terms_agreed, podcast_text),
                 )
@@ -1805,9 +2094,14 @@ class PaperPodcastApp:
                 logger.debug(
                     "Audio generation active - avoiding race condition with timer"
                 )
+                # 進行中の進捗情報を取得
+                progress_html = self._create_recovery_progress_html(
+                    user_session, status_message, is_active=True
+                )
                 # Return gr.update() for audio components to avoid conflicts with ongoing processes
                 return (
                     gr.update(),  # Preserve current streaming audio state
+                    progress_html,
                     gr.update(),  # Preserve current final audio state
                     gr.update(interactive=False, value="音声生成中...（復帰）"),
                 )
@@ -1816,12 +2110,16 @@ class PaperPodcastApp:
                 button_state = self.update_audio_button_state(
                     terms_agreed, podcast_text
                 )
-                return (streaming_audio, final_audio, button_state)
+                progress_html = self._create_recovery_progress_html(
+                    user_session, status_message, is_active=False
+                )
+                return (streaming_audio, progress_html, final_audio, button_state)
 
         except Exception as e:
             logger.error(f"Error in connection recovery: {e}")
             return (
                 None,
+                "",
                 None,
                 self.update_audio_button_state(terms_agreed, podcast_text),
             )

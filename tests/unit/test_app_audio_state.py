@@ -179,7 +179,7 @@ class TestPaperPodcastAppAudioRecovery:
         assert "復帰" in status
 
         # Test connection recovery integration
-        streaming_audio_recovery, final_audio_recovery, button_state = (
+        streaming_audio_recovery, progress_html, final_audio_recovery, button_state = (
             self.app.handle_connection_recovery(
                 self.user_session, terms_agreed=True, podcast_text="Test script"
             )
@@ -187,18 +187,20 @@ class TestPaperPodcastAppAudioRecovery:
 
         # Both should return the same audio content
         assert streaming_audio_recovery == streaming_audio
+        assert "✅ 音声生成完了（復帰）" in progress_html
         assert final_audio_recovery == final_audio
         assert button_state["interactive"] is True
 
     def test_handle_connection_recovery_no_audio(self):
         """Test connection recovery when no audio exists."""
-        streaming_audio, final_audio, button_state = (
+        streaming_audio, progress_html, final_audio, button_state = (
             self.app.handle_connection_recovery(
                 self.user_session, terms_agreed=True, podcast_text="Test script"
             )
         )
 
         assert streaming_audio is None
+        assert progress_html == ""
         assert final_audio is None
         assert button_state["interactive"] is True
         assert button_state["value"] == "音声を生成"
@@ -213,13 +215,14 @@ class TestPaperPodcastAppAudioRecovery:
             final_audio_path="final_audio.wav",
         )
 
-        streaming_audio, final_audio, button_state = (
+        streaming_audio, progress_html, final_audio, button_state = (
             self.app.handle_connection_recovery(
                 self.user_session, terms_agreed=True, podcast_text="Test script"
             )
         )
 
         assert streaming_audio == "part2.wav"
+        assert "✅ 音声生成完了（復帰）" in progress_html
         assert final_audio == "final_audio.wav"
         assert button_state["interactive"] is True
 
@@ -233,7 +236,7 @@ class TestPaperPodcastAppAudioRecovery:
             streaming_parts=["part1.wav"],
         )
 
-        streaming_audio, final_audio, button_state = (
+        streaming_audio, progress_html, final_audio, button_state = (
             self.app.handle_connection_recovery(
                 self.user_session, terms_agreed=True, podcast_text="Test script"
             )
@@ -243,6 +246,7 @@ class TestPaperPodcastAppAudioRecovery:
         import gradio as gr
 
         assert isinstance(streaming_audio, gr.update().__class__)
+        assert "音声生成中" in progress_html
         assert isinstance(final_audio, gr.update().__class__)
         assert button_state["interactive"] is False
 
@@ -256,13 +260,14 @@ class TestPaperPodcastAppAudioRecovery:
             final_audio_path="final_audio.wav",
         )
 
-        streaming_audio, final_audio, button_state = (
+        streaming_audio, progress_html, final_audio, button_state = (
             self.app.handle_connection_recovery(
                 self.user_session, terms_agreed=False, podcast_text="Test script"
             )
         )
 
         assert streaming_audio == "part1.wav"
+        assert "✅ 音声生成完了（復帰）" in progress_html
         assert final_audio == "final_audio.wav"
         assert button_state["interactive"] is False
         assert "VOICEVOX利用規約に同意が必要です" in button_state["value"]
@@ -275,12 +280,13 @@ class TestPaperPodcastAppAudioRecovery:
         )
 
         # Reset
-        streaming_clear, audio_clear = self.app.reset_audio_state_and_components(
-            self.user_session
+        streaming_clear, progress_clear, audio_clear = (
+            self.app.reset_audio_state_and_components(self.user_session)
         )
 
         # Check components are cleared
         assert streaming_clear is None
+        assert progress_clear == ""
         assert audio_clear is None
 
         # Check state is reset

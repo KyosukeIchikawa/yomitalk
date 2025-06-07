@@ -466,3 +466,175 @@ def audio_components_restored_to_previous_state(page: Page):
         logger.warning("Error elements detected, but continuing test")
 
     logger.info("Audio component restoration check completed")
+
+
+@then("audio generation progress should be visible")
+def audio_progress_is_visible(page: Page):
+    """
+    Verify that audio generation progress is displayed
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Checking for audio generation progress visibility...")
+
+    # Wait for progress indicators to appear
+    page.wait_for_timeout(2000)  # Give time for generation to start
+
+    # Check for various progress indicators
+    progress_indicators = [
+        # Button should show progress state
+        page.get_by_text("音声生成中"),
+        page.get_by_text("処理中"),
+        # Progress bar or status display
+        page.locator(".progress"),
+        page.locator("[class*='progress']"),
+        # New dedicated progress component
+        page.locator("#audio_progress"),
+        # Audio output area should show some activity
+        page.locator("#audio_output"),
+    ]
+
+    found_progress = False
+    for indicator in progress_indicators:
+        try:
+            if indicator.count() > 0 and indicator.first.is_visible():
+                logger.info(f"Found progress indicator: {indicator}")
+                found_progress = True
+                break
+        except Exception:
+            continue
+
+    if not found_progress:
+        # Take screenshot for debugging
+        page.screenshot(path="progress_debug.png")
+        page_content = page.locator("body").inner_text()
+        logger.info(f"Page content during progress check: {page_content[:500]}...")
+
+    assert found_progress, "No audio generation progress indicators found"
+
+
+@then("progress information should update during generation")
+def progress_updates_during_generation(page: Page):
+    """
+    Verify that progress information updates during audio generation
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Monitoring progress updates during generation...")
+
+    # Monitor for progress changes over time
+    progress_states = []
+    max_checks = 15
+
+    # First check immediately to catch the generating state
+    for i in range(max_checks):
+        if i > 0:  # Don't wait on the first check
+            page.wait_for_timeout(500)  # Wait 500ms between checks
+
+        # Check button state
+        button_state = None
+        try:
+            if page.get_by_text("音声生成中").count() > 0:
+                button_state = "generating"
+            elif page.get_by_text("音声を生成").count() > 0:
+                button_state = "ready"
+        except Exception:
+            pass
+
+        # Check for progress display in the dedicated progress component
+        progress_content = ""
+        progress_has_content = False
+        try:
+            progress_component = page.locator("#audio_progress")
+            if progress_component.count() > 0:
+                progress_content = progress_component.text_content() or ""
+                progress_has_content = len(progress_content.strip()) > 0
+        except Exception:
+            pass
+
+        # Check for any progress display in audio output
+        audio_output_content = ""
+        audio_output_has_content = False
+        try:
+            audio_output = page.locator("#audio_output")
+            if audio_output.count() > 0:
+                audio_output_content = audio_output.text_content() or ""
+                audio_output_has_content = len(audio_output_content.strip()) > 0
+        except Exception:
+            pass
+
+        current_state = {
+            "check": i,
+            "button_state": button_state,
+            "progress_has_content": progress_has_content,
+            "progress_content": progress_content[:50] if progress_content else "",
+            "audio_output_has_content": audio_output_has_content,
+            "audio_output_content": (
+                audio_output_content[:50] if audio_output_content else ""
+            ),
+            "timestamp": page.evaluate("Date.now()"),
+        }
+
+        progress_states.append(current_state)
+        logger.info(f"Progress check {i}: {current_state}")
+
+        # If we see the generation is complete, break
+        if button_state == "ready":
+            break
+
+    # Verify we saw some progress indication (either button state or progress content)
+    generating_states = [
+        s for s in progress_states if s["button_state"] == "generating"
+    ]
+    progress_content_states = [s for s in progress_states if s["progress_has_content"]]
+
+    assert (
+        len(generating_states) > 0 or len(progress_content_states) > 0
+    ), f"No 'generating' state or progress content observed. States: {progress_states}"
+
+    if len(generating_states) > 0:
+        logger.info(f"Successfully observed {len(generating_states)} generating states")
+    if len(progress_content_states) > 0:
+        logger.info(
+            f"Successfully observed {len(progress_content_states)} progress content updates"
+        )
+
+
+@then("final audio should be displayed when complete")
+def final_audio_displayed_when_complete(page: Page):
+    """
+    Verify that final audio is displayed when generation completes
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Verifying final audio display...")
+
+    # Wait for completion (longer timeout for audio generation)
+    page.wait_for_timeout(15000)
+
+    # Check that generation button is back to normal state
+    try:
+        page.wait_for_selector("text=音声を生成", timeout=30000)
+        logger.info("Generation button returned to normal state")
+    except Exception:
+        logger.warning("Generation button state unclear")
+
+    # Check for final audio in audio_output
+    audio_output = page.locator("#audio_output")
+    assert audio_output.count() > 0, "Audio output component not found"
+
+    # Check if audio player is present in the final output
+    audio_player = audio_output.locator("audio")
+    if audio_player.count() > 0:
+        logger.info("Final audio player found in audio_output")
+        assert audio_player.first.is_visible(), "Final audio player is not visible"
+    else:
+        # If no audio player, check for progress/status text
+        output_text = audio_output.text_content() or ""
+        logger.info(f"Audio output content: {output_text}")
+        assert len(output_text) > 0, "Audio output is empty"
+
+    logger.info("Final audio display verification completed")
