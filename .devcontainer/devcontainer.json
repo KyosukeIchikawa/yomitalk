@@ -1,9 +1,11 @@
 {
   "name": "Yomitalk Development Environment",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "yomitalk-dev",
-  "workspaceFolder": "/workspace",
-  "shutdownAction": "stopCompose",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopContainer",
 
   // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
@@ -16,7 +18,24 @@
     }
   },
 
-  // Configure tool-specific properties.
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  "forwardPorts": [7860],
+  "portsAttributes": {
+    "7860": {
+      "label": "Yomitalk Web App",
+      "onAutoForward": "notify"
+    }
+  },
+
+  // Use 'postCreateCommand' to run commands after the container is created.
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  // Use root user since the base Dockerfile doesn't create a non-root user
+  // "remoteUser": "root",
+
+  // Override the default command to keep container running for development
+  "overrideCommand": true,
   "customizations": {
     "vscode": {
       "settings": {
@@ -34,7 +53,7 @@
         ],
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
-          "source.organizeImports": true
+          "source.organizeImports": "explicit"
         },
         "files.exclude": {
           "**/__pycache__": true,
@@ -66,21 +85,6 @@
     }
   },
 
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  "forwardPorts": [7860],
-  "portsAttributes": {
-    "7860": {
-      "label": "Yomitalk Web App",
-      "onAutoForward": "notify"
-    }
-  },
-
-  // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "bash .devcontainer/setup.sh",
-
-  // Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-  "remoteUser": "vscode",
-
   // Environment variables
   "containerEnv": {
     "VOICEVOX_ACCEPT_AGREEMENT": "true",
@@ -89,9 +93,10 @@
     "E2E_TEST_MODE": "false"
   },
 
-  // Mounts for persistent data
+  // Mounts for persistent data and source code
   "mounts": [
-    "source=yomitalk-data,target=/workspace/data,type=volume",
-    "source=yomitalk-voicevox,target=/workspace/voicevox_core,type=volume"
+    "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached",
+    "source=yomitalk-data,target=/app/data,type=volume",
+    "source=yomitalk-voicevox,target=/app/voicevox_core,type=volume"
   ]
 }

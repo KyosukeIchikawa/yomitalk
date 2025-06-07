@@ -6,19 +6,19 @@ services:
   yomitalk-dev:
     build:
       context: .
-      dockerfile: .devcontainer/Dockerfile
+      dockerfile: Dockerfile
     volumes:
-      - .:/workspace:cached
-      - yomitalk-data:/workspace/data
-      - yomitalk-voicevox:/workspace/voicevox_core
+      - .:/app:cached
+      - yomitalk-data:/app/data
+      - yomitalk-voicevox:/app/voicevox_core
       # Mount for git credentials
-      - ~/.gitconfig:/home/vscode/.gitconfig:ro
+      - ~/.gitconfig:/root/.gitconfig:ro
     environment:
       - VOICEVOX_ACCEPT_AGREEMENT=true
       - PAGER=cat
       - LESSCHARSET=utf-8
       - E2E_TEST_MODE=false
-      - PYTHONPATH=/workspace
+      - PYTHONPATH=/app
     ports:
       - "7860:7860"
     # Keep container running for development
@@ -28,8 +28,8 @@ services:
       - SYS_PTRACE
     security_opt:
       - seccomp:unconfined
-    working_dir: /workspace
-    user: vscode
+    working_dir: /app
+    user: root
 
 volumes:
   yomitalk-data:

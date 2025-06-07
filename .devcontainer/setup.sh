@@ -42,7 +42,7 @@ chmod -R 755 data
 
 # Ensure git configuration
 echo "⚙️  Configuring git..."
-git config --global --add safe.directory /workspace
+git config --global --add safe.directory /app
 
 echo "✅ Yomitalk development environment setup complete!"
 echo ""
