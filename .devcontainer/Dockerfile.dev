@@ -1,0 +1,67 @@
+# Development Dockerfile for Yomitalk
+# Based on the production Dockerfile but includes development tools
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# VOICEVOX規約に自動同意するための環境変数を設定
+ENV VOICEVOX_ACCEPT_AGREEMENT=true
+# 対話型プロンプトを無効化し、ページャーをcatに置き換える
+ENV PAGER=cat
+ENV LESSCHARSET=utf-8
+
+# システム依存パッケージのインストール（開発用ツールを追加）
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        make \
+        sudo \
+        curl \
+        ffmpeg \
+        git \
+        wget \
+        unzip \
+        build-essential \
+        pkg-config \
+        && rm -rf /var/lib/apt/lists/*
+
+# リポジトリのコードをコピー
+COPY . /app/
+
+# Python依存関係のインストール（Docker内では仮想環境を使わない）
+RUN pip install --upgrade pip
+
+# 開発用依存関係をインストール
+RUN pip install --timeout 300 --retries 3 \
+    pre-commit \
+    playwright \
+    pytest \
+    pytest-playwright \
+    pytest-bdd \
+    pytest-asyncio \
+    pytest-mock \
+    black \
+    isort \
+    flake8 \
+    mypy \
+    autoflake \
+    autopep8
+
+# 大きなパッケージを段階的にインストール
+# PyTorch関連のパッケージを先にインストール
+RUN pip install --timeout 600 --retries 5 torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# 残りの依存関係をインストール
+RUN pip install --timeout 300 --retries 3 -r requirements.txt
+
+# パーミッション問題を解決するため、dataディレクトリの権限を設定
+RUN mkdir -p /app/data/temp /app/data/output && chmod -R 777 /app/data
+
+# ポート設定
+ENV PORT=7860
+
+# 開発環境では setup.sh が VOICEVOX Core のセットアップを行うため、
+# ここではスキップ（マウントされたボリュームにインストールされる）
+
+# 開発環境用の起動コマンド（実際にはdevcontainerのpostCreateCommandでsetup.shが実行される）
+CMD ["python", "app.py"]
