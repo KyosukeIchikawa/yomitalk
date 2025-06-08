@@ -912,6 +912,7 @@ class PaperPodcastApp:
                                 label=f"ファイルをアップロード（{', '.join(supported_extensions)}）",
                                 height=120,
                                 interactive=False,
+                                file_count="single",  # 単一ファイルのみ
                             )
 
                         with gr.TabItem("Webページ抽出"):
@@ -1189,7 +1190,8 @@ class PaperPodcastApp:
             )
 
             # Auto file extraction when file is uploaded (file upload mode)
-            file_upload_event = file_input.change(
+            # Use upload event instead of change to avoid duplicate triggers
+            file_upload_event = file_input.upload(
                 fn=self.extract_file_text_auto,
                 inputs=[
                     file_input,
@@ -1200,6 +1202,7 @@ class PaperPodcastApp:
                 outputs=[extracted_text, user_session],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="file_queue",  # ファイル処理用キューID
+                trigger_mode="once",  # 処理中の重複実行を防止
             )
 
             # Clear file input after successful extraction

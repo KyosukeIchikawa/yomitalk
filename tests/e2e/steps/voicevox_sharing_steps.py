@@ -285,7 +285,7 @@ def all_requests_succeed(test_context):
 @then("each user should receive their own audio file")
 def each_user_receives_audio(test_context):
     """Verify each user received their own audio file."""
-    for user_id, success, files in test_context.concurrent_results:
+    for _, success, files in test_context.concurrent_results:
         assert success
         assert len(files) > 0
         # Verify files exist
