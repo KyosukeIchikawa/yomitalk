@@ -7,156 +7,304 @@
 - 対話形式の解説を生成し、様々なドキュメントタイプ（論文、マニュアル、議事録など）に対応する
 
 ## 技術スタック
-- Gradio: ウェブインターフェース構築
-- PyPDF2/pdfplumber: PDF解析と文書テキスト抽出
-- VOICEVOX Core: 日本語音声合成エンジン（ずんだもん、四国めたん、九州そら、中国うさぎ、中部つるぎなど）
-- OpenAI API (GPT-4o-mini, GPT-4など): 論文テキストの要約・解説生成
-- Google Gemini API: 代替のAI文章生成エンジン
-- FFmpeg: 音声ファイルの結合処理
-- pytest/pytest-bdd: テスト自動化とBDDによるE2Eテスト
-- playwright: ブラウザ自動化によるE2Eテスト
+- **UI Framework**: Gradio 4.x with Soft theme integration
+- **開発環境**: VS Code Dev Container (Docker-based)
+- **PDF解析**: PyPDF2/pdfplumber - PDF解析と文書テキスト抽出
+- **音声合成**: VOICEVOX Core - 日本語音声合成エンジン（ずんだもん、四国めたん、九州そら、中国うさぎ、中部つるぎなど）
+- **LLM統合**:
+  - OpenAI API (GPT-4o-mini, GPT-4など) - 論文テキストの要約・解説生成
+  - Google Gemini API - 代替のAI文章生成エンジン
+- **音声処理**: FFmpeg - 音声ファイルの結合処理
+- **テスト**: pytest/pytest-bdd - テスト自動化とBDDによるE2Eテスト
+- **E2Eテスト**: Playwright - ブラウザ自動化によるE2Eテスト
+- **開発ツール**: Claude Code integration, pre-commit hooks, GitHub Copilot
 
 ## アーキテクチャ概要
+
+### 開発環境アーキテクチャ
+- **Dev Container**: Docker-based統一開発環境
+  - VS Code完全統合（タスク、デバッグ、拡張機能）
+  - 自動セットアップ（依存関係、VOICEVOX Core、pre-commit）
+  - ボリューム永続化（データ、VOICEVOXモデル）
+- **Claude Code統合**: AI支援開発環境
+- **Legacy Support**: Makefile/venv setup（下位互換性維持）
 
 ### セッション管理システム
 - **マルチユーザー対応**: 各ユーザーがGradioセッションハッシュに基づく独立したセッション状態を保持
 - **状態の永続化**: ユーザー設定とセッション状態をJSONファイルとして自動保存・復元
 - **セキュリティ配慮**: APIキーは保存せず、セッション復元時に再入力を要求
 - **自動クリーンアップ**: 1日以上古いセッションディレクトリの自動削除
+- **接続復旧**: ブラウザリフレッシュや切断後の状態完全復元
+
+### 進捗表示システム
+- **包括的進捗追跡**: リアルタイム進捗バー、経過時間、推定残り時間
+- **ビジュアル表示**:
+  - グラデーション進捗バー（Gradio Softテーマ統合）
+  - パート別進捗（現在/総数、パーセンテージ）
+  - 時間情報（経過時間、推定残り時間）
+- **状態復元**: 接続断後の進捗状態復元
+- **クリーンUI**: 余分な枠線除去、テーマ統合デザイン
 
 ### コンポーネント設計
 - **UserSession**: セッション管理のコアクラス
   - 各ユーザーの独立したTextProcessorとAudioGeneratorインスタンスを管理
   - セッション状態のシリアライゼーション・デシリアライゼーション機能
   - 音声生成進捗の追跡と復元機能
+  - 進捗状態の詳細管理（推定パーツ数、開始時間、ストリーミング状態）
 - **グローバルリソース管理**: VOICEVOX Coreマネージャーは全ユーザー間で共有
 - **ファイル分離**: ユーザーごとに独立したtempおよびoutputディレクトリ構造
+
+### 音声生成パイプライン
+- **ストリーミング生成**:
+  - パーツ別音声生成とリアルタイムストリーミング再生
+  - 進捗追跡とユーザーフィードバック
+  - 最終音声の自動結合
+- **フォールバック機構**: 結合失敗時の部分音声使用
+- **エラーハンドリング**: 詳細なエラー表示とユーザーガイダンス
 
 ### 状態管理パターン
 - **Gradio State**: `gr.State()`を使用したセッション状態の管理
 - **自動保存**: 設定変更時の自動セッション保存
 - **復元処理**: アプリケーション開始時の既存セッション検出と復元
 - **エラーハンドリング**: セッション復元失敗時の新規セッション作成
+- **音声生成状態**: 詳細な進捗状態管理（パーツ数、時間、ファイルパス）
 
 ## フォルダ構成
-- yomitalk/ - メインアプリケーションコード
-  - common/ - 共通データモデルおよび定義
-    - character.py - キャラクター音声設定定義
-  - components/ - Gradioコンポーネント
-    - audio_generator.py - 音声生成機能
-    - content_extractor.py - コンテンツ抽出機能
-    - text_processor.py - テキスト処理機能
-  - models/ - モデル関連コード
-    - openai_model.py - OpenAI APIとの連携
-    - gemini_model.py - Google Gemini APIとの連携
-  - utils/ - ユーティリティ関数
-  - app.py - Gradioアプリ構築
-  - prompt_manager.py - プロンプト管理および生成
-  - user_session.py - ユーザーセッション管理とステート永続化
-  - templates/ - テンプレートファイル
-    - common_podcast_utils.j2 - 共通のポッドキャスト生成ユーティリティ
-    - paper_to_podcast.j2 - 論文解説用テンプレート
-    - section_by_section.j2 - セクションごとの詳細解説用テンプレート
-- app/ - 追加のアプリケーション機能
-  - utils/ - 追加のユーティリティ機能
-- app.py - ルートレベルのエントリーポイント
-- assets/ - 静的アセット
-  - images/ - 画像ファイル
-    - logo.png - アプリケーションロゴ
-  - favicon.ico - ファビコン
-- data/ - 一時データ保存用
-  - temp/ - アップロードされたファイルの一時保存
-    - {session_id}/ - ユーザーセッションごとの一時ディレクトリ
-      - session_state.json - セッション状態の永続化ファイル
-      - talks/ - 音声生成パーツの一時保存
-  - output/ - 生成された音声ファイル
-    - {session_id}/ - ユーザーセッションごとの出力ディレクトリ
-  - logs/ - ログファイル保存用
-- tests/ - テストコード
-  - data/ - テスト用データ
-  - unit/ - ユニットテスト
-  - e2e/ - エンドツーエンドテスト
-  - utils/ - テスト用ユーティリティ
-- docs/ - ドキュメント
-  - design.md - 設計ドキュメント
-- voicevox_core/ - VOICEVOXコアライブラリとモデル
-- scripts/ - 開発用スクリプト
+```
+yomitalk/ - メインアプリケーションコード
+├── common/ - 共通データモデルおよび定義
+│   ├── api_type.py - API種別定義
+│   └── character.py - キャラクター音声設定定義
+├── components/ - コア機能コンポーネント
+│   ├── audio_generator.py - 音声生成機能（ストリーミング対応）
+│   ├── content_extractor.py - コンテンツ抽出機能
+│   └── text_processor.py - テキスト処理機能
+├── models/ - LLMモデル統合
+│   ├── openai_model.py - OpenAI API統合
+│   └── gemini_model.py - Google Gemini API統合
+├── utils/ - ユーティリティ関数
+│   ├── logger.py - ロギング設定
+│   └── text_utils.py - テキスト処理ユーティリティ
+├── templates/ - LLMプロンプトテンプレート
+│   ├── common_podcast_utils.j2 - 共通ポッドキャスト生成ユーティリティ
+│   ├── paper_to_podcast.j2 - 論文解説用テンプレート
+│   └── section_by_section.j2 - セクション別詳細解説用テンプレート
+├── app.py - メインGradioアプリケーション（進捗表示統合）
+├── prompt_manager.py - プロンプト管理および生成
+└── user_session.py - ユーザーセッション管理と状態永続化
+
+app.py - ルートレベルエントリーポイント
+
+.devcontainer/ - Dev Container開発環境
+├── Dockerfile.dev - 開発用Dockerコンテナ
+├── devcontainer.json - VS Code Dev Container設定
+├── docker-compose.yml - Docker Compose設定
+└── setup.sh - 環境セットアップスクリプト
+
+.vscode/ - VS Code統合
+├── launch.json - デバッグ設定
+├── settings.json - エディタ設定
+└── tasks.json - タスク定義
+
+.github/ - GitHub統合
+├── copilot-instructions.md - GitHub Copilot設定
+└── workflows/ - CI/CD設定
+
+assets/ - 静的アセット
+├── images/
+│   └── logo.png - アプリケーションロゴ
+└── favicon.ico - ファビコン
+
+data/ - 実行時データ
+├── temp/ - 一時データ
+│   └── {session_id}/ - セッション別一時ディレクトリ
+│       ├── session_state.json - セッション状態永続化
+│       └── talks/ - 音声生成パーツ一時保存
+├── output/ - 生成音声出力
+│   └── {session_id}/ - セッション別出力ディレクトリ
+└── logs/ - アプリケーションログ
+
+tests/ - テストスイート
+├── unit/ - ユニットテスト
+│   ├── conftest.py - テスト設定
+│   ├── test_app_audio_state.py - 音声状態管理テスト
+│   ├── test_session_persistence.py - セッション永続化テスト
+│   └── [...] - その他コンポーネントテスト
+├── e2e/ - E2Eテスト
+│   ├── features/ - BDD機能定義（Gherkin）
+│   ├── steps/ - ステップ実装
+│   └── conftest.py - E2Eテスト設定
+├── data/ - テストデータ
+└── utils/ - テストユーティリティ
+
+docs/ - プロジェクトドキュメント
+voicevox_core/ - VOICEVOX Coreライブラリ
+scripts/ - 開発・運用スクリプト
+```
 
 ## 機能要件
-1. ファイルアップロード機能
-   - PDFファイルおよびテキストファイルのアップロードとテキスト抽出
-   - 複数のPDF解析エンジン（PyPDF2, pdfplumber）を使用した堅牢なテキスト抽出
-2. テキスト抽出・前処理
-   - PDFやテキストファイルからのテキスト抽出とフォーマット処理
-3. ポッドキャスト形式テキスト生成
-   - OpenAI API/Google Gemini APIを使用した会話形式テキスト生成
-   - 「概要解説」と「詳細解説」の2つのモード搭載
-   - 専門家役と初学者役の対話形式でわかりやすく内容を解説
-4. ドキュメントタイプ対応
-   - 論文、マニュアル、議事録、ブログ記事、一般ドキュメントなど様々なタイプに対応
-   - ドキュメントタイプに応じた適切な解説スタイルの調整
-5. 音声合成（キャラクターボイスで生成）
-   - VOICEVOX Coreによる日本語音声合成
-   - ずんだもん、四国めたん、九州そら、中国うさぎ、中部つるぎなどの複数キャラクター対応
-   - 専門家役と初学者役それぞれに異なる声を割り当て可能
-6. 自然な会話と音声表現
-   - 文の途中に適切な間を入れる機能
-   - 自然なフィラーやリアクションの挿入
-   - キャラクター特有の話し方パターンの再現（一人称や語尾の特徴など）
-7. 生成された音声のダウンロード
-   - 生成音声のダウンロード機能
-8. マルチLLMサポート
-   - OpenAI APIとGoogle Gemini APIの切り替え機能
-   - 各APIのモデル選択とパラメータ調整機能
-   - トークン使用状況の表示機能
-9. セッション状態の永続化
-   - ユーザーの設定やセッション状態の自動保存・復元機能
-   - ブラウザリフレッシュや接続断後の状態継続
-   - API キー以外の全設定（ドキュメントタイプ、モデル設定、キャラクター等）の保持
-   - 音声生成進捗状況の復元機能
+
+### 1. ファイル処理機能
+- **マルチフォーマット対応**: PDF、テキストファイルのアップロードと抽出
+- **堅牢な解析**: 複数PDF解析エンジン（PyPDF2, pdfplumber）による確実なテキスト抽出
+- **URL抽出**: Webページからのコンテンツ抽出
+- **自動区切り挿入**: ファイル名・URL情報付き区切り線の自動挿入
+
+### 2. LLM統合とテキスト生成
+- **デュアルLLM対応**: OpenAI API/Google Gemini APIの動的切り替え
+- **モード選択**: 「概要解説」「詳細解説」の2つの生成モード
+- **ドキュメントタイプ対応**: 論文、マニュアル、議事録、ブログ記事等
+- **会話形式生成**: 専門家役と初学者役の自然な対話形式
+- **トークン監視**: 使用量表示とコスト管理
+
+### 3. 音声合成システム
+- **キャラクターボイス**: VOICEVOX Core統合
+  - ずんだもん、四国めたん、九州そら、中国うさぎ、中部つるぎ
+- **ストリーミング生成**: パーツ別生成とリアルタイム再生
+- **進捗表示**: 包括的進捗追跡
+  - 視覚的進捗バー（グラデーション、アニメーション）
+  - 時間情報（経過時間、推定残り時間）
+  - パート別進捗（現在/総数、パーセンテージ）
+- **自然な音声**: 適切な間、フィラー、キャラクター特性の再現
+
+### 4. セッション管理
+- **マルチユーザー対応**: セッション分離とリソース共有
+- **状態永続化**: 設定・進捗状態の自動保存・復元
+- **接続復旧**: ブラウザリフレッシュ後の完全状態復元
+- **セキュリティ**: APIキー除外、機密情報保護
+- **自動クリーンアップ**: 古いセッションの定期削除
+
+### 5. 開発者体験
+- **Dev Container**: 統一開発環境とゼロセットアップ
+- **Claude Code統合**: AI支援開発
+- **VS Code統合**: タスク、デバッグ、拡張機能の完全統合
+- **自動テスト**: ユニット・E2E・BDDテストの自動実行
+- **品質保証**: pre-commit、linting、型チェックの自動化
+
+## 技術仕様
+
+### 進捗表示システム
+- **推定アルゴリズム**: 正規表現によるキャラクター対話行カウント
+- **時間計算**: 現在ペースベースの残り時間推定
+- **UI統合**: Gradio Softテーマとの完全統合
+- **状態管理**: セッション状態での進捗情報永続化
+
+### 音声生成パイプライン
+- **ストリーミング**: `yield`ベースの非同期パーツ生成
+- **ファイル管理**: セッション別ディレクトリでの分離管理
+- **フォールバック**: 結合失敗時の部分音声使用
+- **品質保証**: 音声ファイル存在確認と検証
+
+### セッション状態スキーマ
+```json
+{
+  "session_id": "string",
+  "audio_generation_state": {
+    "is_generating": "boolean",
+    "status": "idle|generating|completed|failed",
+    "progress": "float (0.0-1.0)",
+    "start_time": "timestamp",
+    "estimated_total_parts": "integer",
+    "streaming_parts": ["array of file paths"],
+    "final_audio_path": "string|null"
+  },
+  "user_settings": {
+    "document_type": "enum",
+    "podcast_mode": "enum",
+    "character_mapping": "object",
+    "llm_settings": "object"
+  }
+}
+```
 
 ## コーディング規則
-- PEP 8準拠のPythonコード
-  - black、isort、flake8による自動フォーマットとリンティング
-  - pre-commitフックによる自動検証
-- 型ヒントの積極的な活用（mypy対応）
-  - 新規ファイルでは厳格な型チェックを適用
-  - 既存コードにも段階的に型アノテーションを追加
-- テスト駆動開発（TDD）の実践
-  - トランクベース開発（main branchへの直接コミット）
-  - 小さな変更単位での開発と統合
-- 関数・クラスには適切なドキュメンテーション（docstring）を付ける
-- コードレビューとCI通過を統合の条件とする
-- 例外処理の適切な実装
-- 長いテキスト処理のチャンク分割処理
-- 音声ファイル生成時のFFmpeg活用
-- ソースコード内のメッセージ・ログは全て英語で記述する
-- ドキュメント（README.md, design.md等）は日本語のまま維持する
-- カスタムトークンやprintステートメントの検出と警告
 
-## テスト規則
-- BDDフレームワーク（pytest-bdd）を使用したE2Eテスト
-  - テストシナリオは `tests/e2e/features/` ディレクトリに `.feature` ファイルとして記述
-  - ステップ実装は `tests/e2e/features/steps/` ディレクトリに配置
-- Playwrightによるブラウザテスト
-- ユニットテストによる各コンポーネントの個別検証
-  - テストファイルは `tests/unit/` ディレクトリに配置
-  - 各クラス・モジュールごとに独立したテストファイルを作成
-  - セッション永続化機能のテスト（`test_session_persistence.py`）
-- モックを使用したAPIのテスト（OpenAI API、Gemini API）
-- テスト用のサンプルPDFおよびテキストデータを用意した自動テスト
-- GitHubワークフローによるCI自動実行
-  - 静的解析（pre-commit）
-  - E2Eテストの自動実行
-  - 自動デプロイ（Hugging Faceへ）
+### 開発環境
+- **推奨**: VS Code Dev Container開発
+- **legacy**: Makefile/venv setup（下位互換性）
+- **Claude Code**: AI支援開発の活用
+
+### コード品質
+- **PEP 8準拠**: black、isort、flake8による自動フォーマット
+- **型安全**: mypy厳格型チェック、型ヒント必須
+- **テスト駆動**: TDD実践、統合前テスト必須
+- **トランクベース**: main branch直接開発、小さな変更単位
+- **品質ゲート**: pre-commitフック、CI通過必須
+
+### 国際化対応
+- **コード**: 英語（コメント、ログ、エラーメッセージ）
+- **UI**: 日本語（ユーザー向けメッセージ、ラベル）
+- **ドキュメント**: 日本語（設計書、README）
+
+### セキュリティ
+- **機密情報**: APIキー等の永続化禁止
+- **検証**: カスタムトークン、printステートメント検出
+- **分離**: セッション別リソース分離
+
+## テスト戦略
+
+### テスト構成
+- **BDD E2E**: pytest-bdd + Playwright（`.feature`ファイル）
+- **ユニット**: 各コンポーネント個別検証
+- **統合**: API連携、音声生成パイプライン
+- **進捗表示**: 状態管理、UI更新、復元機能
+
+### テストデータ
+- **サンプルPDF**: 多様なフォーマット対応検証
+- **モック**: LLM API、音声生成の効率的テスト
+- **エラーシナリオ**: 接続断、ファイル破損、API制限
+
+### CI/CD
+- **自動実行**: GitHub Actions統合
+- **品質ゲート**: 静的解析、全テスト通過
+- **デプロイ**: Hugging Face Spaces手動デプロイ
 
 ## デプロイメント
-- ローカル開発環境での実行: `python app.py` または `python -m yomitalk.app`
-- セットアップ: `make setup` コマンドで環境構築
-- 必要なパッケージ: requirements.txtに記載（requirements.inから生成）
-- VOICEVOX Core: `make download-voicevox-core` でセットアップ
-  - VOICEVOXのライセンス規約に同意する必要あり
-- OpenAI API / Google Gemini API: APIキー設定が必要
-- Docker: `Dockerfile` を使用してコンテナ化可能
-- CI/CD: GitHub Actions による自動テスト・デプロイ
-  - Hugging Face Spaces へ自動デプロイ
+
+### ローカル開発
+```bash
+# Dev Container (推奨)
+code . # VS Code Dev Container自動起動
+
+# Legacy setup
+make setup && make run
+
+# Direct execution
+python app.py --port 7860 --host 0.0.0.0
+```
+
+### 依存関係管理
+- **Python**: requirements.txt（pip-compile生成）
+- **VOICEVOX**: 自動ダウンロード・セットアップ
+- **ライセンス**: VOICEVOX利用規約同意必須
+
+### 本番環境
+- **コンテナ**: Docker/Dockerfile対応
+- **クラウド**: Hugging Face Spaces統合
+- **監視**: ログ、エラートラッキング
+- **スケーリング**: セッション分離による水平スケール対応
+
+## セキュリティとプライバシー
+
+### データ保護
+- **API キー**: メモリ内のみ、永続化禁止
+- **ファイル**: セッション別分離、自動クリーンアップ
+- **ログ**: 機密情報フィルタリング
+
+### セッション分離
+- **ユーザー分離**: 完全な状態・ファイル分離
+- **リソース共有**: VOICEVOX Coreのみ安全な共有
+- **クリーンアップ**: 定期的な古いセッション削除
+
+## パフォーマンス
+
+### 最適化戦略
+- **VOICEVOX**: グローバルインスタンス共有
+- **ストリーミング**: 順次生成・再生による体感速度向上
+- **セッション**: 必要時のみ状態保存・読込
+- **ファイル**: 効率的な一時ファイル管理
+
+### 監視指標
+- **音声生成**: パーツ別処理時間、全体処理時間
+- **LLM**: API レスポンス時間、トークン使用量
+- **セッション**: アクティブセッション数、復元成功率
