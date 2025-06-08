@@ -193,7 +193,7 @@ def one_session_cleaned_up(test_context):
         test_context.remaining_sessions = test_context.sessions[1:]
 
         # Cleanup
-        session_to_cleanup.cleanup_session_data()
+        session_to_cleanup.cleanup()
 
 
 @then("the global VOICEVOX Core manager should be initialized once")
