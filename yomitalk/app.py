@@ -688,46 +688,6 @@ class PaperPodcastApp:
             )
         return None  # エラー時はNoneを返す
 
-    def _format_progress_info(
-        self, user_session: UserSession, status_message: str = ""
-    ) -> Optional[str]:
-        """
-        音声生成の進捗情報をフォーマットします。
-
-        Args:
-            user_session (UserSession): ユーザーセッションインスタンス
-            status_message (str): ステータスメッセージ
-
-        Returns:
-            Optional[str]: 最終音声ファイルパス、またはNone（進行中の場合）
-        """
-        state = user_session.audio_generation_state
-
-        # 音声生成が完了している場合は最終ファイルを返す
-        if (
-            state.get("status") == "completed"
-            and state.get("final_audio_path")
-            and os.path.exists(state["final_audio_path"])
-        ):
-            logger.info(
-                f"Audio generation completed, returning file: {state['final_audio_path']}"
-            )
-            return str(state["final_audio_path"])
-
-        # 進行中の場合はストリーミング音声があれば最新のものを返す
-        streaming_parts = state.get("streaming_parts", [])
-        if streaming_parts:
-            latest_part = streaming_parts[-1]
-            if os.path.exists(latest_part):
-                logger.info(
-                    f"Progress update - latest streaming part: {latest_part} | {status_message}"
-                )
-                return str(latest_part)
-
-        # それ以外の場合はNoneを返す
-        logger.info(f"Progress update - no audio yet: {status_message}")
-        return None
-
     def disable_generate_button(self):
         """音声生成ボタンを無効化します。"""
         return gr.update(interactive=False, value="音声生成中...")
@@ -799,7 +759,7 @@ class PaperPodcastApp:
         with app:
             # ヘッダー部分をロゴと免責事項を含むレイアウトに変更
             with gr.Row(equal_height=True, variant="panel", elem_classes="header-row"):
-                with gr.Column(scale=1, min_width=200, elem_classes="logo-column"):
+                with gr.Column(scale=1, min_width=200):
                     gr.Image(
                         "assets/images/logo.png",
                         show_label=False,
