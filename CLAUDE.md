@@ -168,6 +168,7 @@ Located in `tests/e2e/features/`, written in Gherkin syntax:
 - **NEVER use `--no-verify`**: All commits must pass pre-commit hooks
 - **Fix issues properly**: Don't bypass linting, formatting, or type checking
 - **Test before commit**: Ensure all tests pass before committing
+- **Commit messages**: Do NOT include Claude as co-author in commit messages
 
 ### Performance Considerations
 - **VOICEVOX Shared**: Don't reinitialize VOICEVOX Core per user

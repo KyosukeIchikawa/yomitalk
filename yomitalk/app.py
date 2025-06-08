@@ -9,7 +9,7 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import gradio as gr
 
@@ -64,10 +64,6 @@ class PaperPodcastApp:
         new_session = UserSession(session_id)
         new_session.auto_save()  # Save initial state
         return new_session
-
-    def clear_extracted_text(self) -> str:
-        """Clear the extracted text area."""
-        return ""
 
     def set_openai_api_key(self, api_key: str, user_session: UserSession):
         """Set the OpenAI API key for the specific user session."""
@@ -264,10 +260,6 @@ class PaperPodcastApp:
             f"Auto file text extraction completed for session {user_session.session_id}"
         )
         return combined_text, user_session
-
-    def clear_file_input(self) -> None:
-        """Clear the file input after successful extraction."""
-        return None
 
     def _estimate_audio_parts_count(self, text: str) -> int:
         """
@@ -737,57 +729,43 @@ class PaperPodcastApp:
         return None
 
     def disable_generate_button(self):
-        """音声生成ボタンを無効化します。
-
-        Returns:
-            Dict[str, Any]: gr.update()の結果
-        """
+        """音声生成ボタンを無効化します。"""
         return gr.update(interactive=False, value="音声生成中...")
 
     def enable_generate_button(self, terms_agreed: bool, podcast_text: str):
-        """音声生成ボタンを再び有効化します。
-
-        Args:
-            terms_agreed (bool): VOICEVOX利用規約への同意状態
-            podcast_text (str): 生成されたトーク原稿（状態確認用）
-
-        Returns:
-            Dict[str, Any]: gr.update()の結果
-        """
+        """音声生成ボタンを再び有効化します。"""
         return self.update_audio_button_state(terms_agreed, podcast_text)
 
     def disable_process_button(self):
-        """トーク原稿生成ボタンを無効化します。
-
-        Returns:
-            Dict[str, Any]: gr.update()の結果
-        """
+        """トーク原稿生成ボタンを無効化します。"""
         return gr.update(interactive=False, value="トーク原稿生成中...")
 
-    def enable_process_button(self, extracted_text, user_session: UserSession):
-        """トーク原稿生成ボタンを再び有効化します。
-
-        Args:
-            extracted_text (str): テキストエリアの内容（状態確認用）
-
-        Returns:
-            Dict[str, Any]: gr.update()の結果
-        """
-        # 現在のAPIキーとテキストの状態に基づいてボタンの状態を更新
-        has_text = (
+    def _check_process_button_conditions(
+        self, extracted_text: str, user_session: UserSession
+    ) -> Tuple[bool, bool]:
+        """Check conditions for process button state."""
+        has_text = bool(
             extracted_text
             and extracted_text.strip() != ""
             and extracted_text
             not in ["Please upload a file.", "Failed to process the file."]
         )
-        has_api_key = False
 
         current_llm_type = user_session.text_processor.get_current_api_type()
         if current_llm_type == APIType.OPENAI:
             has_api_key = user_session.text_processor.openai_model.has_api_key()
         elif current_llm_type == APIType.GEMINI:
             has_api_key = user_session.text_processor.gemini_model.has_api_key()
+        else:
+            has_api_key = False
 
+        return has_text, has_api_key
+
+    def enable_process_button(self, extracted_text: str, user_session: UserSession):
+        """トーク原稿生成ボタンを再び有効化します。"""
+        has_text, has_api_key = self._check_process_button_conditions(
+            extracted_text, user_session
+        )
         is_enabled = has_text and has_api_key
 
         return gr.update(
@@ -1245,7 +1223,7 @@ class PaperPodcastApp:
             # Set up event handlers
             # Clear text button
             clear_text_btn.click(
-                fn=self.clear_extracted_text,
+                fn=lambda: "",
                 outputs=[extracted_text],
                 queue=False,
             )
@@ -1266,7 +1244,7 @@ class PaperPodcastApp:
 
             # Clear file input after successful extraction
             file_upload_event.then(
-                fn=self.clear_file_input,
+                fn=lambda: None,
                 outputs=[file_input],
             )
 
@@ -1515,24 +1493,6 @@ class PaperPodcastApp:
         user_session.auto_save()  # Save session state after model name change
         return user_session
 
-    def get_openai_max_tokens(self, user_session: UserSession) -> int:
-        """
-        現在設定されているOpenAIの最大トークン数を取得します。
-
-        Returns:
-            int: 現在の最大トークン数
-        """
-        return user_session.text_processor.openai_model.get_max_tokens()
-
-    def get_gemini_max_tokens(self, user_session: UserSession) -> int:
-        """
-        現在設定されているGeminiの最大トークン数を取得します。
-
-        Returns:
-            int: 現在の最大トークン数
-        """
-        return user_session.text_processor.gemini_model.get_max_tokens()
-
     def set_openai_max_tokens(
         self, max_tokens: int, user_session: UserSession
     ) -> UserSession:
@@ -1561,14 +1521,6 @@ class PaperPodcastApp:
         user_session.auto_save()  # Save session state after max tokens change
         return user_session
 
-    def get_available_characters(self) -> List[str]:
-        """利用可能なキャラクターのリストを取得します。
-
-        Returns:
-            List[str]: 利用可能なキャラクター名のリスト
-        """
-        return DISPLAY_NAMES
-
     def set_character_mapping(
         self, character1: str, character2: str, user_session: UserSession
     ) -> UserSession:
@@ -1584,42 +1536,6 @@ class PaperPodcastApp:
         logger.debug(f"Character mapping set: {character1}, {character2}: {success}")
         user_session.auto_save()  # Save session state after character mapping change
         return user_session
-
-    def update_process_button_state(
-        self, extracted_text: str, user_session: UserSession
-    ) -> Dict[str, Any]:
-        """
-        抽出されたテキストとAPIキーの状態に基づいて"トーク原稿を生成"ボタンの有効/無効を切り替えます。
-
-        Args:
-            extracted_text (str): 抽出されたテキスト
-            user_session (UserSession): ユーザーセッション
-
-        Returns:
-            Dict[str, Any]: gr.update()の結果
-        """
-        # テキストが有効かつAPIキーが設定されている場合のみボタンを有効化
-        has_text = (
-            extracted_text
-            and extracted_text.strip() != ""
-            and extracted_text
-            not in ["Please upload a file.", "Failed to process the file."]
-        )
-        has_api_key = False
-
-        if user_session.text_processor.current_api_type == APIType.OPENAI:
-            has_api_key = user_session.text_processor.openai_model.has_api_key()
-        elif user_session.text_processor.current_api_type == APIType.GEMINI:
-            has_api_key = user_session.text_processor.gemini_model.has_api_key()
-
-        is_enabled = has_text and has_api_key
-
-        # gr.update()を使用して、Gradioのコンポーネントを更新する
-        # Dict[str, Any]型にキャストして型チェッカーを満足させる
-        result = gr.update(
-            interactive=is_enabled, variant="primary" if is_enabled else "secondary"
-        )
-        return result  # type: ignore
 
     def set_podcast_mode(self, mode: str, user_session: UserSession) -> UserSession:
         """
@@ -1642,15 +1558,6 @@ class PaperPodcastApp:
             logger.error(f"Error setting podcast mode: {str(e)}")
 
         return user_session
-
-    def get_podcast_modes(self):
-        """
-        利用可能なポッドキャスト生成モードのリストを取得します。
-
-        Returns:
-            list: 利用可能なモードのラベル名リスト
-        """
-        return PodcastMode.get_all_label_names()
 
     def update_token_usage_display(self, user_session: UserSession) -> str:
         """
@@ -1735,79 +1642,6 @@ class PaperPodcastApp:
             logger.error(f"Error setting document type: {str(e)}")
 
         return user_session
-
-    def wait_for_audio_completion(
-        self, text: str, user_session: UserSession, progress=gr.Progress()
-    ):
-        """
-        ストリーミング処理の進捗を表示し、最終的な結合音声ファイルを返す
-        波形表示用コンポーネントの更新に使用する
-        音声生成が完了するまで待機し、最終的な結合音声ファイルを返す
-
-        Args:
-            text (str): Generated podcast text (使用しない)
-            progress (gr.Progress): Gradio Progress object for updating progress
-
-        Returns:
-            Optional[str]: 最終結合音声ファイルのパス（すべての会話を含む）
-        """
-        if not text or not user_session.audio_generator.core_initialized:
-            logger.warning(
-                "Cannot display progress: Text is empty or VOICEVOX is not available"
-            )
-            progress(1.0, desc="⚠️ 音声生成できません")
-            return None
-
-        # 進捗表示の初期化
-        progress(0, desc="音声生成準備中...")
-
-        # 音声生成の完了を待ちながら進捗表示を行う
-        last_progress = -math.inf
-        while True:
-            current_value = user_session.audio_generator.audio_generation_progress
-
-            # 生成完了したら音声ファイル取得を試みる
-            if current_value >= 1.0:
-                if user_session.audio_generator.final_audio_path is None:
-                    progress(1.0, desc="✅ 音声生成完了! 音声ファイル取得中...")
-                else:
-                    abs_path = str(
-                        Path(user_session.audio_generator.final_audio_path).absolute()
-                    )
-                    # ファイルが存在しなければエラー
-                    if not os.path.exists(abs_path):
-                        logger.error(f"ファイルが存在しません: {abs_path}")
-                        progress(1.0, desc="⚠️ 音声生成に問題が発生しました")
-                        return None
-                    filesize = os.path.getsize(abs_path)
-                    logger.info(
-                        f"最終音声ファイルを返します: {abs_path} (サイズ: {filesize} bytes)"
-                    )
-                    progress(1.0, desc="✅ 音声ファイル取得完了!")
-                    return abs_path
-
-            # 1%以上変化があれば更新
-            if abs(current_value - last_progress) > 0.01:
-                last_progress = current_value
-                progress_percent = int(current_value * 100)
-
-                # 進捗に応じた絵文字表示
-                if progress_percent < 25:
-                    emoji = "🎤"
-                elif progress_percent < 50:
-                    emoji = "🎵"
-                elif progress_percent < 75:
-                    emoji = "🎶"
-                else:
-                    emoji = "🔊"
-
-                # 進捗を更新
-                progress(
-                    current_value, desc=f"{emoji} 音声生成中... {progress_percent}%"
-                )
-
-            # 一定時間待機してから再チェック
-            time.sleep(0.5)
 
     def reset_audio_state_and_components(self, user_session: UserSession):
         """
@@ -1946,20 +1780,6 @@ class PaperPodcastApp:
             terms_checkbox_update,
             generate_btn_update,
         )
-
-    def cleanup_session(self, user_session: UserSession):
-        """
-        セッションが終了した時に呼び出されるクリーンアップ関数。
-        ユーザーがブラウザタブを閉じたり更新したりした時に実行される。
-
-        セッションのテンポラリファイルと出力ファイルを削除する。
-
-        Returns:
-            None
-        """
-        logger.info(f"Session {user_session.session_id} ended, cleaning up...")
-        user_session.cleanup()
-        logger.info("Session cleanup completed successfully")
 
     def sync_ui_with_session(
         self, user_session: UserSession
@@ -2123,55 +1943,6 @@ class PaperPodcastApp:
                 None,
                 self.update_audio_button_state(terms_agreed, podcast_text),
             )
-
-    def monitor_audio_session_state(
-        self, user_session: UserSession
-    ) -> Tuple[Dict[str, Any], Optional[str], Optional[str]]:
-        """
-        Monitor and update audio generation state from user session.
-
-        Note: This method is deprecated and no longer used.
-        Timer-based monitoring was removed to avoid conflicts with progress display.
-        Audio generation now directly updates user_session state in
-        self.generate_podcast_audio_streaming method without timer monitoring.
-
-        Args:
-            user_session: User session containing audio state
-
-        Returns:
-            Tuple[Dict[str, Any], Optional[str], Optional[str]]:
-                (timer_update, streaming_audio_update, final_audio_update)
-        """
-        try:
-            # Get current audio generation status
-            status = user_session.get_audio_generation_status()
-
-            # Check if audio generation is active
-            if not user_session.is_audio_generation_active():
-                # Stop timer if no active generation
-                logger.debug("No active audio generation - stopping timer")
-                return gr.update(active=False), None, None
-
-            # Update streaming audio if new parts are available
-            streaming_parts = status.get("streaming_parts", [])
-            streaming_audio = streaming_parts[-1] if streaming_parts else None
-
-            # Update final audio if available
-            final_audio = status.get("final_audio_path")
-
-            # Check if generation is completed
-            if status.get("status") == "completed":
-                logger.debug("Audio generation completed - stopping timer")
-                return gr.update(active=False), streaming_audio, final_audio
-
-            # Continue monitoring
-            progress = status.get("progress", 0.0)
-            logger.debug(f"Audio generation progress: {progress:.1%}")
-
-            return gr.update(active=True), streaming_audio, final_audio
-        except Exception as e:
-            logger.error(f"Error monitoring audio session state: {e}")
-            return gr.update(active=False), None, None
 
 
 def main() -> None:

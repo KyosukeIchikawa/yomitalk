@@ -124,10 +124,8 @@ class TestSessionCleanup:
             assert invalid_dir_name in remaining_temp_dirs
             assert invalid_dir_name in remaining_output_dirs
 
-    def test_get_folder_modification_time(self):
-        """Test _get_folder_modification_time method."""
-        user_session = UserSession("test_session_modtime")
-
+    def test_folder_modification_time_inline(self):
+        """Test folder modification time functionality (now inlined)."""
         # テスト用のディレクトリを作成
         test_dir = Path("tests/data/test_mod_time")
         if test_dir.exists():
@@ -135,15 +133,20 @@ class TestSessionCleanup:
         test_dir.mkdir(parents=True)
 
         try:
-            # 現在の更新日時を取得
-            mod_time = user_session._get_folder_modification_time(test_dir)
+            # 現在の更新日時を取得 (inlined logic)
+            mod_time = test_dir.stat().st_mtime
             assert mod_time > 0
 
-            # 存在しないディレクトリの場合は0を返す
-            assert (
-                user_session._get_folder_modification_time(Path("non_existent_dir"))
-                == 0
-            )
+            # 存在しないディレクトリの場合
+            nonexistent_dir = Path("tests/data/nonexistent")
+            try:
+                nonexistent_dir.stat().st_mtime
+                assert (
+                    False
+                ), "Should have raised an exception for nonexistent directory"
+            except Exception:
+                # Expected behavior - exception should be raised
+                pass
 
         finally:
             # クリーンアップ

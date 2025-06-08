@@ -2,14 +2,14 @@
 
 import shutil
 
-from yomitalk.app import UserSession
+from yomitalk.user_session import UserSession
 
 
 class TestSessionCleanup:
     """Tests for session cleanup functionality."""
 
     def test_cleanup_session_data(self):
-        """Test that cleanup_session_data properly removes session directories."""
+        """Test that cleanup properly removes session directories."""
         # セットアップ: UserSessionインスタンスを作成し、ディレクトリ構造を構築
         user_session = UserSession("test_session_cleanup")
 
@@ -38,11 +38,10 @@ class TestSessionCleanup:
         assert test_file2.exists()
         assert test_file3.exists()
 
-        # 実行: クリーンアップメソッドを呼び出す
-        success = user_session.cleanup_session_data()
+        # 実行: クリーンアップメソッドを呼び出す (now uses cleanup() directly)
+        user_session.cleanup()
 
         # 検証: ディレクトリが正常に削除されたことを確認
-        assert success is True
         assert not temp_dir.exists()
         assert not output_dir.exists()
 
@@ -61,8 +60,7 @@ class TestSessionCleanup:
         assert not temp_dir.exists()
         assert not output_dir.exists()
 
-        # 実行: クリーンアップメソッドを呼び出す
-        success = user_session.cleanup_session_data()
+        # 実行: クリーンアップメソッドを呼び出す (now uses cleanup() directly)
+        user_session.cleanup()
 
-        # 検証: エラーなしで完了していること
-        assert success is True
+        # 検証: エラーなしで完了していること (cleanup() doesn't return success value)

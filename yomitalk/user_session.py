@@ -54,22 +54,6 @@ class UserSession:
 
         logger.info(f"User session initialized: {session_id}")
 
-    def _get_folder_modification_time(self, folder_path: Path) -> float:
-        """
-        Get the modification time of a folder.
-
-        Args:
-            folder_path (Path): Path to the folder
-
-        Returns:
-            float: Modification time as seconds since the epoch
-        """
-        try:
-            return folder_path.stat().st_mtime
-        except Exception as e:
-            logger.error(f"Error getting modification time for {folder_path}: {str(e)}")
-            return 0
-
     def _is_session_directory(self, directory_name: str) -> bool:
         """
         Check if directory name matches session directory pattern.
@@ -177,8 +161,12 @@ class UserSession:
                     continue
 
                 # フォルダの更新日時を取得
-                mod_time = self._get_folder_modification_time(item)
-                if mod_time == 0:
+                try:
+                    mod_time = item.stat().st_mtime
+                except Exception as e:
+                    logger.error(
+                        f"Error getting modification time for {item}: {str(e)}"
+                    )
                     logger.debug(f"Could not get modification time for: {item}")
                     continue
 
@@ -241,34 +229,6 @@ class UserSession:
         talk_temp_dir = self.get_temp_dir() / "talks"
         talk_temp_dir.mkdir(parents=True, exist_ok=True)
         return talk_temp_dir
-
-    def cleanup_session_data(self) -> bool:
-        """
-        Clean up all session data when the session ends.
-
-        Removes the session's temporary and output directories.
-
-        Returns:
-            bool: True if cleanup was successful, False otherwise
-        """
-        success = True
-        try:
-            # セッション用テンポラリディレクトリの削除
-            temp_dir = self.get_temp_dir()
-            if temp_dir.exists():
-                shutil.rmtree(temp_dir, ignore_errors=True)
-                logger.info(f"Removed session temp directory: {temp_dir}")
-
-            # セッション用出力ディレクトリの削除
-            output_dir = self.get_output_dir()
-            if output_dir.exists():
-                shutil.rmtree(output_dir, ignore_errors=True)
-                logger.info(f"Removed session output directory: {output_dir}")
-
-            return success
-        except Exception as e:
-            logger.error(f"Failed to clean up session data: {str(e)}")
-            return False
 
     @property
     def current_document_type(self) -> str:
@@ -335,7 +295,20 @@ class UserSession:
     def cleanup(self):
         """Clean up session resources."""
         logger.info(f"Cleaning up user session: {self.session_id}")
-        self.cleanup_session_data()
+        try:
+            # セッション用テンポラリディレクトリの削除
+            temp_dir = self.get_temp_dir()
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                logger.info(f"Removed session temp directory: {temp_dir}")
+
+            # セッション用出力ディレクトリの削除
+            output_dir = self.get_output_dir()
+            if output_dir.exists():
+                shutil.rmtree(output_dir, ignore_errors=True)
+                logger.info(f"Removed session output directory: {output_dir}")
+        except Exception as e:
+            logger.error(f"Failed to clean up session data: {str(e)}")
 
     def update_audio_generation_state(self, **kwargs) -> None:
         """Update audio generation state.
