@@ -242,7 +242,7 @@ class PaperPodcastApp:
     ) -> Tuple[str, UserSession]:
         """Extract text from uploaded file automatically (for file upload mode)."""
         if file_obj is None:
-            logger.warning("No file provided for automatic extraction")
+            logger.debug("No file provided for automatic extraction")
             return existing_text, user_session
 
         # Extract new text from file
