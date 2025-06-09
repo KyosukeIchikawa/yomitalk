@@ -895,20 +895,17 @@ class PaperPodcastApp:
             /* Footer styling */
             #footer {
                 text-align: center !important;
-                margin: 30px 0 !important;
-                font-size: 16px !important;
+                margin: 15px 0 10px !important;
+                font-size: 14px !important;
             }
 
             #footer a {
-                color: #666 !important;
+                color: #888 !important;
                 text-decoration: none !important;
-                display: inline-flex !important;
-                align-items: center !important;
-                gap: 6px !important;
             }
 
             #footer a:hover {
-                color: #333 !important;
+                color: #555 !important;
             }
             """
             gr.HTML(f"<style>{css}</style>")
@@ -1146,9 +1143,7 @@ class PaperPodcastApp:
             with gr.Row():
                 gr.HTML(
                     """<div id="footer">
-                        <a href="https://github.com/KyosukeIchikawa/yomitalk" target="_blank">
-                            <img src="https://github.com/favicon.ico" width="16" height="16"> GitHub
-                        </a>
+                        <a href="https://github.com/KyosukeIchikawa/yomitalk" target="_blank">GitHub</a>
                     </div>"""
                 )
 
