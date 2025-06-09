@@ -238,7 +238,7 @@ class TestAudioGenerator:
             ("AI技術", "AI技術"),
             ("Machine Learning入門", "マシンラーニング入門"),
             ("Vision-Language-Model", "ビジョンランゲージモデル"),
-            ("spacial awareness", "スペイシャルアウエアネス"),
+            ("spatial awareness", "スペイシャルアウエアネス"),
             ("LLMs", "LLMズ"),
         ],
     )

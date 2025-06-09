@@ -282,7 +282,7 @@ class AudioGenerator:
         "api": "API",
         "ai": "AI",
         "VAE": "VAE",
-        "spacial": "スペイシャル",
+        "spatial": "スペイシャル",
     }
 
     def __init__(
