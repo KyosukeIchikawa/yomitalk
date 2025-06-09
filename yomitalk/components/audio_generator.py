@@ -283,6 +283,7 @@ class AudioGenerator:
         "ai": "AI",
         "VAE": "VAE",
         "spatial": "スペイシャル",
+        "yomitalk": "ヨミトーク",
     }
 
     def __init__(
