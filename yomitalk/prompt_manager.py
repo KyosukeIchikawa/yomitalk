@@ -80,7 +80,7 @@ class PromptManager:
         PodcastMode.SECTION_BY_SECTION: "section_by_section.j2",
     }
     DEFAULT_DOCUMENT_TYPE = DocumentType.PAPER
-    DEFAULT_MODE = PodcastMode.SECTION_BY_SECTION
+    DEFAULT_MODE = PodcastMode.STANDARD
     DEFAULT_CHARACTER1 = Character.SHIKOKU_METAN
     DEFAULT_CHARACTER2 = Character.ZUNDAMON
 

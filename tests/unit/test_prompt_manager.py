@@ -17,7 +17,7 @@ class TestPromptManager:
         assert hasattr(self.prompt_manager, "current_document_type")
 
         # Check default values
-        assert self.prompt_manager.current_mode == PodcastMode.SECTION_BY_SECTION
+        assert self.prompt_manager.current_mode == PodcastMode.STANDARD
         assert self.prompt_manager.current_document_type == DocumentType.PAPER
 
     def test_podcast_mode_enum(self):
