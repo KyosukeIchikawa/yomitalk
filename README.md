@@ -29,13 +29,6 @@ short_description: ドキュメントからポッドキャスト風の解説音�
 - 中国うさぎ
 - 中部つるぎ
 
-## 必要条件
-
-- [Docker](https://docs.docker.com/get-docker/)
-- [VS Code](https://code.visualstudio.com/) (開発時)
-- [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) (開発時)
-- OpenAI API キー または Google Gemini API キー
-
 ## 開発環境セットアップ
 
 ### Makefile を使ったセットアップ方法
