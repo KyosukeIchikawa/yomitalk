@@ -69,7 +69,7 @@ jobs:
     needs: e2e-tests
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     environment:
-      name: huggingface-production
+      name: huggingface-spaces
       url: https://huggingface.co/spaces/${{ env.HF_SPACE }}
     steps:
       - uses: actions/checkout@v3
