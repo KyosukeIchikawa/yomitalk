@@ -891,6 +891,25 @@ class PaperPodcastApp:
                 text-align: center;
                 padding: 10px;
             }
+
+            /* Footer styling */
+            #footer {
+                text-align: center !important;
+                margin: 30px 0 !important;
+                font-size: 16px !important;
+            }
+
+            #footer a {
+                color: #666 !important;
+                text-decoration: none !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+            }
+
+            #footer a:hover {
+                color: #333 !important;
+            }
             """
             gr.HTML(f"<style>{css}</style>")
 
@@ -1122,6 +1141,16 @@ class PaperPodcastApp:
                         ),
                         min_width=300,
                     )
+
+            # Footer with repository link
+            with gr.Row():
+                gr.HTML(
+                    """<div id="footer">
+                        <a href="https://github.com/KyosukeIchikawa/yomitalk" target="_blank">
+                            <img src="https://github.com/favicon.ico" width="16" height="16"> GitHub
+                        </a>
+                    </div>"""
+                )
 
             # Initialize user session and sync UI components with session values
             user_session = gr.State()
