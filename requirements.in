@@ -1,35 +1,26 @@
+# Development tools
 autoflake
 black
-e2k
-ffmpeg-python
 flake8
-gradio
-huggingface_hub>=0.20.2
-httpx>=0.28.0
 isort
+mypy
+pip-tools
+pre-commit
+types-requests
+
+# Runtime dependencies
+e2k
+gradio
+google-genai>=0.1.0
+httpx>=0.28.0
 jinja2>=3.0.0
 markitdown[pdf, youtube-transcription]>=0.1.1
-mypy
-numpy
-onnxruntime>=1.16.0
 openai
-google-genai>=0.1.0
-protobuf
-pip-tools
+reportlab
+requests
+
+# Testing dependencies
 playwright
-pre-commit
-pydantic
 pytest
 pytest-bdd>=4.1.0
 pytest-playwright
-pytest-xdist
-python-dotenv
-radon
-reportlab
-requests
-rope
-selenium
-torch>=2.2.0
-transformers>=4.40.0
-types-requests
-webdriver-manager
