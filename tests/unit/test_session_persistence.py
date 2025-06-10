@@ -58,7 +58,7 @@ class TestSessionPersistence:
         # Verify prompt manager state
         pm_state = text_state["prompt_manager_state"]
         assert pm_state["current_document_type"] == DocumentType.PAPER.value
-        assert pm_state["current_mode"] == PodcastMode.STANDARD.value
+        assert pm_state["current_mode"] == PodcastMode.SECTION_BY_SECTION.value
 
     def test_session_deserialization_from_dict(self):
         """Test session restoration from dictionary."""
