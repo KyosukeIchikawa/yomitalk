@@ -284,6 +284,7 @@ class AudioGenerator:
         "VAE": "VAE",
         "spatial": "スペイシャル",
         "yomitalk": "ヨミトーク",
+        "lovot": "ラボット",
     }
 
     def __init__(
