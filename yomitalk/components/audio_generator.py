@@ -30,6 +30,7 @@ try:
         Onnxruntime,
         OpenJtalk,
         Synthesizer,
+        UserDict,
         VoiceModelFile,
     )
 
@@ -50,11 +51,13 @@ class VoicevoxCoreManager:
     VOICEVOX_MODELS_PATH = VOICEVOX_BASE_PATH / "models/vvms"
     VOICEVOX_DICT_PATH = VOICEVOX_BASE_PATH / "dict/open_jtalk_dic_utf_8-1.11"
     VOICEVOX_LIB_PATH = VOICEVOX_BASE_PATH / "onnxruntime/lib"
+    USER_DICT_PATH = Path("assets/dictionaries/user_dictionary.json")
 
     def __init__(self) -> None:
         """Initialize global VOICEVOX Core manager."""
         self.core_initialized = False
         self.core_synthesizer: Optional[Synthesizer] = None
+        self.user_dict_words: set = set()
 
         # Initialize VOICEVOX Core if available
         if VOICEVOX_CORE_AVAILABLE:
@@ -76,8 +79,8 @@ class VoicevoxCoreManager:
             return
 
         try:
-            # 2. Initialize OpenJtalk
-            open_jtalk = OpenJtalk(str(self.VOICEVOX_DICT_PATH))
+            # 2. Initialize OpenJtalk with user dictionary if available
+            open_jtalk = self._initialize_openjtalk()
 
             # 3. Initialize ONNX Runtime
             runtime_path = str(
@@ -138,6 +141,44 @@ class VoicevoxCoreManager:
 
         return loaded_count
 
+    def _initialize_openjtalk(self) -> "OpenJtalk":
+        """
+        Initialize OpenJtalk with user dictionary if available.
+
+        Returns:
+            OpenJtalk: Initialized OpenJtalk instance
+        """
+        # Initialize OpenJtalk with system dictionary
+        open_jtalk = OpenJtalk(str(self.VOICEVOX_DICT_PATH))
+
+        # Load user dictionary if it exists
+        if self.USER_DICT_PATH.exists():
+            try:
+                user_dict = UserDict()
+                user_dict.load(str(self.USER_DICT_PATH))
+
+                # Use the user dictionary with OpenJtalk
+                open_jtalk.use_user_dict(user_dict)
+                logger.info(f"Loaded user dictionary: {self.USER_DICT_PATH}")
+
+                # Log dictionary contents for debugging
+                words = user_dict.to_dict()
+                logger.info(f"User dictionary contains {len(words)} words")
+                for word in words.values():
+                    logger.debug(f"  {word.surface} -> {word.pronunciation}")
+
+                # Load user dictionary words for conversion checking
+                self._load_user_dict_words_from_dict(user_dict)
+
+            except Exception as e:
+                logger.warning(f"Failed to load user dictionary: {e}")
+                logger.info("Continuing with system dictionary only")
+        else:
+            logger.info(f"User dictionary not found: {self.USER_DICT_PATH}")
+            logger.info("Using system dictionary only")
+
+        return open_jtalk
+
     def text_to_speech(self, text: str, style_id: int) -> bytes:
         """
         Generate audio data from text using VOICEVOX Core.
@@ -164,6 +205,138 @@ class VoicevoxCoreManager:
     def is_available(self) -> bool:
         """Check if VOICEVOX Core is available and initialized."""
         return self.core_initialized
+
+    def _load_user_dict_words_from_dict(self, user_dict: UserDict) -> None:
+        """
+        Load user dictionary words from UserDict for conversion checking.
+
+        Args:
+            user_dict: UserDict instance to load words from
+        """
+        self.user_dict_words = set()
+
+        try:
+            # Get all words from dictionary
+            dict_words = user_dict.to_dict()
+            for word in dict_words.values():
+                # Add both the full-width surface form and potential original form
+                self.user_dict_words.add(word.surface)
+
+                # Try to reverse the full-width conversion to get original form
+                # Full-width to half-width conversion for common cases
+                original_surface = word.surface
+                original_surface = (
+                    original_surface.replace("Ａ", "A")
+                    .replace("Ｂ", "B")
+                    .replace("Ｃ", "C")
+                )
+                original_surface = (
+                    original_surface.replace("Ｄ", "D")
+                    .replace("Ｅ", "E")
+                    .replace("Ｆ", "F")
+                )
+                original_surface = (
+                    original_surface.replace("Ｇ", "G")
+                    .replace("Ｈ", "H")
+                    .replace("Ｉ", "I")
+                )
+                original_surface = (
+                    original_surface.replace("Ｊ", "J")
+                    .replace("Ｋ", "K")
+                    .replace("Ｌ", "L")
+                )
+                original_surface = (
+                    original_surface.replace("Ｍ", "M")
+                    .replace("Ｎ", "N")
+                    .replace("Ｏ", "O")
+                )
+                original_surface = (
+                    original_surface.replace("Ｐ", "P")
+                    .replace("Ｑ", "Q")
+                    .replace("Ｒ", "R")
+                )
+                original_surface = (
+                    original_surface.replace("Ｓ", "S")
+                    .replace("Ｔ", "T")
+                    .replace("Ｕ", "U")
+                )
+                original_surface = (
+                    original_surface.replace("Ｖ", "V")
+                    .replace("Ｗ", "W")
+                    .replace("Ｘ", "X")
+                )
+                original_surface = original_surface.replace("Ｙ", "Y").replace(
+                    "Ｚ", "Z"
+                )
+                original_surface = (
+                    original_surface.replace("ａ", "a")
+                    .replace("ｂ", "b")
+                    .replace("ｃ", "c")
+                )
+                original_surface = (
+                    original_surface.replace("ｄ", "d")
+                    .replace("ｅ", "e")
+                    .replace("ｆ", "f")
+                )
+                original_surface = (
+                    original_surface.replace("ｇ", "g")
+                    .replace("ｈ", "h")
+                    .replace("ｉ", "i")
+                )
+                original_surface = (
+                    original_surface.replace("ｊ", "j")
+                    .replace("ｋ", "k")
+                    .replace("ｌ", "l")
+                )
+                original_surface = (
+                    original_surface.replace("ｍ", "m")
+                    .replace("ｎ", "n")
+                    .replace("ｏ", "o")
+                )
+                original_surface = (
+                    original_surface.replace("ｐ", "p")
+                    .replace("ｑ", "q")
+                    .replace("ｒ", "r")
+                )
+                original_surface = (
+                    original_surface.replace("ｓ", "s")
+                    .replace("ｔ", "t")
+                    .replace("ｕ", "u")
+                )
+                original_surface = (
+                    original_surface.replace("ｖ", "v")
+                    .replace("ｗ", "w")
+                    .replace("ｘ", "x")
+                )
+                original_surface = original_surface.replace("ｙ", "y").replace(
+                    "ｚ", "z"
+                )
+
+                if original_surface != word.surface:
+                    self.user_dict_words.add(original_surface)
+
+                logger.debug(
+                    f"Loaded user dict word: {word.surface} (original: {original_surface})"
+                )
+
+        except Exception as e:
+            logger.warning(f"Failed to load user dictionary words: {e}")
+
+        logger.info(
+            f"Loaded {len(self.user_dict_words)} user dictionary surface forms for conversion checking"
+        )
+
+    def is_word_in_user_dict(self, word: str) -> bool:
+        """
+        Check if a word is in the user dictionary.
+
+        Args:
+            word: Word to check
+
+        Returns:
+            bool: True if word is in user dictionary
+        """
+        return word in self.user_dict_words
 
 
 # Global VOICEVOX Core manager instance
@@ -437,6 +610,9 @@ class AudioGenerator:
             if converted_part := self.CONVERSION_OVERRIDE.get(part.lower()):
                 # 特定の単語は事前定義した変換を使用
                 part_to_add = converted_part
+            elif self._is_in_user_dict(part):
+                # ユーザー辞書に登録済みの単語はそのまま使用（VOICEVOXが変換する）
+                part_to_add = part
             elif not is_english_word:
                 # 英単語でない場合はそのまま
                 part_to_add = part
@@ -798,3 +974,18 @@ class AudioGenerator:
             return b""
 
         return manager.text_to_speech(text, style_id)
+
+    def _is_in_user_dict(self, word: str) -> bool:
+        """
+        Check if a word is in the user dictionary.
+
+        Args:
+            word: Word to check
+
+        Returns:
+            bool: True if word is in user dictionary
+        """
+        manager = get_global_voicevox_manager()
+        if manager is None:
+            return False
+        return manager.is_word_in_user_dict(word)
