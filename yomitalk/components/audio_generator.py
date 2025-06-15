@@ -279,9 +279,6 @@ class AudioGenerator:
         "thought": "ソート",
         "learn": "ラン",
         "with": "ウィズ",
-        "api": "API",
-        "ai": "AI",
-        "VAE": "VAE",
         "spatial": "スペイシャル",
         "yomitalk": "ヨミトーク",
         "lovot": "ラボット",
@@ -443,8 +440,11 @@ class AudioGenerator:
             elif not is_english_word:
                 # 英単語でない場合はそのまま
                 part_to_add = part
-            elif is_all_uppercase and len(part) < 7 and not is_romaji_readable(part):
-                # 大文字のみで構成され、字数が少なく、ローマ字読みできない場合はアルファベット読みして欲しいためそのまま
+            elif is_all_uppercase and (
+                len(part) <= 3 or (len(part) <= 6 and not is_romaji_readable(part))
+            ):
+                # 大文字のみで構成され、字数が少なくてローマ字読みできない場合はアルファベット読みして欲しいためそのまま
+                # （字数が3文字以下なら基本的にアルファベット読みで良く, 駄目であればCONVERSION_OVERRIDEなどで変換する）
                 part_to_add = part
             else:
                 part_to_add = part.capitalize() if is_all_uppercase else part
