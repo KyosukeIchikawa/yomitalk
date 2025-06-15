@@ -7,6 +7,7 @@ import datetime
 import io
 import os
 import re
+import unicodedata
 import uuid
 import wave
 from enum import Enum, auto
@@ -222,95 +223,8 @@ class VoicevoxCoreManager:
                 # Add both the full-width surface form and potential original form
                 self.user_dict_words.add(word.surface)
 
-                # Try to reverse the full-width conversion to get original form
-                # Full-width to half-width conversion for common cases
-                original_surface = word.surface
-                original_surface = (
-                    original_surface.replace("Ａ", "A")
-                    .replace("Ｂ", "B")
-                    .replace("Ｃ", "C")
-                )
-                original_surface = (
-                    original_surface.replace("Ｄ", "D")
-                    .replace("Ｅ", "E")
-                    .replace("Ｆ", "F")
-                )
-                original_surface = (
-                    original_surface.replace("Ｇ", "G")
-                    .replace("Ｈ", "H")
-                    .replace("Ｉ", "I")
-                )
-                original_surface = (
-                    original_surface.replace("Ｊ", "J")
-                    .replace("Ｋ", "K")
-                    .replace("Ｌ", "L")
-                )
-                original_surface = (
-                    original_surface.replace("Ｍ", "M")
-                    .replace("Ｎ", "N")
-                    .replace("Ｏ", "O")
-                )
-                original_surface = (
-                    original_surface.replace("Ｐ", "P")
-                    .replace("Ｑ", "Q")
-                    .replace("Ｒ", "R")
-                )
-                original_surface = (
-                    original_surface.replace("Ｓ", "S")
-                    .replace("Ｔ", "T")
-                    .replace("Ｕ", "U")
-                )
-                original_surface = (
-                    original_surface.replace("Ｖ", "V")
-                    .replace("Ｗ", "W")
-                    .replace("Ｘ", "X")
-                )
-                original_surface = original_surface.replace("Ｙ", "Y").replace(
-                    "Ｚ", "Z"
-                )
-                original_surface = (
-                    original_surface.replace("ａ", "a")
-                    .replace("ｂ", "b")
-                    .replace("ｃ", "c")
-                )
-                original_surface = (
-                    original_surface.replace("ｄ", "d")
-                    .replace("ｅ", "e")
-                    .replace("ｆ", "f")
-                )
-                original_surface = (
-                    original_surface.replace("ｇ", "g")
-                    .replace("ｈ", "h")
-                    .replace("ｉ", "i")
-                )
-                original_surface = (
-                    original_surface.replace("ｊ", "j")
-                    .replace("ｋ", "k")
-                    .replace("ｌ", "l")
-                )
-                original_surface = (
-                    original_surface.replace("ｍ", "m")
-                    .replace("ｎ", "n")
-                    .replace("ｏ", "o")
-                )
-                original_surface = (
-                    original_surface.replace("ｐ", "p")
-                    .replace("ｑ", "q")
-                    .replace("ｒ", "r")
-                )
-                original_surface = (
-                    original_surface.replace("ｓ", "s")
-                    .replace("ｔ", "t")
-                    .replace("ｕ", "u")
-                )
-                original_surface = (
-                    original_surface.replace("ｖ", "v")
-                    .replace("ｗ", "w")
-                    .replace("ｘ", "x")
-                )
-                original_surface = original_surface.replace("ｙ", "y").replace(
-                    "ｚ", "z"
-                )
+                # Convert full-width to half-width characters
+                original_surface = unicodedata.normalize("NFKC", word.surface)
 
                 if original_surface != word.surface:
                     self.user_dict_words.add(original_surface)
