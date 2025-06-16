@@ -15,9 +15,7 @@ import sys
 from typing import List, Optional, Pattern
 
 # ロギング設定
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("custom_tokens")
 
 
@@ -86,17 +84,10 @@ def is_excluded_path(file_path: str) -> bool:
 
     # 特定のパスを除外
     normalized_path = os.path.normpath(file_path)
-    for excluded_path in excluded_paths:
-        # ファイル名のみまたはパスの一部として含まれるか確認
-        if filename == excluded_path or excluded_path in normalized_path:
-            return True
-
-    return False
+    return any(filename == excluded_path or excluded_path in normalized_path for excluded_path in excluded_paths)
 
 
-def is_python_identifier_context(
-    content: str, match_str: str, match_start: int
-) -> bool:
+def is_python_identifier_context(content: str, match_str: str, match_start: int) -> bool:
     """
     マッチした文字列がPythonの識別子（関数名、変数名、クラス名など）の文脈にあるかを判断
     """
@@ -144,9 +135,7 @@ def is_python_identifier_context(
 
     # Pythonの命名規則に従った識別子かどうか
     # スネークケース（snake_case）またはキャメルケース（camelCase）のパターン
-    return bool(re.match(r"^[a-z][a-z0-9_]*$", match_str) or re.match(
-        r"^[a-z][a-zA-Z0-9]*$", match_str
-    ))
+    return bool(re.match(r"^[a-z][a-z0-9_]*$", match_str) or re.match(r"^[a-z][a-zA-Z0-9]*$", match_str))
 
 
 def check_file(file_path: str) -> bool:
@@ -176,9 +165,7 @@ def check_file(file_path: str) -> bool:
                     continue
 
                 # Pythonファイルの場合、識別子の文脈かどうかをチェック
-                if file_path.endswith(".py") and is_python_identifier_context(
-                    content, match_str, match_start
-                ):
+                if file_path.endswith(".py") and is_python_identifier_context(content, match_str, match_start):
                     continue
 
                 # テスト用の一時ファイルの場合は、ダミートークンもトークンとして検出
