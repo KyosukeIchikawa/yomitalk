@@ -11,9 +11,7 @@ import time
 from typing import List, Set
 
 # ロギング設定
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("run_staged_tests")
 
 
@@ -70,9 +68,7 @@ def get_test_files_to_run(staged_files: List[str]) -> Set[str]:
                             check=True,
                         )
                         for test_file in matching_tests.stdout.strip().split("\n"):
-                            if (
-                                test_file and "test_audio_generator.py" not in test_file
-                            ):  # Skip empty lines and problematic test
+                            if test_file and "test_audio_generator.py" not in test_file:  # Skip empty lines and problematic test
                                 test_files.add(test_file)
                     except subprocess.CalledProcessError:
                         pass
@@ -95,11 +91,7 @@ def run_pytest(test_files: Set[str]) -> bool:
     venv_pytest = "venv/bin/python -m pytest"
 
     # Use venv pytest if available, otherwise try system pytest
-    if os.path.exists("venv/bin/python"):
-        # タイムアウト(秒)を指定して実行
-        cmd = f"{venv_pytest} {' '.join(test_files)} -v --timeout=30"
-    else:
-        cmd = f"python -m pytest {' '.join(test_files)} -v --timeout=30"
+    cmd = f"{venv_pytest} {' '.join(test_files)} -v --timeout=30" if os.path.exists("venv/bin/python") else f"python -m pytest {' '.join(test_files)} -v --timeout=30"
 
     logger.info(f"Running: {cmd}")
 

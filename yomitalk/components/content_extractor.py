@@ -75,9 +75,7 @@ class ContentExtractor:
             return f"URL conversion error: {str(e)}"
 
     @classmethod
-    def extract_file_content(
-        cls, file_obj: Any
-    ) -> Tuple[Optional[str], Optional[bytes]]:
+    def extract_file_content(cls, file_obj: Any) -> Tuple[Optional[str], Optional[bytes]]:
         """
         メモリ上でファイルコンテンツを抽出します。
 
@@ -99,9 +97,7 @@ class ContentExtractor:
             original_extension = ".txt"  # デフォルト拡張子
             if hasattr(file_obj, "name"):
                 # 元のファイルの拡張子を取得
-                original_extension = os.path.splitext(Path(file_obj.name).name)[
-                    1
-                ].lower()
+                original_extension = os.path.splitext(Path(file_obj.name).name)[1].lower()
                 # 拡張子がない場合はデフォルト値を使用
                 if not original_extension:
                     original_extension = ".txt"
@@ -110,10 +106,7 @@ class ContentExtractor:
             file_content = None
             if hasattr(file_obj, "read") and callable(file_obj.read):
                 # 現在位置を記録
-                if hasattr(file_obj, "tell") and callable(file_obj.tell):
-                    pos = file_obj.tell()
-                else:
-                    pos = 0
+                pos = file_obj.tell() if hasattr(file_obj, "tell") and callable(file_obj.tell) else 0
 
                 # コンテンツを読み込み
                 file_content = file_obj.read()
@@ -205,9 +198,7 @@ class ContentExtractor:
 
                 # メモリ上のPDFストリームを直接変換
                 logger.debug("Processing PDF from memory stream")
-                result = _markdown_converter.convert(
-                    pdf_stream, stream_info=stream_info
-                )
+                result = _markdown_converter.convert(pdf_stream, stream_info=stream_info)
 
                 # 変換結果からテキストコンテンツを取得
                 markdown_content = result.text_content
@@ -221,9 +212,7 @@ class ContentExtractor:
             return f"Unsupported file type: {file_ext}. Supported types: {', '.join(cls.SUPPORTED_EXTENSIONS)}"
 
     @classmethod
-    def append_text_with_source(
-        cls, existing_text: str, new_text: str, source: str, add_separator: bool = True
-    ) -> str:
+    def append_text_with_source(cls, existing_text: str, new_text: str, source: str, add_separator: bool = True) -> str:
         """
         Append new text to existing text with source information.
 
@@ -245,18 +234,10 @@ class ContentExtractor:
         if add_separator:
             # Create markdown-style separator with source information
             separator = f"\n\n---\n**Source: {source}**\n\n"
-            if existing_text.strip():
-                # If there's existing text, add separator before new content
-                result = existing_text.rstrip() + separator + content_to_append
-            else:
-                # If no existing text, add source info at the beginning
-                result = f"**Source: {source}**\n\n" + content_to_append
+            result = existing_text.rstrip() + separator + content_to_append if existing_text.strip() else f"**Source: {source}**\n\n" + content_to_append
         else:
             # Just append with minimal spacing
-            if existing_text.strip():
-                result = existing_text.rstrip() + "\n\n" + content_to_append
-            else:
-                result = content_to_append
+            result = existing_text.rstrip() + "\n\n" + content_to_append if existing_text.strip() else content_to_append
 
         return result
 

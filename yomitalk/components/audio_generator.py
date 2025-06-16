@@ -70,13 +70,8 @@ class VoicevoxCoreManager:
         self.core_initialized = False
 
         # 1. Check existence of required directories
-        if (
-            not self.VOICEVOX_MODELS_PATH.exists()
-            or not self.VOICEVOX_DICT_PATH.exists()
-        ):
-            logger.warning(
-                "Required VOICEVOX directories not found. Please run 'make download-voicevox-core'"
-            )
+        if not self.VOICEVOX_MODELS_PATH.exists() or not self.VOICEVOX_DICT_PATH.exists():
+            logger.warning("Required VOICEVOX directories not found. Please run 'make download-voicevox-core'")
             return
 
         try:
@@ -84,9 +79,7 @@ class VoicevoxCoreManager:
             open_jtalk = self._initialize_openjtalk()
 
             # 3. Initialize ONNX Runtime
-            runtime_path = str(
-                self.VOICEVOX_LIB_PATH / "libvoicevox_onnxruntime.so.1.17.3"
-            )
+            runtime_path = str(self.VOICEVOX_LIB_PATH / "libvoicevox_onnxruntime.so.1.17.3")
 
             if os.path.exists(runtime_path):
                 logger.info("Loading ONNX runtime from local path")
@@ -102,9 +95,7 @@ class VoicevoxCoreManager:
             loaded_count = self._load_voice_models()
 
             if loaded_count > 0:
-                logger.info(
-                    f"Successfully loaded {loaded_count}/{len(REQUIRED_MODEL_FILES)} voice models"
-                )
+                logger.info(f"Successfully loaded {loaded_count}/{len(REQUIRED_MODEL_FILES)} voice models")
                 self.core_initialized = True
             else:
                 logger.error("No voice models could be loaded")
@@ -229,16 +220,12 @@ class VoicevoxCoreManager:
                 if original_surface != word.surface:
                     self.user_dict_words.add(original_surface)
 
-                logger.debug(
-                    f"Loaded user dict word: {word.surface} (original: {original_surface})"
-                )
+                logger.debug(f"Loaded user dict word: {word.surface} (original: {original_surface})")
 
         except Exception as e:
             logger.warning(f"Failed to load user dictionary words: {e}")
 
-        logger.info(
-            f"Loaded {len(self.user_dict_words)} user dictionary surface forms for conversion checking"
-        )
+        logger.info(f"Loaded {len(self.user_dict_words)} user dictionary surface forms for conversion checking")
 
     def is_word_in_user_dict(self, word: str) -> bool:
         """
@@ -386,12 +373,8 @@ class AudioGenerator:
                 If not provided, defaults to "data/temp/talks"
         """
         # Use session-specific directories if provided
-        self.output_dir = (
-            session_output_dir if session_output_dir else Path("data/output")
-        )
-        self.temp_dir = (
-            session_temp_dir if session_temp_dir else Path("data/temp/talks")
-        )
+        self.output_dir = session_output_dir if session_output_dir else Path("data/output")
+        self.temp_dir = session_temp_dir if session_temp_dir else Path("data/temp/talks")
 
         # Make sure directories exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -454,9 +437,7 @@ class AudioGenerator:
                     result.extend([uppercase_part, "ズ"])
                 else:
                     # 英単語のパターンに基づいて分割（キャメルケース対応）
-                    segments = re.findall(
-                        r"([A-Z]{2,}(?=[A-Z][a-z]|$)|[A-Z][a-z]*|[a-z]+)", part
-                    )
+                    segments = re.findall(r"([A-Z]{2,}(?=[A-Z][a-z]|$)|[A-Z][a-z]*|[a-z]+)", part)
                     result.extend(segments)
             else:
                 # 英単語以外はそのまま追加
@@ -509,11 +490,7 @@ class AudioGenerator:
                 needs_space = word_count >= 6  # 6単語以上続く
 
                 # 特定の品詞の前後で息継ぎ
-                if (
-                    last_part.lower() in self.BE_VERBS
-                    or part.lower() in self.PREPOSITIONS
-                    or part.lower() in self.CONJUNCTIONS
-                ) and word_count >= 4:
+                if (last_part.lower() in self.BE_VERBS or part.lower() in self.PREPOSITIONS or part.lower() in self.CONJUNCTIONS) and word_count >= 4:
                     needs_space = True
 
                 if needs_space:
@@ -530,9 +507,7 @@ class AudioGenerator:
             elif not is_english_word:
                 # 英単語でない場合はそのまま
                 part_to_add = part
-            elif is_all_uppercase and (
-                len(part) <= 3 or (len(part) <= 6 and not is_romaji_readable(part))
-            ):
+            elif is_all_uppercase and (len(part) <= 3 or (len(part) <= 6 and not is_romaji_readable(part))):
                 # 大文字のみで構成され、字数が少なくてローマ字読みできない場合はアルファベット読みして欲しいためそのまま
                 # （字数が3文字以下なら基本的にアルファベット読みで良く, 駄目であればCONVERSION_OVERRIDEなどで変換する）
                 part_to_add = part
@@ -546,9 +521,7 @@ class AudioGenerator:
 
         return "".join(result)
 
-    def generate_character_conversation(
-        self, podcast_text: str
-    ) -> Generator[Optional[str], None, None]:
+    def generate_character_conversation(self, podcast_text: str) -> Generator[Optional[str], None, None]:
         """
         Generate audio for a character conversation from podcast text with streaming support.
 
@@ -614,10 +587,7 @@ class AudioGenerator:
         conversation_parts = []
 
         # キャラクターパターンを取得
-        character_patterns = {
-            char.display_name: [f"{char.display_name}:", f"{char.display_name}："]
-            for char in Character
-        }
+        character_patterns = {char.display_name: [f"{char.display_name}:", f"{char.display_name}："] for char in Character}
 
         # 複数行のセリフを処理するために現在の話者と発言を記録
         current_speaker = None
@@ -663,9 +633,7 @@ class AudioGenerator:
 
         # 会話部分が見つからない場合はフォーマット修正を試みる
         if not conversation_parts:
-            logger.warning(
-                "No valid conversation parts found. Attempting to fix format..."
-            )
+            logger.warning("No valid conversation parts found. Attempting to fix format...")
             fixed_text = self._fix_conversation_format(podcast_text)
             if fixed_text != podcast_text:
                 return self._extract_conversation_parts(fixed_text)
@@ -801,10 +769,9 @@ class AudioGenerator:
                 # 現在の話者の発言として処理
                 if line_stripped:
                     current_speech.append(line_stripped)
-                elif current_speech:
+                elif current_speech and not current_speech[-1].endswith("\n"):
                     # 段落区切りの空行
-                    if not current_speech[-1].endswith("\n"):
-                        current_speech[-1] += "\n"
+                    current_speech[-1] += "\n"
             elif line_stripped:
                 # 話者が一度も検出されていない場合はデフォルト設定
                 current_speaker = Character.ZUNDAMON.display_name

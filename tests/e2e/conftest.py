@@ -94,10 +94,7 @@ def browser():
         Browser: Playwrightブラウザインスタンス
     """
     with sync_playwright() as playwright:
-        if os.environ.get("HEADLESS", "true").lower() == "true":
-            browser = playwright.chromium.launch(headless=True)
-        else:
-            browser = playwright.chromium.launch(headless=False, slow_mo=100)
+        browser = playwright.chromium.launch(headless=True) if os.environ.get("HEADLESS", "true").lower() == "true" else playwright.chromium.launch(headless=False, slow_mo=100)
 
         yield browser
 
@@ -125,9 +122,7 @@ def pytest_bdd_apply_tag(tag, function):
     return None
 
 
-def pytest_bdd_step_error(
-    request, feature, scenario, step, step_func, step_func_args, exception
-):
+def pytest_bdd_step_error(request, feature, scenario, step, step_func, step_func_args, exception):
     """
     ステップが失敗した場合のフック
 
@@ -146,9 +141,7 @@ def pytest_bdd_step_error(
         step_name = step.name.replace(" ", "_")
         timestamp = int(time.time())
 
-        screenshot_path = os.path.join(
-            screenshot_dir, f"error_{scenario_name}_{step_name}_{timestamp}.png"
-        )
+        screenshot_path = os.path.join(screenshot_dir, f"error_{scenario_name}_{step_name}_{timestamp}.png")
 
         page.screenshot(path=screenshot_path)
         logger.error(f"スクリーンショットが保存されました: {screenshot_path}")
