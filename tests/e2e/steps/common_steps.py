@@ -19,9 +19,9 @@ def application_is_running(page: Page, app_environment):
         app_environment: バックエンドのフィクスチャ(TestEnvironmentインスタンス)
     """
     # アプリケーションが起動していることを確認
-    assert (
-        app_environment.app_port is not None
-    ), "Application port is not set. Test environment might not be properly initialized."
+    assert app_environment.app_port is not None, (
+        "Application port is not set. Test environment might not be properly initialized."
+    )
 
     # ブラウザでアプリケーションにアクセス
     app_url = app_environment.app_url

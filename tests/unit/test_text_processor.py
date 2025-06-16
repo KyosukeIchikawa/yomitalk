@@ -71,10 +71,13 @@ class TestTextProcessor:
     def test_set_api_type(self):
         """Test setting API type."""
         # Clear environment API keys and APIが設定されていない場合
-        with patch.object(
-            self.text_processor.openai_model, "has_api_key", return_value=False
-        ), patch.object(
-            self.text_processor.gemini_model, "has_api_key", return_value=False
+        with (
+            patch.object(
+                self.text_processor.openai_model, "has_api_key", return_value=False
+            ),
+            patch.object(
+                self.text_processor.gemini_model, "has_api_key", return_value=False
+            ),
         ):
             assert self.text_processor.set_api_type(APIType.OPENAI) is False
             assert self.text_processor.set_api_type(APIType.GEMINI) is False
@@ -87,10 +90,13 @@ class TestTextProcessor:
             assert self.text_processor.get_current_api_type() == APIType.OPENAI
 
         # OpenAI APIキーが設定されていないがGemini APIキーがある場合
-        with patch.object(
-            self.text_processor.openai_model, "has_api_key", return_value=False
-        ), patch.object(
-            self.text_processor.gemini_model, "has_api_key", return_value=True
+        with (
+            patch.object(
+                self.text_processor.openai_model, "has_api_key", return_value=False
+            ),
+            patch.object(
+                self.text_processor.gemini_model, "has_api_key", return_value=True
+            ),
         ):
             assert self.text_processor.set_api_type(APIType.GEMINI) is True
             assert self.text_processor.get_current_api_type() == APIType.GEMINI
@@ -124,11 +130,14 @@ class TestTextProcessor:
         """Test API generation methods."""
         # OpenAIとGeminiのAPIがあると仮定したテスト
         # 実際のAPIを呼び出さないでモックする
-        with patch.object(
-            self.text_processor.openai_model, "generate_text"
-        ) as mock_openai, patch.object(
-            self.text_processor.openai_model, "has_api_key"
-        ) as mock_has_api_key:
+        with (
+            patch.object(
+                self.text_processor.openai_model, "generate_text"
+            ) as mock_openai,
+            patch.object(
+                self.text_processor.openai_model, "has_api_key"
+            ) as mock_has_api_key,
+        ):
             mock_openai.return_value = "OpenAI generated text"
             mock_has_api_key.return_value = True
             self.text_processor.set_api_type(APIType.OPENAI)
@@ -140,11 +149,14 @@ class TestTextProcessor:
     def test_gemini_generation(self):
         """Test Gemini generation."""
         # Geminiのモックをセットアップ
-        with patch.object(
-            self.text_processor.gemini_model, "generate_text"
-        ) as mock_gemini, patch.object(
-            self.text_processor.gemini_model, "has_api_key"
-        ) as mock_has_api_key:
+        with (
+            patch.object(
+                self.text_processor.gemini_model, "generate_text"
+            ) as mock_gemini,
+            patch.object(
+                self.text_processor.gemini_model, "has_api_key"
+            ) as mock_has_api_key,
+        ):
             mock_gemini.return_value = "Gemini generated text"
             mock_has_api_key.return_value = True
             self.text_processor.set_api_type(APIType.GEMINI)

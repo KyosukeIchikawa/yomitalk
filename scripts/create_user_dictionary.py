@@ -14,9 +14,8 @@ sys.path.insert(0, str(project_root))
 from yomitalk.utils.logger import logger  # noqa: E402
 
 try:
-    from voicevox_core.blocking import UserDict  # type: ignore
-
     from voicevox_core import UserDictWord  # type: ignore
+    from voicevox_core.blocking import UserDict  # type: ignore
 
     VOICEVOX_CORE_AVAILABLE = True
 except ImportError as e:

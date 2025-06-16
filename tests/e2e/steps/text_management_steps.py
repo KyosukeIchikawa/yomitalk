@@ -257,13 +257,13 @@ def text_area_shows_content_with_separator(page: Page):
     logger.info(f"Text area content: '{text_content}'")
 
     # セパレーター（---）が含まれていることを確認
-    assert (
-        "---" in text_content
-    ), f"Expected separator in content, but found: '{text_content}'"
+    assert "---" in text_content, (
+        f"Expected separator in content, but found: '{text_content}'"
+    )
     # ソース情報が含まれていることを確認
-    assert (
-        "**Source:" in text_content
-    ), f"Expected source info in content, but found: '{text_content}'"
+    assert "**Source:" in text_content, (
+        f"Expected source info in content, but found: '{text_content}'"
+    )
 
     logger.info("Text area shows content with separator as expected")
 
@@ -284,18 +284,18 @@ def text_area_shows_appended_content(page: Page):
     logger.info(f"Text area content: '{text_content}'")
 
     # セパレーター（---）が含まれていないことを確認
-    assert (
-        "---" not in text_content
-    ), f"Expected no separator in content, but found: '{text_content}'"
+    assert "---" not in text_content, (
+        f"Expected no separator in content, but found: '{text_content}'"
+    )
     # ソース情報（**Source:**）が含まれていないことを確認
-    assert (
-        "**Source:" not in text_content
-    ), f"Expected no source info in content, but found: '{text_content}'"
+    assert "**Source:" not in text_content, (
+        f"Expected no source info in content, but found: '{text_content}'"
+    )
 
     # ただし、既存のコンテンツと新しいコンテンツが追加されていることは確認
-    assert (
-        "Existing content" in text_content
-    ), f"Expected existing content to be preserved, but found: '{text_content}'"
+    assert "Existing content" in text_content, (
+        f"Expected existing content to be preserved, but found: '{text_content}'"
+    )
 
     logger.info("Text area shows appended content without separator as expected")
 
@@ -313,9 +313,9 @@ def text_area_contains_text(page: Page, expected_text: str):
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
-    assert (
-        expected_text in text_content
-    ), f"Expected '{expected_text}' in content, but found: '{text_content}'"
+    assert expected_text in text_content, (
+        f"Expected '{expected_text}' in content, but found: '{text_content}'"
+    )
     logger.info(f"Text area contains expected text: {expected_text}")
 
 
@@ -333,9 +333,9 @@ def text_area_contains_source_info(page: Page, source: str):
     logger.info(f"Text area content: '{text_content}'")
 
     # ソース情報が含まれていることを確認
-    assert (
-        f"**Source: {source}**" in text_content
-    ), f"Expected source info for '{source}' in content, but found: '{text_content}'"
+    assert f"**Source: {source}**" in text_content, (
+        f"Expected source info for '{source}' in content, but found: '{text_content}'"
+    )
     logger.info(f"Text area contains source info for: {source}")
 
 
@@ -353,9 +353,9 @@ def file_input_should_be_cleared(page: Page):
     logger.info(f"File input value: '{input_value}'")
 
     # File input should be empty after automatic extraction
-    assert (
-        input_value == "" or input_value is None
-    ), "File input should be cleared after extraction"
+    assert input_value == "" or input_value is None, (
+        "File input should be cleared after extraction"
+    )
 
     logger.info("File input is cleared as expected")
 
@@ -374,17 +374,17 @@ def text_should_be_extracted_with_separator(page: Page):
     logger.info(f"Extracted text content: '{text_content}'")
 
     # テキストが抽出されていることを確認
-    assert (
-        text_content and len(text_content.strip()) > 0
-    ), "Expected extracted text but found empty content"
+    assert text_content and len(text_content.strip()) > 0, (
+        "Expected extracted text but found empty content"
+    )
 
     # セパレーターが含まれていることを確認
-    assert (
-        "---" in text_content
-    ), f"Expected separator in content, but found: '{text_content}'"
-    assert (
-        "**Source:" in text_content
-    ), f"Expected source info in content, but found: '{text_content}'"
+    assert "---" in text_content, (
+        f"Expected separator in content, but found: '{text_content}'"
+    )
+    assert "**Source:" in text_content, (
+        f"Expected source info in content, but found: '{text_content}'"
+    )
 
     logger.info("Text extracted with source separator as expected")
 
@@ -403,17 +403,17 @@ def text_should_be_extracted_without_separator(page: Page):
     logger.info(f"Extracted text content: '{text_content}'")
 
     # テキストが抽出されていることを確認
-    assert (
-        text_content and len(text_content.strip()) > 0
-    ), "Expected extracted text but found empty content"
+    assert text_content and len(text_content.strip()) > 0, (
+        "Expected extracted text but found empty content"
+    )
 
     # セパレーターが含まれていないことを確認
-    assert (
-        "---" not in text_content
-    ), f"Expected no separator in content, but found: '{text_content}'"
-    assert (
-        "**Source:" not in text_content
-    ), f"Expected no source info in content, but found: '{text_content}'"
+    assert "---" not in text_content, (
+        f"Expected no separator in content, but found: '{text_content}'"
+    )
+    assert "**Source:" not in text_content, (
+        f"Expected no source info in content, but found: '{text_content}'"
+    )
 
     logger.info("Text extracted without separator as expected")
 
@@ -432,20 +432,20 @@ def text_area_contains_content_from_both_files(page: Page):
     logger.info(f"Text area content: {text_content[:300]}...")
 
     # 両方のファイルからのソース情報があることを確認
-    assert (
-        "**Source: sample_text.txt**" in text_content
-    ), "Source information for sample_text.txt not found"
-    assert (
-        "**Source: another_file.txt**" in text_content
-    ), "Source information for another_file.txt not found"
+    assert "**Source: sample_text.txt**" in text_content, (
+        "Source information for sample_text.txt not found"
+    )
+    assert "**Source: another_file.txt**" in text_content, (
+        "Source information for another_file.txt not found"
+    )
 
     # 両方のファイルの内容があることを確認
-    assert (
-        "Yomitalk サンプルテキスト" in text_content
-    ), "Content from sample_text.txt not found"
-    assert (
-        "別のサンプルファイル" in text_content
-    ), "Content from another_file.txt not found"
+    assert "Yomitalk サンプルテキスト" in text_content, (
+        "Content from sample_text.txt not found"
+    )
+    assert "別のサンプルファイル" in text_content, (
+        "Content from another_file.txt not found"
+    )
 
     logger.info("Content from both files found as expected")
 
@@ -490,9 +490,9 @@ def text_area_contains_source_information(page: Page, filename: str):
     logger.info(f"Text area content: {text_content[:200]}...")
 
     expected_source = f"**Source: {filename}**"
-    assert (
-        expected_source in text_content
-    ), f"Expected source information '{expected_source}' not found in text content"
+    assert expected_source in text_content, (
+        f"Expected source information '{expected_source}' not found in text content"
+    )
 
     logger.info(f"Source information for {filename} found as expected")
 
@@ -512,9 +512,9 @@ def automatic_separator_is_disabled(page: Page):
         )  # Fallback to first checkbox
     expect(checkbox).to_be_visible()
 
-    assert (
-        not checkbox.is_checked()
-    ), "Expected checkbox to be unchecked (separator disabled)"
+    assert not checkbox.is_checked(), (
+        "Expected checkbox to be unchecked (separator disabled)"
+    )
     logger.info("Automatic separator is disabled as expected")
 
 
@@ -532,14 +532,14 @@ def text_area_contains_content_from_both_sources(page: Page):
     logger.info(f"Text area content: {text_content[:300]}...")
 
     # ファイルのソース情報があることを確認
-    assert (
-        "**Source: sample_text.txt**" in text_content
-    ), "Source information for file not found"
+    assert "**Source: sample_text.txt**" in text_content, (
+        "Source information for file not found"
+    )
 
     # URLのソース情報があることを確認
-    assert (
-        "**Source: https://example.com**" in text_content
-    ), "Source information for URL not found"
+    assert "**Source: https://example.com**" in text_content, (
+        "Source information for URL not found"
+    )
 
     # 両方のソースからの内容があることを確認
     assert (
@@ -573,9 +573,9 @@ def text_area_contains_specific_text(page: Page, expected_text: str):
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
-    assert (
-        expected_text in text_content
-    ), f"Expected '{expected_text}' in content, but found: '{text_content}'"
+    assert expected_text in text_content, (
+        f"Expected '{expected_text}' in content, but found: '{text_content}'"
+    )
     logger.info(f"Text area contains expected text: {expected_text}")
 
 
@@ -622,9 +622,9 @@ def text_area_contains_file_content(page: Page):
     ]
     has_file_content = any(indicator in text_content for indicator in file_indicators)
 
-    assert (
-        has_file_content
-    ), f"Expected file content indicators in text area, but found: '{text_content[:200]}...'"
+    assert has_file_content, (
+        f"Expected file content indicators in text area, but found: '{text_content[:200]}...'"
+    )
     logger.info("Text area contains content from the file as expected")
 
 
@@ -684,9 +684,9 @@ def text_area_contains_existing_content(page: Page):
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
-    assert (
-        "Existing content" in text_content
-    ), f"Expected 'Existing content' in content, but found: '{text_content}'"
+    assert "Existing content" in text_content, (
+        f"Expected 'Existing content' in content, but found: '{text_content}'"
+    )
     logger.info("Text area contains 'Existing content' as expected")
 
 
@@ -759,7 +759,7 @@ def text_area_contains_manual_input_content(page: Page):
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
-    assert (
-        "Manual input content" in text_content
-    ), f"Expected 'Manual input content' in content, but found: '{text_content}'"
+    assert "Manual input content" in text_content, (
+        f"Expected 'Manual input content' in content, but found: '{text_content}'"
+    )
     logger.info("Text area contains 'Manual input content' as expected")

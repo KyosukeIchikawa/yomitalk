@@ -160,7 +160,7 @@ def all_users_generate_simultaneously(test_context):
 
     # Start threads for concurrent generation
     for i, (session, text) in enumerate(
-        zip(test_context.sessions, test_context.test_texts)
+        zip(test_context.sessions, test_context.test_texts, strict=False)
     ):
         thread = threading.Thread(
             target=generate_audio_for_user, args=(session.audio_generator, text, i)

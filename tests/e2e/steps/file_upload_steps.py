@@ -169,9 +169,9 @@ def file_input_should_be_cleared(page: Page):
     logger.info(f"File input value: '{input_value}'")
 
     # File input should be empty after automatic extraction
-    assert (
-        input_value == "" or input_value is None
-    ), "File input should be cleared after extraction"
+    assert input_value == "" or input_value is None, (
+        "File input should be cleared after extraction"
+    )
 
     logger.info("File input is cleared as expected")
 
@@ -189,9 +189,9 @@ def text_should_contain_file_content(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert (
-        len(text_content.strip()) > 0
-    ), "Extracted text area should contain file content"
+    assert len(text_content.strip()) > 0, (
+        "Extracted text area should contain file content"
+    )
 
     content_preview = (
         text_content[:100] + "..." if len(text_content) > 100 else text_content
@@ -237,9 +237,9 @@ def text_should_accumulate_contents(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert (
-        len(text_content.strip()) > 0
-    ), "Extracted text area should contain accumulated content"
+    assert len(text_content.strip()) > 0, (
+        "Extracted text area should contain accumulated content"
+    )
 
     # Check for content from both files or separator indicators
     has_multiple_sources = (
@@ -270,9 +270,9 @@ def text_extracted_with_source_separator(page: Page):
 
     # Check for separator and source information
     assert "---" in text_content, "Separator should be present in extracted text"
-    assert (
-        "**Source:" in text_content
-    ), "Source information should be present in extracted text"
+    assert "**Source:" in text_content, (
+        "Source information should be present in extracted text"
+    )
 
     content_preview = (
         text_content[:200] + "..." if len(text_content) > 200 else text_content
@@ -297,9 +297,9 @@ def text_extracted_without_separator(page: Page):
     assert len(text_content.strip()) > 0, "Extracted text area should contain content"
 
     # Check that separator is not present (but allow for natural line breaks)
-    assert (
-        "---" not in text_content
-    ), "Separator should not be present in extracted text"
+    assert "---" not in text_content, (
+        "Separator should not be present in extracted text"
+    )
 
     content_preview = (
         text_content[:200] + "..." if len(text_content) > 200 else text_content

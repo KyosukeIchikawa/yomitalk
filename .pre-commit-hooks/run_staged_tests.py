@@ -2,6 +2,7 @@
 """
 Pre-commit hook that runs unit tests related to staged Python files.
 """
+
 import logging
 import os
 import subprocess

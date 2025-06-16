@@ -18,7 +18,7 @@ VOICEVOX_DIR = voicevox_core
 VOICEVOX_CHECK_MODULE = $(VENV_PYTHON) -c "import voicevox_core" 2>/dev/null
 
 # Source code related
-SRC_DIRS = app tests app.py
+SRC_DIRS = yomitalk tests app.py
 CACHE_DIRS = __pycache__ app/__pycache__ app/components/__pycache__ app/utils/__pycache__ \
              tests/__pycache__ tests/unit/__pycache__ tests/e2e/__pycache__ tests/data/__pycache__ \
              .pytest_cache
@@ -42,8 +42,8 @@ help:
 	@echo "  make setup-lint   - Install linting packages only"
 	@echo "【Development】"
 	@echo "  make run          - Run the application"
-	@echo "  make lint         - Run static code analysis (flake8, mypy)"
-	@echo "  make format       - Auto-format and fix code issues (black, isort, autoflake, autopep8)"
+	@echo "  make lint         - Run static code analysis (ruff check, mypy)"
+	@echo "  make format       - Auto-format and fix code issues (ruff format, ruff check --fix)"
 	@echo "  make pre-commit-install - Install pre-commit hooks"
 	@echo "  make pre-commit-run    - Run pre-commit hooks manually"
 	@echo "【Testing】"
@@ -128,17 +128,15 @@ run: venv
 # Run static analysis (lint)
 lint: setup-lint
 	@echo "Running static code analysis..."
-	$(VENV_DIR)/bin/flake8 $(SRC_DIRS)
+	$(VENV_DIR)/bin/ruff check $(SRC_DIRS)
 	$(VENV_DIR)/bin/mypy $(SRC_DIRS)
 	@echo "Static analysis completed"
 
 # Format code
 format: setup-lint
 	@echo "Running code formatting and issue fixes..."
-	$(VENV_DIR)/bin/autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive $(SRC_DIRS)
-	$(VENV_DIR)/bin/autopep8 --in-place --aggressive --aggressive --recursive $(SRC_DIRS)
-	$(VENV_DIR)/bin/black $(SRC_DIRS)
-	$(VENV_DIR)/bin/isort $(SRC_DIRS)
+	$(VENV_DIR)/bin/ruff check --fix $(SRC_DIRS)
+	$(VENV_DIR)/bin/ruff format $(SRC_DIRS)
 	@echo "Formatting completed"
 
 # Install pre-commit hooks

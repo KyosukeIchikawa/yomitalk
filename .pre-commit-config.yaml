@@ -25,22 +25,14 @@ repos:
         types: [python]
         stages: [pre-commit]
 
--   repo: https://github.com/pycqa/isort
-    rev: 6.0.1
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.13
     hooks:
-    -   id: isort
-        name: isort (python)
-
--   repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-    -   id: black
-        language_version: python3
-
--   repo: https://github.com/pycqa/flake8
-    rev: 7.2.0
-    hooks:
-    -   id: flake8
+    -   id: ruff
+        name: ruff (linter)
+        args: [--fix]
+    -   id: ruff-format
+        name: ruff (formatter)
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.16.0
@@ -48,24 +40,6 @@ repos:
     -   id: mypy
         additional_dependencies: [types-requests]
 
--   repo: https://github.com/PyCQA/autoflake
-    rev: v2.3.1
-    hooks:
-    -   id: autoflake
-        args: [
-            --remove-all-unused-imports,
-            --in-place,
-            --recursive
-        ]
-        stages: [pre-commit]
-    -   id: autoflake
-        name: autoflake-ci-check
-        args: [
-            --remove-all-unused-imports,
-            --check,
-            --recursive
-        ]
-        stages: [manual]
 
 -   repo: local
     hooks:

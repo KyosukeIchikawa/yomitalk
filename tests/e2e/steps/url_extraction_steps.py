@@ -118,9 +118,9 @@ def text_area_shows_content(page: Page):
                 f"Textarea {i}: placeholder='{placeholder}', content='{content[:50] if content else 'EMPTY'}'"
             )
 
-    assert (
-        len(text_content.strip()) > 0
-    ), "Extracted text area should contain content, but found empty content"
+    assert len(text_content.strip()) > 0, (
+        "Extracted text area should contain content, but found empty content"
+    )
 
     # example.comの場合は "Example Domain" が含まれることを確認
     if (
@@ -141,9 +141,9 @@ def text_area_shows_content(page: Page):
         content_preview = (
             text_content[:150] + "..." if len(text_content) > 150 else text_content
         )
-        assert (
-            not contains_error
-        ), f"Extracted text should not contain error. Content preview: {content_preview}"
+        assert not contains_error, (
+            f"Extracted text should not contain error. Content preview: {content_preview}"
+        )
 
     # Log only a preview of the content for readability
     content_preview = (
@@ -164,9 +164,9 @@ def text_area_shows_github_content(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert (
-        len(text_content.strip()) > 0
-    ), "Extracted text area should contain GitHub README content"
+    assert len(text_content.strip()) > 0, (
+        "Extracted text area should contain GitHub README content"
+    )
 
     # Check for actual error messages, not just the word "error" anywhere in content
     error_indicators = [
@@ -185,9 +185,9 @@ def text_area_shows_github_content(page: Page):
         text_content[:150] + "..." if len(text_content) > 150 else text_content
     )
 
-    assert (
-        not contains_actual_error
-    ), f"GitHub README extraction should not contain actual error messages. Content preview: {content_preview}"
+    assert not contains_actual_error, (
+        f"GitHub README extraction should not contain actual error messages. Content preview: {content_preview}"
+    )
 
     # Check that content contains README-related keywords
     readme_keywords = [
@@ -201,9 +201,9 @@ def text_area_shows_github_content(page: Page):
     contains_readme_content = any(
         keyword in text_content.lower() for keyword in readme_keywords
     )
-    assert (
-        contains_readme_content
-    ), f"Content should contain README-related keywords. Content preview: {content_preview}"
+    assert contains_readme_content, (
+        f"Content should contain README-related keywords. Content preview: {content_preview}"
+    )
 
     # Log only a preview of the content for readability
     logger.info(
@@ -223,9 +223,9 @@ def text_area_shows_error_message(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert (
-        len(text_content.strip()) > 0
-    ), "Extracted text area should contain error message"
+    assert len(text_content.strip()) > 0, (
+        "Extracted text area should contain error message"
+    )
 
     # エラーメッセージのキーワードが含まれていることを確認
     error_keywords = [
@@ -244,9 +244,9 @@ def text_area_shows_error_message(page: Page):
     content_preview = (
         text_content[:150] + "..." if len(text_content) > 150 else text_content
     )
-    assert (
-        contains_error_keyword
-    ), f"Text should contain error message. Content preview: {content_preview}"
+    assert contains_error_keyword, (
+        f"Text should contain error message. Content preview: {content_preview}"
+    )
 
     logger.info(f"Error message displayed: {content_preview}")
 
@@ -262,9 +262,9 @@ def text_area_replaced_with_file_content(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert (
-        len(text_content.strip()) > 0
-    ), "Extracted text area should contain file content"
+    assert len(text_content.strip()) > 0, (
+        "Extracted text area should contain file content"
+    )
 
     # ファイルの内容が含まれていることを確認（テストファイルの内容による）
     # 少なくとも何らかのコンテンツが表示されていることを確認
@@ -382,9 +382,9 @@ def text_should_contain_separator(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert (
-        "---" in text_content or "**Source:" in text_content
-    ), "Text should contain a separator"
+    assert "---" in text_content or "**Source:" in text_content, (
+        "Text should contain a separator"
+    )
 
     logger.info("Separator found in extracted text")
 
@@ -401,9 +401,9 @@ def text_should_not_contain_separator(page: Page):
 
     text_content = text_area.input_value()
     # Check that there are no markdown-style separators
-    assert (
-        "---" not in text_content and "**Source:" not in text_content
-    ), "Text should not contain a separator"
+    assert "---" not in text_content and "**Source:" not in text_content, (
+        "Text should not contain a separator"
+    )
 
     logger.info("No separator found in extracted text")
 
@@ -439,9 +439,9 @@ def text_area_should_be_empty(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert (
-        len(text_content.strip()) == 0
-    ), f"Text area should be empty, but contains: {text_content[:50]}"
+    assert len(text_content.strip()) == 0, (
+        f"Text area should be empty, but contains: {text_content[:50]}"
+    )
 
     logger.info("Text area is empty as expected")
 
@@ -550,8 +550,8 @@ def text_area_contains_specific_text_url(page: Page, text: str):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert (
-        text in text_content
-    ), f"Expected '{text}' in content, but found: '{text_content[:200]}...'"
+    assert text in text_content, (
+        f"Expected '{text}' in content, but found: '{text_content[:200]}...'"
+    )
 
     logger.info(f"Text area contains expected text: {text}")

@@ -126,9 +126,9 @@ def podcast_script_is_generated(page: Page):
     # Verify that the script content is in conversation format
     script_content = script_textarea.input_value()
     assert len(script_content) > 50, "Generated script is too short"
-    assert (
-        ":" in script_content
-    ), "Generated script does not contain conversation markers"
+    assert ":" in script_content, (
+        "Generated script does not contain conversation markers"
+    )
 
 
 @then("token usage information should be displayed")

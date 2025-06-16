@@ -279,9 +279,7 @@ class TextProcessor:
             if (
                 self.current_api_type == APIType.OPENAI
                 and self.openai_model.has_api_key()
-            ):
-                podcast_text = self.generate_podcast_conversation(cleaned_text)
-            elif (
+            ) or (
                 self.current_api_type == APIType.GEMINI
                 and self.gemini_model.has_api_key()
             ):

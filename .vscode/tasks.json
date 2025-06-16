@@ -67,7 +67,7 @@
             "label": "Format Code",
             "type": "shell",
             "command": "bash",
-            "args": ["-c", "black . && isort . && autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive ."],
+            "args": ["-c", "ruff check --fix . && ruff format ."],
             "group": "build",
             "presentation": {
                 "echo": true,
@@ -81,7 +81,7 @@
             "label": "Run Linting",
             "type": "shell",
             "command": "bash",
-            "args": ["-c", "flake8 . && mypy ."],
+            "args": ["-c", "ruff check . && mypy ."],
             "group": "test",
             "presentation": {
                 "echo": true,
@@ -90,7 +90,6 @@
                 "panel": "new"
             },
             "problemMatcher": [
-                "$flake8",
                 "$mypy-python"
             ]
         },

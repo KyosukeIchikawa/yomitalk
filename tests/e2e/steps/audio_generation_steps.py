@@ -590,9 +590,9 @@ def progress_updates_during_generation(page: Page):
     ]
     progress_content_states = [s for s in progress_states if s["progress_has_content"]]
 
-    assert (
-        len(generating_states) > 0 or len(progress_content_states) > 0
-    ), f"No 'generating' state or progress content observed. States: {progress_states}"
+    assert len(generating_states) > 0 or len(progress_content_states) > 0, (
+        f"No 'generating' state or progress content observed. States: {progress_states}"
+    )
 
     if len(generating_states) > 0:
         logger.info(f"Successfully observed {len(generating_states)} generating states")

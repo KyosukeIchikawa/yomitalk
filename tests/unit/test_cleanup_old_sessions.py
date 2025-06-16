@@ -47,8 +47,9 @@ class TestSessionCleanup:
         user_session = UserSession("test_session_cleanup")
 
         # グローバル変数をパッチしてテスト用ディレクトリを使用
-        with patch("yomitalk.user_session.BASE_TEMP_DIR", test_temp_dir), patch(
-            "yomitalk.user_session.BASE_OUTPUT_DIR", test_output_dir
+        with (
+            patch("yomitalk.user_session.BASE_TEMP_DIR", test_temp_dir),
+            patch("yomitalk.user_session.BASE_OUTPUT_DIR", test_output_dir),
         ):
             # 現在の時刻を取得
             current_time = int(time.time())
@@ -141,9 +142,9 @@ class TestSessionCleanup:
             nonexistent_dir = Path("tests/data/nonexistent")
             try:
                 nonexistent_dir.stat().st_mtime
-                assert (
-                    False
-                ), "Should have raised an exception for nonexistent directory"
+                assert False, (
+                    "Should have raised an exception for nonexistent directory"
+                )
             except Exception:
                 # Expected behavior - exception should be raised
                 pass

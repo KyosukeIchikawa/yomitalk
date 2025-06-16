@@ -4,6 +4,7 @@
 
 Builds the Paper Podcast Generator application using Gradio.
 """
+
 import math
 import os
 import time
@@ -551,7 +552,12 @@ class PaperPodcastApp:
                         desc=f"🎵 音声パート {current_part_count}/{estimated_total_parts} 生成中...",
                     )
 
-                    yield audio_path, user_session, progress_html, None  # ストリーミング再生用にyield
+                    yield (
+                        audio_path,
+                        user_session,
+                        progress_html,
+                        None,
+                    )  # ストリーミング再生用にyield
                     time.sleep(0.05)  # 連続再生のタイミング調整
                 elif filename.startswith("audio_"):
                     # 最終結合ファイルの場合

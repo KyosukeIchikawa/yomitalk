@@ -2,6 +2,7 @@
 """
 Pre-commit hook that detects print statements in Python files.
 """
+
 import ast
 import logging
 import os

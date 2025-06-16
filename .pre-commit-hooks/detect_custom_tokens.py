@@ -207,7 +207,7 @@ def check_file(file_path: str) -> bool:
                     continue
 
                 logger.error(f"Found potential token in {file_path}")
-                logger.error(f"Pattern #{i+1} matched: {match_str}")
+                logger.error(f"Pattern #{i + 1} matched: {match_str}")
                 return True
 
         return False

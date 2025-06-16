@@ -147,7 +147,7 @@ class TestEnvironment:
                     )
 
                 logger.info(
-                    f"Waiting for application to start (attempt {i+1}/{max_retries}): {error_msg[:100]}..."
+                    f"Waiting for application to start (attempt {i + 1}/{max_retries}): {error_msg[:100]}..."
                 )
                 time.sleep(retry_interval)
 

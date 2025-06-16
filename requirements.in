@@ -1,8 +1,5 @@
 # Development tools
-autoflake
-black
-flake8
-isort
+ruff
 mypy
 pip-tools
 pre-commit
