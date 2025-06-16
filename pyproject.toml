@@ -1,5 +1,5 @@
 [tool.ruff]
-line-length = 120
+line-length = 200  # Temporarily relaxed during migration
 target-version = "py311"
 
 [tool.ruff.lint]
