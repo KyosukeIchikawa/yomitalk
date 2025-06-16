@@ -70,7 +70,7 @@ def create_user_dictionary():
                     surface=surface,
                     pronunciation=pronunciation,
                     accent_type=accent_type,
-                    word_type=word_type,
+                    word_type=word_type,  # type: ignore
                     priority=priority,
                 )
                 word_uuid = user_dict.add_word(user_dict_word)
