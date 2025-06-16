@@ -61,7 +61,7 @@ def get_test_files_to_run(staged_files: List[str]) -> Set[str]:
                 module_name = module_path.split(".")[-1]
                 # 一時的に、audio_generator関連テストを除外
                 if module_name != "audio_generator":
-                    # Look for test files with test_*.py pattern matching the module name
+                    # Look for test files with test_*.py pattern matching module
                     try:
                         matching_tests = subprocess.run(
                             ["find", "tests/unit", "-name", f"test_{module_name}.py"],
@@ -135,7 +135,7 @@ def main() -> int:
     Returns:
         int: 0 if all tests pass, 1 otherwise
     """
-    # .pre-commit-config.yaml や .pre-commit-hooks/run_staged_tests.py のみの変更の場合は
+    # .pre-commit-config.yaml や .pre-commit-hooks/run_staged_tests.py の変更は
     # スキップする (一時的な措置)
     staged_files = get_staged_python_files()
 

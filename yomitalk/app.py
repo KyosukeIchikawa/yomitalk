@@ -433,7 +433,7 @@ class PaperPodcastApp:
             )
 
     def generate_podcast_audio_streaming(
-        self, text: str, user_session: UserSession, progress=gr.Progress()
+        self, text: str, user_session: UserSession, progress=None
     ):
         """
         Generate streaming audio from podcast text with progress tracking.
@@ -467,6 +467,10 @@ class PaperPodcastApp:
             return
 
         try:
+            # Initialize progress if not provided
+            if progress is None:
+                progress = gr.Progress()
+
             # スクリプトからパーツ数を推定
             estimated_total_parts = self._estimate_audio_parts_count(text)
             logger.info(f"Estimated total audio parts: {estimated_total_parts}")

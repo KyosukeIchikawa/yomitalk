@@ -144,12 +144,9 @@ def is_python_identifier_context(
 
     # Pythonの命名規則に従った識別子かどうか
     # スネークケース（snake_case）またはキャメルケース（camelCase）のパターン
-    if re.match(r"^[a-z][a-z0-9_]*$", match_str) or re.match(
+    return bool(re.match(r"^[a-z][a-z0-9_]*$", match_str) or re.match(
         r"^[a-z][a-zA-Z0-9]*$", match_str
-    ):
-        return True
-
-    return False
+    ))
 
 
 def check_file(file_path: str) -> bool:

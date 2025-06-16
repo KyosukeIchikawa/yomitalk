@@ -76,10 +76,7 @@ class UserSession:
             return True
 
         # Gradioが生成する典型的なセッションIDパターン（8文字以上の英数字）
-        if re.match(r"^[a-z0-9]{8,}$", directory_name):
-            return True
-
-        return False
+        return bool(re.match(r"^[a-z0-9]{8,}$", directory_name))
 
     def cleanup_old_sessions(self, max_age_days: float = 1.0) -> int:
         """

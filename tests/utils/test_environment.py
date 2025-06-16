@@ -144,7 +144,7 @@ class TestEnvironment:
                     logger.error(f"stderr: {stderr.decode('utf-8', errors='ignore')}")
                     raise Exception(
                         f"Application process exited prematurely with code {self._app_process.returncode}"
-                    )
+                    ) from None
 
                 logger.info(
                     f"Waiting for application to start (attempt {i + 1}/{max_retries}): {error_msg[:100]}..."

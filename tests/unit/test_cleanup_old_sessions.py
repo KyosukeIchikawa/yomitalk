@@ -141,8 +141,8 @@ class TestSessionCleanup:
             # 存在しないディレクトリの場合
             nonexistent_dir = Path("tests/data/nonexistent")
             try:
-                nonexistent_dir.stat().st_mtime
-                assert False, (
+                _ = nonexistent_dir.stat().st_mtime
+                raise AssertionError(
                     "Should have raised an exception for nonexistent directory"
                 )
             except Exception:

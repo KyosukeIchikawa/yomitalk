@@ -43,11 +43,7 @@ def is_excluded_path(file_path: str) -> bool:
     normalized_path = os.path.normpath(file_path)
 
     # 特定のパスを除外
-    for excluded_path in excluded_paths:
-        if excluded_path in normalized_path:
-            return True
-
-    return False
+    return any(excluded_path in normalized_path for excluded_path in excluded_paths)
 
 
 class PrintFinder(ast.NodeVisitor):
