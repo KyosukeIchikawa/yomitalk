@@ -73,9 +73,7 @@ class PaperPodcastApp:
             return user_session
 
         success = user_session.text_processor.set_openai_api_key(api_key)
-        logger.debug(
-            f"OpenAI API key set for session {user_session.session_id}: {success}"
-        )
+        logger.debug(f"OpenAI API key set for session {user_session.session_id}: {success}")
         user_session.auto_save()  # Save session state after API key change
         return user_session
 
@@ -86,25 +84,17 @@ class PaperPodcastApp:
             return user_session
 
         success = user_session.text_processor.set_gemini_api_key(api_key)
-        logger.debug(
-            f"Gemini API key set for session {user_session.session_id}: {success}"
-        )
+        logger.debug(f"Gemini API key set for session {user_session.session_id}: {success}")
         user_session.auto_save()  # Save session state after API key change
         return user_session
 
-    def switch_llm_type(
-        self, api_type: APIType, user_session: UserSession
-    ) -> UserSession:
+    def switch_llm_type(self, api_type: APIType, user_session: UserSession) -> UserSession:
         """Switch LLM type for the specific user session."""
         success = user_session.text_processor.set_api_type(api_type)
         if success:
-            logger.debug(
-                f"LLM type switched to {api_type.display_name} for session {user_session.session_id}"
-            )
+            logger.debug(f"LLM type switched to {api_type.display_name} for session {user_session.session_id}")
         else:
-            logger.debug(
-                f"{api_type.display_name} API key not set for session {user_session.session_id}"
-            )
+            logger.debug(f"{api_type.display_name} API key not set for session {user_session.session_id}")
         user_session.auto_save()  # Save session state after API type change
         return user_session
 
@@ -127,13 +117,9 @@ class PaperPodcastApp:
         source_name = ContentExtractor.get_source_name_from_file(file_obj)
 
         # Append to existing text with source information
-        combined_text = ContentExtractor.append_text_with_source(
-            existing_text, new_text, source_name, add_separator
-        )
+        combined_text = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator)
 
-        logger.debug(
-            f"File text extraction completed for session {user_session.session_id}"
-        )
+        logger.debug(f"File text extraction completed for session {user_session.session_id}")
         return (
             None,
             combined_text,
@@ -154,14 +140,7 @@ class PaperPodcastApp:
             error_message = "Please enter a valid URL"
             if existing_text.strip():
                 # If there's existing text, append error message with separator
-                if add_separator:
-                    combined_text = (
-                        existing_text.rstrip()
-                        + "\n\n---\n**Error**\n\n"
-                        + error_message
-                    )
-                else:
-                    combined_text = existing_text.rstrip() + "\n\n" + error_message
+                combined_text = existing_text.rstrip() + "\n\n---\n**Error**\n\n" + error_message if add_separator else existing_text.rstrip() + "\n\n" + error_message
             else:
                 # If no existing text, just show error message
                 combined_text = error_message
@@ -174,18 +153,12 @@ class PaperPodcastApp:
         source_name = url.strip()
 
         # Append to existing text with source information
-        combined_text = ContentExtractor.append_text_with_source(
-            existing_text, new_text, source_name, add_separator
-        )
+        combined_text = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator)
 
-        logger.debug(
-            f"URL text extraction completed for session {user_session.session_id}"
-        )
+        logger.debug(f"URL text extraction completed for session {user_session.session_id}")
         return combined_text, user_session
 
-    def generate_podcast_text(
-        self, text: str, user_session: UserSession
-    ) -> Tuple[str, UserSession]:
+    def generate_podcast_text(self, text: str, user_session: UserSession) -> Tuple[str, UserSession]:
         """Generate podcast-style text from input text for the specific user session."""
         if not text:
             logger.warning("Podcast text generation: Input text is empty")
@@ -194,24 +167,14 @@ class PaperPodcastApp:
         # Check if API key is set
         current_llm_type = user_session.text_processor.get_current_api_type()
 
-        if (
-            current_llm_type == APIType.OPENAI
-            and not user_session.text_processor.openai_model.has_api_key()
-        ):
-            logger.warning(
-                f"Podcast text generation: OpenAI API key not set for session {user_session.session_id}"
-            )
+        if current_llm_type == APIType.OPENAI and not user_session.text_processor.openai_model.has_api_key():
+            logger.warning(f"Podcast text generation: OpenAI API key not set for session {user_session.session_id}")
             return (
                 "OpenAI API key is not set. Please configure it in the Settings tab.",
                 user_session,
             )
-        elif (
-            current_llm_type == APIType.GEMINI
-            and not user_session.text_processor.gemini_model.has_api_key()
-        ):
-            logger.warning(
-                f"Podcast text generation: Gemini API key not set for session {user_session.session_id}"
-            )
+        elif current_llm_type == APIType.GEMINI and not user_session.text_processor.gemini_model.has_api_key():
+            logger.warning(f"Podcast text generation: Gemini API key not set for session {user_session.session_id}")
             return (
                 "Google Gemini API key is not set. Please configure it in the Settings tab.",
                 user_session,
@@ -225,9 +188,7 @@ class PaperPodcastApp:
                 usage_msg = f"Token usage: input {token_usage.get('prompt_tokens', 0)}, output {token_usage.get('completion_tokens', 0)}, total {token_usage.get('total_tokens', 0)}"
                 logger.debug(usage_msg)
 
-            logger.debug(
-                f"Podcast text generation completed for session {user_session.session_id}"
-            )
+            logger.debug(f"Podcast text generation completed for session {user_session.session_id}")
             return podcast_text, user_session
         except Exception as e:
             error_msg = f"Podcast text generation error: {str(e)}"
@@ -253,13 +214,9 @@ class PaperPodcastApp:
         source_name = ContentExtractor.get_source_name_from_file(file_obj)
 
         # Append to existing text with source information
-        combined_text = ContentExtractor.append_text_with_source(
-            existing_text, new_text, source_name, add_separator
-        )
+        combined_text = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator)
 
-        logger.debug(
-            f"Auto file text extraction completed for session {user_session.session_id}"
-        )
+        logger.debug(f"Auto file text extraction completed for session {user_session.session_id}")
         return combined_text, user_session
 
     def _estimate_audio_parts_count(self, text: str) -> int:
@@ -308,9 +265,7 @@ class PaperPodcastApp:
             progress_percent = 100
             emoji = "✅"
         else:
-            progress_percent = int(
-                min(95, (current_part / total_parts) * 100) if total_parts > 0 else 0
-            )
+            progress_percent = int(min(95, (current_part / total_parts) * 100) if total_parts > 0 else 0)
             emoji = "🎵"
 
         # 経過時間と推定残り時間を計算
@@ -385,9 +340,7 @@ class PaperPodcastApp:
         </div>
         """
 
-    def _create_recovery_progress_html(
-        self, user_session: UserSession, status_message: str, is_active: bool = False
-    ) -> str:
+    def _create_recovery_progress_html(self, user_session: UserSession, status_message: str, is_active: bool = False) -> str:
         """
         Create progress HTML for connection recovery scenarios.
 
@@ -404,9 +357,7 @@ class PaperPodcastApp:
 
         state = user_session.get_audio_generation_status()
         streaming_parts = state.get("streaming_parts", [])
-        estimated_total_parts = state.get(
-            "estimated_total_parts", len(streaming_parts) if streaming_parts else 1
-        )
+        estimated_total_parts = state.get("estimated_total_parts", len(streaming_parts) if streaming_parts else 1)
         current_part_count = len(streaming_parts)
         start_time = state.get("start_time")
 
@@ -432,9 +383,7 @@ class PaperPodcastApp:
                 start_time=start_time,
             )
 
-    def generate_podcast_audio_streaming(
-        self, text: str, user_session: UserSession, progress=None
-    ):
+    def generate_podcast_audio_streaming(self, text: str, user_session: UserSession, progress=None):
         """
         Generate streaming audio from podcast text with progress tracking.
         Saves intermediate results to user_session and displays progress.
@@ -449,9 +398,7 @@ class PaperPodcastApp:
         """
         if not text:
             logger.warning("Streaming audio generation: Text is empty")
-            user_session.update_audio_generation_state(
-                status="failed", is_generating=False
-            )
+            user_session.update_audio_generation_state(status="failed", is_generating=False)
             error_html = self._create_error_html("テキストが空のため音声生成できません")
             yield None, user_session, error_html, None
             return
@@ -459,9 +406,7 @@ class PaperPodcastApp:
         # Check if VOICEVOX Core is available
         if not user_session.audio_generator.core_initialized:
             logger.error("Streaming audio generation: VOICEVOX Core is not available")
-            user_session.update_audio_generation_state(
-                status="failed", is_generating=False
-            )
+            user_session.update_audio_generation_state(status="failed", is_generating=False)
             error_html = self._create_error_html("VOICEVOX Coreが利用できません")
             yield None, user_session, error_html, None
             return
@@ -491,9 +436,7 @@ class PaperPodcastApp:
             )
 
             # 初回のyieldを行って、Gradioのストリーミングモードを確実に有効化
-            logger.debug(
-                f"Initializing streaming audio generation (ID: {generation_id})"
-            )
+            logger.debug(f"Initializing streaming audio generation (ID: {generation_id})")
             start_html = self._create_progress_html(
                 0,
                 estimated_total_parts,
@@ -510,9 +453,7 @@ class PaperPodcastApp:
             final_combined_path = None
 
             # 個別の音声パートを生成・ストリーミング
-            for (
-                audio_path
-            ) in user_session.audio_generator.generate_character_conversation(text):
+            for audio_path in user_session.audio_generator.generate_character_conversation(text):
                 if not audio_path:
                     continue
 
@@ -523,23 +464,17 @@ class PaperPodcastApp:
                     parts_paths.append(audio_path)
 
                     # 状態を更新
-                    current_parts = list(
-                        user_session.audio_generation_state["streaming_parts"]
-                    )
+                    current_parts = list(user_session.audio_generation_state["streaming_parts"])
                     current_parts.append(audio_path)
                     current_part_count = len(current_parts)
-                    progress_ratio = min(
-                        0.95, current_part_count / estimated_total_parts
-                    )
+                    progress_ratio = min(0.95, current_part_count / estimated_total_parts)
 
                     user_session.update_audio_generation_state(
                         streaming_parts=current_parts,
                         progress=progress_ratio,
                     )
 
-                    logger.debug(
-                        f"ストリーム音声パーツ ({current_part_count}/{estimated_total_parts}): {audio_path}"
-                    )
+                    logger.debug(f"ストリーム音声パーツ ({current_part_count}/{estimated_total_parts}): {audio_path}")
 
                     # 進捗情報を生成してyield（新しい詳細進捗表示）
                     start_time = user_session.audio_generation_state.get("start_time")
@@ -566,12 +501,8 @@ class PaperPodcastApp:
                 elif filename.startswith("audio_"):
                     # 最終結合ファイルの場合
                     final_combined_path = audio_path
-                    user_session.update_audio_generation_state(
-                        final_audio_path=audio_path, progress=1.0
-                    )
-                    logger.info(
-                        f"結合済み最終音声ファイルを受信: {final_combined_path}"
-                    )
+                    user_session.update_audio_generation_state(final_audio_path=audio_path, progress=1.0)
+                    logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
 
                     # 最終音声完成の進捗を表示
                     start_time = user_session.audio_generation_state.get("start_time")
@@ -589,24 +520,16 @@ class PaperPodcastApp:
                     yield None, user_session, complete_html, final_combined_path
 
             # 音声生成の完了処理
-            self._finalize_audio_generation(
-                final_combined_path, parts_paths, user_session
-            )
+            self._finalize_audio_generation(final_combined_path, parts_paths, user_session)
 
         except Exception as e:
             logger.error(f"Streaming audio generation exception: {str(e)}")
-            user_session.update_audio_generation_state(
-                status="failed", is_generating=False, progress=0.0
-            )
-            error_html = self._create_error_html(
-                f"音声生成でエラーが発生しました: {str(e)}"
-            )
+            user_session.update_audio_generation_state(status="failed", is_generating=False, progress=0.0)
+            error_html = self._create_error_html(f"音声生成でエラーが発生しました: {str(e)}")
             progress(0, desc="❌ 音声生成エラー")
             yield None, user_session, error_html, None
 
-    def _finalize_audio_generation(
-        self, final_combined_path, parts_paths, user_session: UserSession
-    ):
+    def _finalize_audio_generation(self, final_combined_path, parts_paths, user_session: UserSession):
         """
         音声生成の最終処理を行う
 
@@ -641,9 +564,7 @@ class PaperPodcastApp:
                     is_generating=False,
                     final_audio_path=final_combined_path,
                 )
-                logger.info(
-                    f"音声生成完了: {final_combined_path} (ファイルサイズ: {filesize} bytes)"
-                )
+                logger.info(f"音声生成完了: {final_combined_path} (ファイルサイズ: {filesize} bytes)")
                 return final_combined_path  # 最終的な音声ファイルパスを返す
             else:
                 logger.error(f"ファイルが存在しなくなりました: {final_combined_path}")
@@ -666,9 +587,7 @@ class PaperPodcastApp:
         """
         # 部分音声ファイルがある場合は最後のパートを使用
         if parts_paths:
-            logger.warning(
-                "結合音声ファイルを取得できなかったため、最後のパートを使用します"
-            )
+            logger.warning("結合音声ファイルを取得できなかったため、最後のパートを使用します")
             user_session.audio_generator.final_audio_path = parts_paths[-1]
             user_session.audio_generator.audio_generation_progress = 1.0
             user_session.update_audio_generation_state(
@@ -680,22 +599,16 @@ class PaperPodcastApp:
 
             if os.path.exists(parts_paths[-1]):
                 filesize = os.path.getsize(parts_paths[-1])
-                logger.info(
-                    f"部分音声ファイル使用: {parts_paths[-1]} (ファイルサイズ: {filesize} bytes)"
-                )
+                logger.info(f"部分音声ファイル使用: {parts_paths[-1]} (ファイルサイズ: {filesize} bytes)")
                 return parts_paths[-1]  # フォールバック音声ファイルパスを返す
             else:
                 logger.error(f"フォールバックファイルも存在しません: {parts_paths[-1]}")
                 user_session.audio_generator.audio_generation_progress = 0.0
-                user_session.update_audio_generation_state(
-                    status="failed", is_generating=False, progress=0.0
-                )
+                user_session.update_audio_generation_state(status="failed", is_generating=False, progress=0.0)
         else:
             logger.warning("音声ファイルが生成されませんでした")
             user_session.audio_generator.audio_generation_progress = 0.0
-            user_session.update_audio_generation_state(
-                status="failed", is_generating=False, progress=0.0
-            )
+            user_session.update_audio_generation_state(status="failed", is_generating=False, progress=0.0)
         return None  # エラー時はNoneを返す
 
     def disable_generate_button(self):
@@ -710,16 +623,9 @@ class PaperPodcastApp:
         """トーク原稿生成ボタンを無効化します。"""
         return gr.update(interactive=False, value="トーク原稿生成中...")
 
-    def _check_process_button_conditions(
-        self, extracted_text: str, user_session: UserSession
-    ) -> Tuple[bool, bool]:
+    def _check_process_button_conditions(self, extracted_text: str, user_session: UserSession) -> Tuple[bool, bool]:
         """Check conditions for process button state."""
-        has_text = bool(
-            extracted_text
-            and extracted_text.strip() != ""
-            and extracted_text
-            not in ["Please upload a file.", "Failed to process the file."]
-        )
+        has_text = bool(extracted_text and extracted_text.strip() != "" and extracted_text not in ["Please upload a file.", "Failed to process the file."])
 
         current_llm_type = user_session.text_processor.get_current_api_type()
         if current_llm_type == APIType.OPENAI:
@@ -733,9 +639,7 @@ class PaperPodcastApp:
 
     def enable_process_button(self, extracted_text: str, user_session: UserSession):
         """トーク原稿生成ボタンを再び有効化します。"""
-        has_text, has_api_key = self._check_process_button_conditions(
-            extracted_text, user_session
-        )
+        has_text, has_api_key = self._check_process_button_conditions(extracted_text, user_session)
         is_enabled = has_text and has_api_key
 
         return gr.update(
@@ -778,15 +682,14 @@ class PaperPodcastApp:
                         container=False,
                         scale=1,
                     )
-                with gr.Column(scale=3, elem_classes="disclaimer-column"):
-                    with gr.Row(elem_id="disclaimer-container"):
-                        gr.Markdown(
-                            """**ドキュメントからポッドキャスト風の解説音声を生成するアプリケーション**
+                with gr.Column(scale=3, elem_classes="disclaimer-column"), gr.Row(elem_id="disclaimer-container"):
+                    gr.Markdown(
+                        """**ドキュメントからポッドキャスト風の解説音声を生成するアプリケーション**
 
                             **免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。
                             また、秘密文書のアップロードは推奨されません。当アプリケーションの使用により生じた、いかなる損害についても責任を負いません。""",
-                            elem_id="disclaimer-text",
-                        )
+                        elem_id="disclaimer-text",
+                    )
 
             # カスタムCSSスタイルを追加
             css = """
@@ -1000,20 +903,19 @@ class PaperPodcastApp:
                     )
 
                     # キャラクター設定
-                    with gr.Accordion(label="キャラクター設定", open=False):
-                        with gr.Row():
-                            character1_dropdown = gr.Dropdown(
-                                choices=DISPLAY_NAMES,
-                                value=PromptManager.DEFAULT_CHARACTER1.display_name,  # 後でユーザーセッションの値で更新される
-                                label="キャラクター1（専門家役）",
-                                interactive=False,
-                            )
-                            character2_dropdown = gr.Dropdown(
-                                choices=DISPLAY_NAMES,
-                                value=PromptManager.DEFAULT_CHARACTER2.display_name,  # 後でユーザーセッションの値で更新される
-                                label="キャラクター2（初学者役）",
-                                interactive=False,
-                            )
+                    with gr.Accordion(label="キャラクター設定", open=False), gr.Row():
+                        character1_dropdown = gr.Dropdown(
+                            choices=DISPLAY_NAMES,
+                            value=PromptManager.DEFAULT_CHARACTER1.display_name,  # 後でユーザーセッションの値で更新される
+                            label="キャラクター1（専門家役）",
+                            interactive=False,
+                        )
+                        character2_dropdown = gr.Dropdown(
+                            choices=DISPLAY_NAMES,
+                            value=PromptManager.DEFAULT_CHARACTER2.display_name,  # 後でユーザーセッションの値で更新される
+                            label="キャラクター2（初学者役）",
+                            interactive=False,
+                        )
 
                 with gr.Column(variant="panel"):
                     # LLM API設定タブ
@@ -1074,9 +976,7 @@ class PaperPodcastApp:
                                 )
 
                     # トーク原稿を生成ボタン
-                    process_btn = gr.Button(
-                        "初期化中...", variant="secondary", interactive=False
-                    )
+                    process_btn = gr.Button("初期化中...", variant="secondary", interactive=False)
                     podcast_text = gr.Textbox(
                         label="生成されたトーク原稿",
                         placeholder="初期化中です。少しお待ちください...",
@@ -1104,9 +1004,7 @@ class PaperPodcastApp:
                         info=msg,
                         interactive=False,
                     )
-                    generate_btn = gr.Button(
-                        "初期化中...", variant="secondary", interactive=False
-                    )
+                    generate_btn = gr.Button("初期化中...", variant="secondary", interactive=False)
 
                     # 音声生成進捗表示
                     audio_progress = gr.HTML(
@@ -1159,9 +1057,7 @@ class PaperPodcastApp:
 
             # Initialize user session and sync UI components with session values
             user_session = gr.State()
-            app.load(
-                fn=self.create_user_session, outputs=[user_session], queue=False
-            ).then(
+            app.load(fn=self.create_user_session, outputs=[user_session], queue=False).then(
                 # ユーザーセッション作成後にUIコンポーネントの値を同期
                 fn=self.sync_ui_with_session,
                 inputs=[user_session],
@@ -1294,17 +1190,13 @@ class PaperPodcastApp:
 
             # タブ切り替え時のLLMタイプ変更
             gemini_tab.select(
-                fn=lambda user_session: self.switch_llm_type(
-                    APIType.GEMINI, user_session
-                ),
+                fn=lambda user_session: self.switch_llm_type(APIType.GEMINI, user_session),
                 inputs=[user_session],
                 outputs=[user_session],
             )
 
             openai_tab.select(
-                fn=lambda user_session: self.switch_llm_type(
-                    APIType.OPENAI, user_session
-                ),
+                fn=lambda user_session: self.switch_llm_type(APIType.OPENAI, user_session),
                 inputs=[user_session],
                 outputs=[user_session],
             )
@@ -1462,9 +1354,7 @@ class PaperPodcastApp:
 
         return app
 
-    def set_openai_model_name(
-        self, model_name: str, user_session: UserSession
-    ) -> UserSession:
+    def set_openai_model_name(self, model_name: str, user_session: UserSession) -> UserSession:
         """
         OpenAIモデル名を設定します。
 
@@ -1476,9 +1366,7 @@ class PaperPodcastApp:
         user_session.auto_save()  # Save session state after model name change
         return user_session
 
-    def set_gemini_model_name(
-        self, model_name: str, user_session: UserSession
-    ) -> UserSession:
+    def set_gemini_model_name(self, model_name: str, user_session: UserSession) -> UserSession:
         """
         Geminiモデル名を設定します。
 
@@ -1490,9 +1378,7 @@ class PaperPodcastApp:
         user_session.auto_save()  # Save session state after model name change
         return user_session
 
-    def set_openai_max_tokens(
-        self, max_tokens: int, user_session: UserSession
-    ) -> UserSession:
+    def set_openai_max_tokens(self, max_tokens: int, user_session: UserSession) -> UserSession:
         """
         OpenAIの最大トークン数を設定します。
 
@@ -1504,9 +1390,7 @@ class PaperPodcastApp:
         user_session.auto_save()  # Save session state after max tokens change
         return user_session
 
-    def set_gemini_max_tokens(
-        self, max_tokens: int, user_session: UserSession
-    ) -> UserSession:
+    def set_gemini_max_tokens(self, max_tokens: int, user_session: UserSession) -> UserSession:
         """
         Geminiの最大トークン数を設定します。
 
@@ -1518,18 +1402,14 @@ class PaperPodcastApp:
         user_session.auto_save()  # Save session state after max tokens change
         return user_session
 
-    def set_character_mapping(
-        self, character1: str, character2: str, user_session: UserSession
-    ) -> UserSession:
+    def set_character_mapping(self, character1: str, character2: str, user_session: UserSession) -> UserSession:
         """キャラクターマッピングを設定します。
 
         Args:
             character1 (str): Character1に割り当てるキャラクター名
             character2 (str): Character2に割り当てるキャラクター名
         """
-        success = user_session.text_processor.set_character_mapping(
-            character1, character2
-        )
+        success = user_session.text_processor.set_character_mapping(character1, character2)
         logger.debug(f"Character mapping set: {character1}, {character2}: {success}")
         user_session.auto_save()  # Save session state after character mapping change
         return user_session
@@ -1586,9 +1466,7 @@ class PaperPodcastApp:
         """
         return html
 
-    def update_audio_button_state(
-        self, checked: bool, podcast_text: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def update_audio_button_state(self, checked: bool, podcast_text: Optional[str] = None) -> Dict[str, Any]:
         """
         VOICEVOX利用規約チェックボックスの状態とトーク原稿の有無に基づいて音声生成ボタンの有効/無効を切り替えます。
 
@@ -1616,9 +1494,7 @@ class PaperPodcastApp:
         )
         return result
 
-    def set_document_type(
-        self, doc_type: str, user_session: UserSession
-    ) -> UserSession:
+    def set_document_type(self, doc_type: str, user_session: UserSession) -> UserSession:
         """
         ドキュメントタイプを設定します。
 
@@ -1695,14 +1571,10 @@ class PaperPodcastApp:
         file_input_update = gr.update(interactive=True)
 
         # Enable URL input
-        url_input_update = gr.update(
-            placeholder="https://example.com/page", interactive=True
-        )
+        url_input_update = gr.update(placeholder="https://example.com/page", interactive=True)
 
         # Enable URL extract button
-        url_extract_btn_update = gr.update(
-            value="URLからテキストを抽出", variant="primary", interactive=True
-        )
+        url_extract_btn_update = gr.update(value="URLからテキストを抽出", variant="primary", interactive=True)
 
         # Enable auto separator checkbox
         auto_separator_checkbox_update = gr.update(interactive=True)
@@ -1739,9 +1611,7 @@ class PaperPodcastApp:
         openai_max_tokens_slider_update = gr.update(interactive=True)
 
         # Enable process button (but check API key status)
-        process_btn_update = gr.update(
-            interactive=False, variant="secondary", value="トーク原稿を生成"
-        )
+        process_btn_update = gr.update(interactive=False, variant="secondary", value="トーク原稿を生成")
 
         # Enable podcast text
         podcast_text_update = gr.update(
@@ -1778,9 +1648,7 @@ class PaperPodcastApp:
             generate_btn_update,
         )
 
-    def sync_ui_with_session(
-        self, user_session: UserSession
-    ) -> Tuple[str, str, str, str, int, int]:
+    def sync_ui_with_session(self, user_session: UserSession) -> Tuple[str, str, str, str, int, int]:
         """Sync UI components with user session values.
 
         Args:
@@ -1791,9 +1659,7 @@ class PaperPodcastApp:
         """
         return user_session.get_ui_sync_values()
 
-    def check_and_restore_audio_generation(
-        self, user_session: UserSession
-    ) -> Tuple[Optional[str], Optional[str], str]:
+    def check_and_restore_audio_generation(self, user_session: UserSession) -> Tuple[Optional[str], Optional[str], str]:
         """
         接続復帰時に音声生成の状態をチェックして復元する
 
@@ -1834,9 +1700,7 @@ class PaperPodcastApp:
             logger.error(f"Error during audio generation restoration: {e}")
             return None, None, "⚠️ 音声復帰中にエラーが発生"
 
-    def _resume_audio_generation_monitoring(
-        self, user_session: UserSession
-    ) -> Tuple[Optional[str], Optional[str], str]:
+    def _resume_audio_generation_monitoring(self, user_session: UserSession) -> Tuple[Optional[str], Optional[str], str]:
         """
         音声生成の監視を再開する
 
@@ -1867,9 +1731,7 @@ class PaperPodcastApp:
 
         return streaming_audio, final_audio, status_message
 
-    def handle_connection_recovery(
-        self, user_session: UserSession, terms_agreed: bool, podcast_text: str
-    ) -> Tuple[Optional[str], str, Optional[str], Dict[str, Any]]:
+    def handle_connection_recovery(self, user_session: UserSession, terms_agreed: bool, podcast_text: str) -> Tuple[Optional[str], str, Optional[str], Dict[str, Any]]:
         """
         Handle connection recovery when page loads/reconnects
         Combines audio state restoration and button state management
@@ -1887,10 +1749,7 @@ class PaperPodcastApp:
 
         try:
             # Check if there's any audio to restore
-            if (
-                not user_session.is_audio_generation_active()
-                and not user_session.has_generated_audio()
-            ):
+            if not user_session.is_audio_generation_active() and not user_session.has_generated_audio():
                 logger.debug("No audio to restore - setting normal button state")
                 return (
                     None,
@@ -1900,21 +1759,15 @@ class PaperPodcastApp:
                 )
 
             # Restore audio state using the existing restoration logic
-            streaming_audio, final_audio, status_message = (
-                self.check_and_restore_audio_generation(user_session)
-            )
+            streaming_audio, final_audio, status_message = self.check_and_restore_audio_generation(user_session)
 
             logger.info("Audio state detected - restoring components")
 
             # If audio generation is active, avoid race conditions with timer and events
             if user_session.is_audio_generation_active():
-                logger.debug(
-                    "Audio generation active - avoiding race condition with timer"
-                )
+                logger.debug("Audio generation active - avoiding race condition with timer")
                 # 進行中の進捗情報を取得
-                progress_html = self._create_recovery_progress_html(
-                    user_session, status_message, is_active=True
-                )
+                progress_html = self._create_recovery_progress_html(user_session, status_message, is_active=True)
                 # Return gr.update() for audio components to avoid conflicts with ongoing processes
                 return (
                     gr.update(),  # Preserve current streaming audio state
@@ -1924,12 +1777,8 @@ class PaperPodcastApp:
                 )
             else:
                 # Audio generation completed - safe to restore audio components
-                button_state = self.update_audio_button_state(
-                    terms_agreed, podcast_text
-                )
-                progress_html = self._create_recovery_progress_html(
-                    user_session, status_message, is_active=False
-                )
+                button_state = self.update_audio_button_state(terms_agreed, podcast_text)
+                progress_html = self._create_recovery_progress_html(user_session, status_message, is_active=False)
                 return (streaming_audio, progress_html, final_audio, button_state)
 
         except Exception as e:
@@ -1968,9 +1817,7 @@ def main() -> None:
         default="0.0.0.0",
         help="Host to run the server on (default: 0.0.0.0)",
     )
-    parser.add_argument(
-        "--share", action="store_true", help="Create a public link via Gradio tunneling"
-    )
+    parser.add_argument("--share", action="store_true", help="Create a public link via Gradio tunneling")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 
     args = parser.parse_args()
@@ -1987,9 +1834,7 @@ def main() -> None:
         "debug": args.debug,
         "show_error": True,
         "quiet": not args.debug,
-        "favicon_path": (
-            "assets/favicon.ico" if Path("assets/favicon.ico").exists() else None
-        ),
+        "favicon_path": ("assets/favicon.ico" if Path("assets/favicon.ico").exists() else None),
     }
 
     # Add authentication for production environment
