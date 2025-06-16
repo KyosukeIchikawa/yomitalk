@@ -42,9 +42,7 @@ class TestGeminiModel:
         assert model.set_max_tokens(70000) is False
         assert model.max_tokens == 1000  # Should not change
         # Invalid type
-        assert (
-            model.set_max_tokens(int("0")) is False
-        )  # 0は無効な値なのでFalseが返るはず
+        assert model.set_max_tokens(int("0")) is False  # 0は無効な値なのでFalseが返るはず
         assert model.max_tokens == 1000  # Should not change
 
     def test_set_model_name(self):
@@ -129,9 +127,7 @@ class TestGeminiModel:
 
         # Set up mock client to raise exception
         mock_client_instance = MagicMock()
-        mock_client_instance.models.generate_content.side_effect = (
-            BlockedPromptException()
-        )
+        mock_client_instance.models.generate_content.side_effect = BlockedPromptException()
         mock_client.return_value = mock_client_instance
 
         # Test
@@ -140,10 +136,7 @@ class TestGeminiModel:
         result = model.generate_text("Test prompt")
 
         # Assertions
-        assert (
-            result
-            == "Error: Your request contains content that is flagged as inappropriate or against usage policies."
-        )
+        assert result == "Error: Your request contains content that is flagged as inappropriate or against usage policies."
 
     @patch("google.genai.Client")
     def test_generate_text_stop_candidate(self, mock_client):
@@ -155,9 +148,7 @@ class TestGeminiModel:
 
         # Set up mock client to raise exception
         mock_client_instance = MagicMock()
-        mock_client_instance.models.generate_content.side_effect = (
-            StopCandidateException()
-        )
+        mock_client_instance.models.generate_content.side_effect = StopCandidateException()
         mock_client.return_value = mock_client_instance
 
         # Test
@@ -166,19 +157,14 @@ class TestGeminiModel:
         result = model.generate_text("Test prompt")
 
         # Assertions
-        assert (
-            result
-            == "Error: The generation was stopped as the potential response may contain inappropriate content."
-        )
+        assert result == "Error: The generation was stopped as the potential response may contain inappropriate content."
 
     @patch("google.genai.Client")
     def test_generate_text_generic_exception(self, mock_client):
         """Test handling of generic exception."""
         # Set up mock client to raise exception
         mock_client_instance = MagicMock()
-        mock_client_instance.models.generate_content.side_effect = Exception(
-            "Generic error"
-        )
+        mock_client_instance.models.generate_content.side_effect = Exception("Generic error")
         mock_client.return_value = mock_client_instance
 
         # Test

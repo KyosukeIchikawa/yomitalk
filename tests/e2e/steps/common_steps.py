@@ -19,9 +19,7 @@ def application_is_running(page: Page, app_environment):
         app_environment: バックエンドのフィクスチャ(TestEnvironmentインスタンス)
     """
     # アプリケーションが起動していることを確認
-    assert app_environment.app_port is not None, (
-        "Application port is not set. Test environment might not be properly initialized."
-    )
+    assert app_environment.app_port is not None, "Application port is not set. Test environment might not be properly initialized."
 
     # ブラウザでアプリケーションにアクセス
     app_url = app_environment.app_url
@@ -44,8 +42,7 @@ def application_is_running(page: Page, app_environment):
         # アプリケーションが完全にロードされたことを確認
         # Gradioアプリでよく使用される要素の存在確認
         page.wait_for_function(
-            "() => document.readyState === 'complete' && "
-            "(document.querySelector('h1') || document.querySelector('h2') || document.querySelector('.gr-button'))",
+            "() => document.readyState === 'complete' && (document.querySelector('h1') || document.querySelector('h2') || document.querySelector('.gr-button'))",
             timeout=8000,
         )
         logger.debug("Application fully loaded")
@@ -86,9 +83,7 @@ def user_has_accessed_application_page(page: Page, app_environment):
     expect(file_input).to_be_attached()
 
     # Verify extracted text area is visible
-    extracted_text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか"]'
-    )
+    extracted_text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
     expect(extracted_text_area).to_be_visible()
 
     logger.info("All main UI elements are visible and accessible")

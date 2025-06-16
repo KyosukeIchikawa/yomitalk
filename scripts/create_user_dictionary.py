@@ -73,9 +73,7 @@ def create_user_dictionary():
                     priority=priority,
                 )
                 word_uuid = user_dict.add_word(user_dict_word)
-                logger.info(
-                    f"Added: '{surface}' -> '{pronunciation}' (accent: {accent_type}, type: {word_type}, priority: {priority}) UUID: {word_uuid}"
-                )
+                logger.info(f"Added: '{surface}' -> '{pronunciation}' (accent: {accent_type}, type: {word_type}, priority: {priority}) UUID: {word_uuid}")
             except Exception as e:
                 logger.error(f"Failed to add word '{surface}': {e}")
 
@@ -107,9 +105,7 @@ if __name__ == "__main__":
 
     if success:
         logger.info("✅ User dictionary created successfully!")
-        logger.info(
-            "The dictionary file is saved in assets/dictionaries/user_dictionary.json"
-        )
+        logger.info("The dictionary file is saved in assets/dictionaries/user_dictionary.json")
     else:
         logger.error("❌ Failed to create user dictionary")
         sys.exit(1)

@@ -14,9 +14,7 @@ def user_enters_text_to_area(page: Page, text: str):
     logger.info(f"Entering text into extracted text area: {text}")
 
     # 抽出されたテキストエリアを見つける
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
     text_area.fill(text)
 
@@ -29,9 +27,7 @@ def user_has_entered_some_test_content(page: Page):
     logger.info("Entering 'Some test content' into extracted text area")
 
     # 抽出されたテキストエリアを見つける
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
     text_area.fill("Some test content")
 
@@ -44,13 +40,9 @@ def user_unchecks_auto_separator_given(page: Page):
     logger.info("Unchecking auto separator checkbox (Given step)")
 
     # チェックボックスを見つけてクリック（チェックを外す）
-    checkbox = page.locator(
-        'label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]'
-    )
+    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
     if not checkbox.is_visible():
-        checkbox = page.locator('input[type="checkbox"]').nth(
-            0
-        )  # Fallback to first checkbox
+        checkbox = page.locator('input[type="checkbox"]').nth(0)  # Fallback to first checkbox
     expect(checkbox).to_be_visible()
 
     # チェックボックスがチェック済みの場合のみクリック
@@ -65,9 +57,7 @@ def user_enters_text_into_text_area(page: Page, text: str):
     """User enters text into the extracted text area."""
     logger.info(f"Entering '{text}' into extracted text area")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_area.clear()
@@ -83,13 +73,9 @@ def user_unchecks_auto_separator(page: Page):
 
     # チェックボックスを見つけてクリック（チェックを外す）
     # Try different selectors for Gradio checkbox
-    checkbox = page.locator(
-        'label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]'
-    )
+    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
     if not checkbox.is_visible():
-        checkbox = page.locator('input[type="checkbox"]').nth(
-            0
-        )  # Fallback to first checkbox
+        checkbox = page.locator('input[type="checkbox"]').nth(0)  # Fallback to first checkbox
     expect(checkbox).to_be_visible()
 
     # チェックボックスがチェック済みの場合のみクリック
@@ -106,13 +92,9 @@ def user_checks_auto_separator_checkbox_japanese(page: Page):
 
     # チェックボックスを見つけてクリック（チェックする）
     # Try different selectors for Gradio checkbox
-    checkbox = page.locator(
-        'label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]'
-    )
+    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
     if not checkbox.is_visible():
-        checkbox = page.locator('input[type="checkbox"]').nth(
-            0
-        )  # Fallback to first checkbox
+        checkbox = page.locator('input[type="checkbox"]').nth(0)  # Fallback to first checkbox
     expect(checkbox).to_be_visible()
 
     # チェックボックスがチェックされていない場合のみクリック
@@ -230,9 +212,7 @@ def text_area_is_empty(page: Page):
     logger.info("Checking if extracted text area is empty")
 
     # 抽出されたテキストエリアを見つける
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     # テキストエリアが空であることを確認
@@ -248,22 +228,16 @@ def text_area_shows_content_with_separator(page: Page):
     """The extracted text area shows content with source separator."""
     logger.info("Checking if extracted text area shows content with separator")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
     # セパレーター（---）が含まれていることを確認
-    assert "---" in text_content, (
-        f"Expected separator in content, but found: '{text_content}'"
-    )
+    assert "---" in text_content, f"Expected separator in content, but found: '{text_content}'"
     # ソース情報が含まれていることを確認
-    assert "**Source:" in text_content, (
-        f"Expected source info in content, but found: '{text_content}'"
-    )
+    assert "**Source:" in text_content, f"Expected source info in content, but found: '{text_content}'"
 
     logger.info("Text area shows content with separator as expected")
 
@@ -271,31 +245,21 @@ def text_area_shows_content_with_separator(page: Page):
 @then("the extracted text area shows appended content without separator")
 def text_area_shows_appended_content(page: Page):
     """The extracted text area shows appended content without separator."""
-    logger.info(
-        "Checking if extracted text area shows appended content without separator"
-    )
+    logger.info("Checking if extracted text area shows appended content without separator")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
     # セパレーター（---）が含まれていないことを確認
-    assert "---" not in text_content, (
-        f"Expected no separator in content, but found: '{text_content}'"
-    )
+    assert "---" not in text_content, f"Expected no separator in content, but found: '{text_content}'"
     # ソース情報（**Source:**）が含まれていないことを確認
-    assert "**Source:" not in text_content, (
-        f"Expected no source info in content, but found: '{text_content}'"
-    )
+    assert "**Source:" not in text_content, f"Expected no source info in content, but found: '{text_content}'"
 
     # ただし、既存のコンテンツと新しいコンテンツが追加されていることは確認
-    assert "Existing content" in text_content, (
-        f"Expected existing content to be preserved, but found: '{text_content}'"
-    )
+    assert "Existing content" in text_content, f"Expected existing content to be preserved, but found: '{text_content}'"
 
     logger.info("Text area shows appended content without separator as expected")
 
@@ -305,17 +269,13 @@ def text_area_contains_text(page: Page, expected_text: str):
     """The extracted text area contains the expected text."""
     logger.info(f"Checking if extracted text area contains: {expected_text}")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
-    assert expected_text in text_content, (
-        f"Expected '{expected_text}' in content, but found: '{text_content}'"
-    )
+    assert expected_text in text_content, f"Expected '{expected_text}' in content, but found: '{text_content}'"
     logger.info(f"Text area contains expected text: {expected_text}")
 
 
@@ -324,18 +284,14 @@ def text_area_contains_source_info(page: Page, source: str):
     """The extracted text area contains source information for the given source."""
     logger.info(f"Checking if extracted text area contains source info for: {source}")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
     # ソース情報が含まれていることを確認
-    assert f"**Source: {source}**" in text_content, (
-        f"Expected source info for '{source}' in content, but found: '{text_content}'"
-    )
+    assert f"**Source: {source}**" in text_content, f"Expected source info for '{source}' in content, but found: '{text_content}'"
     logger.info(f"Text area contains source info for: {source}")
 
 
@@ -353,9 +309,7 @@ def file_input_should_be_cleared(page: Page):
     logger.info(f"File input value: '{input_value}'")
 
     # File input should be empty after automatic extraction
-    assert input_value == "" or input_value is None, (
-        "File input should be cleared after extraction"
-    )
+    assert input_value == "" or input_value is None, "File input should be cleared after extraction"
 
     logger.info("File input is cleared as expected")
 
@@ -365,26 +319,18 @@ def text_should_be_extracted_with_separator(page: Page):
     """Text should be extracted with source separator."""
     logger.info("Checking if text is extracted with source separator")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Extracted text content: '{text_content}'")
 
     # テキストが抽出されていることを確認
-    assert text_content and len(text_content.strip()) > 0, (
-        "Expected extracted text but found empty content"
-    )
+    assert text_content and len(text_content.strip()) > 0, "Expected extracted text but found empty content"
 
     # セパレーターが含まれていることを確認
-    assert "---" in text_content, (
-        f"Expected separator in content, but found: '{text_content}'"
-    )
-    assert "**Source:" in text_content, (
-        f"Expected source info in content, but found: '{text_content}'"
-    )
+    assert "---" in text_content, f"Expected separator in content, but found: '{text_content}'"
+    assert "**Source:" in text_content, f"Expected source info in content, but found: '{text_content}'"
 
     logger.info("Text extracted with source separator as expected")
 
@@ -394,26 +340,18 @@ def text_should_be_extracted_without_separator(page: Page):
     """Text should be extracted without separator."""
     logger.info("Checking if text is extracted without separator")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Extracted text content: '{text_content}'")
 
     # テキストが抽出されていることを確認
-    assert text_content and len(text_content.strip()) > 0, (
-        "Expected extracted text but found empty content"
-    )
+    assert text_content and len(text_content.strip()) > 0, "Expected extracted text but found empty content"
 
     # セパレーターが含まれていないことを確認
-    assert "---" not in text_content, (
-        f"Expected no separator in content, but found: '{text_content}'"
-    )
-    assert "**Source:" not in text_content, (
-        f"Expected no source info in content, but found: '{text_content}'"
-    )
+    assert "---" not in text_content, f"Expected no separator in content, but found: '{text_content}'"
+    assert "**Source:" not in text_content, f"Expected no source info in content, but found: '{text_content}'"
 
     logger.info("Text extracted without separator as expected")
 
@@ -423,29 +361,19 @@ def text_area_contains_content_from_both_files(page: Page):
     """The extracted text area contains content from both files."""
     logger.info("Checking if text area contains content from both files")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: {text_content[:300]}...")
 
     # 両方のファイルからのソース情報があることを確認
-    assert "**Source: sample_text.txt**" in text_content, (
-        "Source information for sample_text.txt not found"
-    )
-    assert "**Source: another_file.txt**" in text_content, (
-        "Source information for another_file.txt not found"
-    )
+    assert "**Source: sample_text.txt**" in text_content, "Source information for sample_text.txt not found"
+    assert "**Source: another_file.txt**" in text_content, "Source information for another_file.txt not found"
 
     # 両方のファイルの内容があることを確認
-    assert "Yomitalk サンプルテキスト" in text_content, (
-        "Content from sample_text.txt not found"
-    )
-    assert "別のサンプルファイル" in text_content, (
-        "Content from another_file.txt not found"
-    )
+    assert "Yomitalk サンプルテキスト" in text_content, "Content from sample_text.txt not found"
+    assert "別のサンプルファイル" in text_content, "Content from another_file.txt not found"
 
     logger.info("Content from both files found as expected")
 
@@ -455,9 +383,7 @@ def existing_text_preserved_from_file(page: Page):
     """The existing text is preserved when extracting from file."""
     logger.info("Checking if existing text is preserved during file extraction")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -472,27 +398,19 @@ def existing_text_preserved_from_file(page: Page):
     logger.info("Existing text preserved during file extraction as expected")
 
 
-@then(
-    parsers.parse(
-        'the extracted text area contains source information for "{filename}"'
-    )
-)
+@then(parsers.parse('the extracted text area contains source information for "{filename}"'))
 def text_area_contains_source_information(page: Page, filename: str):
     """The extracted text area contains source information for the specified file."""
     logger.info(f"Checking if text area contains source information for {filename}")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: {text_content[:200]}...")
 
     expected_source = f"**Source: {filename}**"
-    assert expected_source in text_content, (
-        f"Expected source information '{expected_source}' not found in text content"
-    )
+    assert expected_source in text_content, f"Expected source information '{expected_source}' not found in text content"
 
     logger.info(f"Source information for {filename} found as expected")
 
@@ -503,18 +421,12 @@ def automatic_separator_is_disabled(page: Page):
     logger.info("Checking if automatic separator is disabled")
 
     # チェックボックスがチェックされていないことを確認
-    checkbox = page.locator(
-        'label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]'
-    )
+    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
     if not checkbox.is_visible():
-        checkbox = page.locator('input[type="checkbox"]').nth(
-            0
-        )  # Fallback to first checkbox
+        checkbox = page.locator('input[type="checkbox"]').nth(0)  # Fallback to first checkbox
     expect(checkbox).to_be_visible()
 
-    assert not checkbox.is_checked(), (
-        "Expected checkbox to be unchecked (separator disabled)"
-    )
+    assert not checkbox.is_checked(), "Expected checkbox to be unchecked (separator disabled)"
     logger.info("Automatic separator is disabled as expected")
 
 
@@ -523,28 +435,20 @@ def text_area_contains_content_from_both_sources(page: Page):
     """The extracted text area contains content from both sources."""
     logger.info("Checking if text area contains content from both sources")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: {text_content[:300]}...")
 
     # ファイルのソース情報があることを確認
-    assert "**Source: sample_text.txt**" in text_content, (
-        "Source information for file not found"
-    )
+    assert "**Source: sample_text.txt**" in text_content, "Source information for file not found"
 
     # URLのソース情報があることを確認
-    assert "**Source: https://example.com**" in text_content, (
-        "Source information for URL not found"
-    )
+    assert "**Source: https://example.com**" in text_content, "Source information for URL not found"
 
     # 両方のソースからの内容があることを確認
-    assert (
-        "Yomitalk サンプルテキスト" in text_content or "Example Domain" in text_content
-    ), "Content from sources not found"
+    assert "Yomitalk サンプルテキスト" in text_content or "Example Domain" in text_content, "Content from sources not found"
 
     logger.info("Content from both sources found as expected")
 
@@ -565,17 +469,13 @@ def text_area_contains_specific_text(page: Page, expected_text: str):
     """The extracted text area contains the specific expected text."""
     logger.info(f"Checking if extracted text area contains: {expected_text}")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
-    assert expected_text in text_content, (
-        f"Expected '{expected_text}' in content, but found: '{text_content}'"
-    )
+    assert expected_text in text_content, f"Expected '{expected_text}' in content, but found: '{text_content}'"
     logger.info(f"Text area contains expected text: {expected_text}")
 
 
@@ -585,13 +485,9 @@ def automatic_separator_is_enabled(page: Page):
     logger.info("Checking if automatic separator is enabled")
 
     # チェックボックスを見つける
-    checkbox = page.locator(
-        'label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]'
-    )
+    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
     if not checkbox.is_visible():
-        checkbox = page.locator('input[type="checkbox"]').nth(
-            0
-        )  # Fallback to first checkbox
+        checkbox = page.locator('input[type="checkbox"]').nth(0)  # Fallback to first checkbox
     expect(checkbox).to_be_visible()
 
     # チェックボックスがチェックされていることを確認
@@ -604,9 +500,7 @@ def text_area_contains_file_content(page: Page):
     """The extracted text area contains content from the file."""
     logger.info("Checking if text area contains content from the file")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -622,9 +516,7 @@ def text_area_contains_file_content(page: Page):
     ]
     has_file_content = any(indicator in text_content for indicator in file_indicators)
 
-    assert has_file_content, (
-        f"Expected file content indicators in text area, but found: '{text_content[:200]}...'"
-    )
+    assert has_file_content, f"Expected file content indicators in text area, but found: '{text_content[:200]}...'"
     logger.info("Text area contains content from the file as expected")
 
 
@@ -660,9 +552,7 @@ def extracted_text_area_has_label(page: Page, expected_label: str):
 @then('the extracted text area has label "解説対象テキスト（トークの元ネタ）"')
 def extracted_text_area_has_japanese_label(page: Page):
     """The extracted text area has the Japanese label."""
-    logger.info(
-        "Checking if extracted text area has label: 解説対象テキスト（トークの元ネタ）"
-    )
+    logger.info("Checking if extracted text area has label: 解説対象テキスト（トークの元ネタ）")
 
     # ラベルテキストを探す
     label_element = page.locator('text="解説対象テキスト（トークの元ネタ）"')
@@ -676,17 +566,13 @@ def text_area_contains_existing_content(page: Page):
     """The extracted text area contains 'Existing content'."""
     logger.info("Checking if extracted text area contains 'Existing content'")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
-    assert "Existing content" in text_content, (
-        f"Expected 'Existing content' in content, but found: '{text_content}'"
-    )
+    assert "Existing content" in text_content, f"Expected 'Existing content' in content, but found: '{text_content}'"
     logger.info("Text area contains 'Existing content' as expected")
 
 
@@ -735,9 +621,7 @@ def text_area_contains_url_content(page: Page):
     """The extracted text area contains content from the URL."""
     logger.info("Checking if text area contains URL content")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -751,15 +635,11 @@ def text_area_contains_manual_input_content(page: Page):
     """The extracted text area contains 'Manual input content'."""
     logger.info("Checking if extracted text area contains 'Manual input content'")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     logger.info(f"Text area content: '{text_content}'")
 
-    assert "Manual input content" in text_content, (
-        f"Expected 'Manual input content' in content, but found: '{text_content}'"
-    )
+    assert "Manual input content" in text_content, f"Expected 'Manual input content' in content, but found: '{text_content}'"
     logger.info("Text area contains 'Manual input content' as expected")

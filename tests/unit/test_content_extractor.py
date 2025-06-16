@@ -33,10 +33,7 @@ class TestContentExtractor:
         assert ".pdf" in ContentExtractor.SUPPORTED_PDF_EXTENSIONS
 
         # Check the combined list
-        all_extensions = (
-            ContentExtractor.SUPPORTED_TEXT_EXTENSIONS
-            + ContentExtractor.SUPPORTED_PDF_EXTENSIONS
-        )
+        all_extensions = ContentExtractor.SUPPORTED_TEXT_EXTENSIONS + ContentExtractor.SUPPORTED_PDF_EXTENSIONS
         for ext in all_extensions:
             assert ext in ContentExtractor.SUPPORTED_EXTENSIONS
 
@@ -195,9 +192,7 @@ class TestContentExtractor:
         new_text = "New content"
         source_name = "test.txt"
 
-        result = ContentExtractor.append_text_with_source(
-            existing_text, new_text, source_name, add_separator=False
-        )
+        result = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator=False)
 
         expected = "Existing content\n\nNew content"
         assert result == expected
@@ -208,9 +203,7 @@ class TestContentExtractor:
         new_text = "New content"
         source_name = "test.txt"
 
-        result = ContentExtractor.append_text_with_source(
-            existing_text, new_text, source_name, add_separator=True
-        )
+        result = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator=True)
 
         expected = "Existing content\n\n---\n**Source: test.txt**\n\nNew content"
         assert result == expected
@@ -221,9 +214,7 @@ class TestContentExtractor:
         new_text = "New content"
         source_name = "test.txt"
 
-        result = ContentExtractor.append_text_with_source(
-            existing_text, new_text, source_name, add_separator=True
-        )
+        result = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator=True)
 
         expected = "**Source: test.txt**\n\nNew content"
         assert result == expected
@@ -234,9 +225,7 @@ class TestContentExtractor:
         new_text = ""
         source_name = "test.txt"
 
-        result = ContentExtractor.append_text_with_source(
-            existing_text, new_text, source_name, add_separator=True
-        )
+        result = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator=True)
 
         # Should return existing text unchanged when new text is empty
         assert result == existing_text

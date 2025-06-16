@@ -147,9 +147,7 @@ class TextProcessor:
             bool: 設定が成功したかどうか
         """
         # 明示的に戻り値の型を指定
-        success: bool = self.prompt_manager.set_character_mapping(
-            character1, character2
-        )
+        success: bool = self.prompt_manager.set_character_mapping(character1, character2)
         return success
 
     def get_character_mapping(self) -> Dict[str, str]:
@@ -224,9 +222,7 @@ class TextProcessor:
         # 現在選択されているAPIに基づいてテキスト生成
         if self.current_api_type == APIType.OPENAI and self.openai_model.has_api_key():
             result = self.openai_model.generate_text(prompt)
-        elif (
-            self.current_api_type == APIType.GEMINI and self.gemini_model.has_api_key()
-        ):
+        elif self.current_api_type == APIType.GEMINI and self.gemini_model.has_api_key():
             result = self.gemini_model.generate_text(prompt)
         else:
             return "Error: No API key is set or valid API type is not selected."
@@ -276,23 +272,11 @@ class TextProcessor:
             logger.info(f"現在のポッドキャストモード: {current_mode.name}")
 
             # 現在のAPIタイプに基づいて適切なAPIが設定されているか確認
-            if (
-                self.current_api_type == APIType.OPENAI
-                and self.openai_model.has_api_key()
-            ) or (
-                self.current_api_type == APIType.GEMINI
-                and self.gemini_model.has_api_key()
-            ):
+            if (self.current_api_type == APIType.OPENAI and self.openai_model.has_api_key()) or (self.current_api_type == APIType.GEMINI and self.gemini_model.has_api_key()):
                 podcast_text = self.generate_podcast_conversation(cleaned_text)
             else:
-                api_name = (
-                    self.current_api_type.display_name
-                    if self.current_api_type
-                    else "API"
-                )
-                podcast_text = (
-                    f"{api_name} API key is not set. Please enter your API key."
-                )
+                api_name = self.current_api_type.display_name if self.current_api_type else "API"
+                podcast_text = f"{api_name} API key is not set. Please enter your API key."
 
             return podcast_text
 

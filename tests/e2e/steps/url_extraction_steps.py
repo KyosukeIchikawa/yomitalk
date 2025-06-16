@@ -30,9 +30,7 @@ def user_enters_url(page: Page, url: str):
 @when("the user enters a GitHub README URL into the URL input field")
 def user_enters_github_readme_url(page: Page):
     """The user enters a GitHub README URL into the URL input field."""
-    github_readme_url = (
-        "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"
-    )
+    github_readme_url = "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"
     logger.info(f"Entering GitHub README URL: {github_readme_url}")
 
     # Make sure the Web page extraction tab is active first
@@ -88,9 +86,7 @@ def text_area_shows_content(page: Page):
     logger.info("Checking if extracted text area shows content")
 
     # 抽出されたテキストエリアを見つける
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     # テキストエリアにコンテンツが入力されていることを確認
@@ -103,9 +99,7 @@ def text_area_shows_content(page: Page):
         logger.info("Text area is empty, checking page state...")
 
         # スクリーンショットを撮影
-        screenshot_path = (
-            f"tests/e2e/screenshots/debug_url_extraction_{int(time.time())}.png"
-        )
+        screenshot_path = f"tests/e2e/screenshots/debug_url_extraction_{int(time.time())}.png"
         page.screenshot(path=screenshot_path)
         logger.info(f"Debug screenshot saved: {screenshot_path}")
 
@@ -114,19 +108,12 @@ def text_area_shows_content(page: Page):
         for i, textarea in enumerate(all_textareas):
             content = textarea.input_value()
             placeholder = textarea.get_attribute("placeholder")
-            logger.info(
-                f"Textarea {i}: placeholder='{placeholder}', content='{content[:50] if content else 'EMPTY'}'"
-            )
+            logger.info(f"Textarea {i}: placeholder='{placeholder}', content='{content[:50] if content else 'EMPTY'}'")
 
-    assert len(text_content.strip()) > 0, (
-        "Extracted text area should contain content, but found empty content"
-    )
+    assert len(text_content.strip()) > 0, "Extracted text area should contain content, but found empty content"
 
     # example.comの場合は "Example Domain" が含まれることを確認
-    if (
-        "example domain" in text_content.lower()
-        or "example.com" in text_content.lower()
-    ):
+    if "example domain" in text_content.lower() or "example.com" in text_content.lower():
         logger.info("Successfully extracted content from example.com")
     else:
         # その他のエラーメッセージでないことを確認
@@ -135,20 +122,12 @@ def text_area_shows_content(page: Page):
             "failed to extract",
             "an error occurred",
         ]
-        contains_error = any(
-            indicator in text_content.lower() for indicator in error_indicators
-        )
-        content_preview = (
-            text_content[:150] + "..." if len(text_content) > 150 else text_content
-        )
-        assert not contains_error, (
-            f"Extracted text should not contain error. Content preview: {content_preview}"
-        )
+        contains_error = any(indicator in text_content.lower() for indicator in error_indicators)
+        content_preview = text_content[:150] + "..." if len(text_content) > 150 else text_content
+        assert not contains_error, f"Extracted text should not contain error. Content preview: {content_preview}"
 
     # Log only a preview of the content for readability
-    content_preview = (
-        text_content[:100] + "..." if len(text_content) > 100 else text_content
-    )
+    content_preview = text_content[:100] + "..." if len(text_content) > 100 else text_content
     logger.info(f"Extracted text area contains content: {content_preview}")
     logger.info(f"Total content length: {len(text_content)} characters")
 
@@ -158,15 +137,11 @@ def text_area_shows_github_content(page: Page):
     """The extracted text area shows GitHub README content."""
     logger.info("Checking if extracted text area shows GitHub README content")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert len(text_content.strip()) > 0, (
-        "Extracted text area should contain GitHub README content"
-    )
+    assert len(text_content.strip()) > 0, "Extracted text area should contain GitHub README content"
 
     # Check for actual error messages, not just the word "error" anywhere in content
     error_indicators = [
@@ -176,18 +151,12 @@ def text_area_shows_github_content(page: Page):
         "error:",
         "failed:",
     ]
-    contains_actual_error = any(
-        indicator in text_content.lower() for indicator in error_indicators
-    )
+    contains_actual_error = any(indicator in text_content.lower() for indicator in error_indicators)
 
     # Create preview for logging and error messages to improve readability
-    content_preview = (
-        text_content[:150] + "..." if len(text_content) > 150 else text_content
-    )
+    content_preview = text_content[:150] + "..." if len(text_content) > 150 else text_content
 
-    assert not contains_actual_error, (
-        f"GitHub README extraction should not contain actual error messages. Content preview: {content_preview}"
-    )
+    assert not contains_actual_error, f"GitHub README extraction should not contain actual error messages. Content preview: {content_preview}"
 
     # Check that content contains README-related keywords
     readme_keywords = [
@@ -198,17 +167,11 @@ def text_area_shows_github_content(page: Page):
         "gradio",
         "アプリケーション",
     ]
-    contains_readme_content = any(
-        keyword in text_content.lower() for keyword in readme_keywords
-    )
-    assert contains_readme_content, (
-        f"Content should contain README-related keywords. Content preview: {content_preview}"
-    )
+    contains_readme_content = any(keyword in text_content.lower() for keyword in readme_keywords)
+    assert contains_readme_content, f"Content should contain README-related keywords. Content preview: {content_preview}"
 
     # Log only a preview of the content for readability
-    logger.info(
-        f"GitHub README content extracted successfully. Preview: {content_preview}"
-    )
+    logger.info(f"GitHub README content extracted successfully. Preview: {content_preview}")
     logger.info(f"Total content length: {len(text_content)} characters")
 
 
@@ -217,15 +180,11 @@ def text_area_shows_error_message(page: Page):
     """The extracted text area shows an error message."""
     logger.info("Checking if extracted text area shows error message")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert len(text_content.strip()) > 0, (
-        "Extracted text area should contain error message"
-    )
+    assert len(text_content.strip()) > 0, "Extracted text area should contain error message"
 
     # エラーメッセージのキーワードが含まれていることを確認
     error_keywords = [
@@ -236,17 +195,11 @@ def text_area_shows_error_message(page: Page):
         "please enter a valid url",
         "please enter a url",
     ]
-    contains_error_keyword = any(
-        keyword in text_content.lower() for keyword in error_keywords
-    )
+    contains_error_keyword = any(keyword in text_content.lower() for keyword in error_keywords)
 
     # Create preview for logging
-    content_preview = (
-        text_content[:150] + "..." if len(text_content) > 150 else text_content
-    )
-    assert contains_error_keyword, (
-        f"Text should contain error message. Content preview: {content_preview}"
-    )
+    content_preview = text_content[:150] + "..." if len(text_content) > 150 else text_content
+    assert contains_error_keyword, f"Text should contain error message. Content preview: {content_preview}"
 
     logger.info(f"Error message displayed: {content_preview}")
 
@@ -256,21 +209,15 @@ def text_area_replaced_with_file_content(page: Page):
     """The extracted text area content is replaced with file content."""
     logger.info("Checking if extracted text area content is replaced with file content")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert len(text_content.strip()) > 0, (
-        "Extracted text area should contain file content"
-    )
+    assert len(text_content.strip()) > 0, "Extracted text area should contain file content"
 
     # ファイルの内容が含まれていることを確認（テストファイルの内容による）
     # 少なくとも何らかのコンテンツが表示されていることを確認
-    content_preview = (
-        text_content[:100] + "..." if len(text_content) > 100 else text_content
-    )
+    content_preview = text_content[:100] + "..." if len(text_content) > 100 else text_content
     logger.info(f"File content displayed: {content_preview}")
     logger.info(f"Total content length: {len(text_content)} characters")
 
@@ -289,9 +236,7 @@ def user_uploads_text_file(page: Page):
     # テストファイルが存在しない場合は作成
     if not test_file.exists():
         test_file.parent.mkdir(parents=True, exist_ok=True)
-        test_file.write_text(
-            "This is a test text file content for URL extraction testing."
-        )
+        test_file.write_text("This is a test text file content for URL extraction testing.")
 
     # ファイルアップロード
     file_input = page.locator('input[type="file"]')
@@ -335,9 +280,7 @@ def user_unchecks_separator_checkbox(page: Page):
     """The user unchecks the automatic separator checkbox."""
     logger.info("Unchecking automatic separator checkbox")
 
-    separator_checkbox = page.locator('input[type="checkbox"]').filter(
-        has_text="追加時に自動で区切りを挿入"
-    )
+    separator_checkbox = page.locator('input[type="checkbox"]').filter(has_text="追加時に自動で区切りを挿入")
     expect(separator_checkbox).to_be_visible()
     separator_checkbox.uncheck()
 
@@ -349,9 +292,7 @@ def user_checks_separator_checkbox(page: Page):
     """The user checks the automatic separator checkbox."""
     logger.info("Checking automatic separator checkbox")
 
-    separator_checkbox = page.locator('input[type="checkbox"]').filter(
-        has_text="追加時に自動で区切りを挿入"
-    )
+    separator_checkbox = page.locator('input[type="checkbox"]').filter(has_text="追加時に自動で区切りを挿入")
     expect(separator_checkbox).to_be_visible()
     separator_checkbox.check()
 
@@ -376,15 +317,11 @@ def text_should_contain_separator(page: Page):
     """The extracted text should contain a separator before the new content."""
     logger.info("Checking if extracted text contains separator")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert "---" in text_content or "**Source:" in text_content, (
-        "Text should contain a separator"
-    )
+    assert "---" in text_content or "**Source:" in text_content, "Text should contain a separator"
 
     logger.info("Separator found in extracted text")
 
@@ -394,16 +331,12 @@ def text_should_not_contain_separator(page: Page):
     """The extracted text should not contain a separator."""
     logger.info("Checking if extracted text does not contain separator")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     # Check that there are no markdown-style separators
-    assert "---" not in text_content and "**Source:" not in text_content, (
-        "Text should not contain a separator"
-    )
+    assert "---" not in text_content and "**Source:" not in text_content, "Text should not contain a separator"
 
     logger.info("No separator found in extracted text")
 
@@ -413,18 +346,14 @@ def text_should_contain_both_contents(page: Page):
     """The extracted text should contain both the original and new content."""
     logger.info("Checking if extracted text contains both original and new content")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     assert len(text_content.strip()) > 0, "Text area should contain content"
 
     # For URL extraction, we expect content from the URL
-    content_preview = (
-        text_content[:200] + "..." if len(text_content) > 200 else text_content
-    )
+    content_preview = text_content[:200] + "..." if len(text_content) > 200 else text_content
     logger.info(f"Combined content found: {content_preview}")
 
 
@@ -433,15 +362,11 @@ def text_area_should_be_empty(page: Page):
     """The extracted text area should be empty."""
     logger.info("Checking if extracted text area is empty")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert len(text_content.strip()) == 0, (
-        f"Text area should be empty, but contains: {text_content[:50]}"
-    )
+    assert len(text_content.strip()) == 0, f"Text area should be empty, but contains: {text_content[:50]}"
 
     logger.info("Text area is empty as expected")
 
@@ -451,9 +376,7 @@ def user_enters_initial_text(page: Page):
     """The user enters some initial text in the extracted text area."""
     logger.info("Entering initial text in extracted text area")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     initial_text = "This is some initial text that was already in the text area."
@@ -468,9 +391,7 @@ def existing_text_is_preserved(page: Page):
     """The existing text with separator is preserved."""
     logger.info("Checking if existing text with separator is preserved")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -493,9 +414,7 @@ def existing_text_no_separator_preserved(page: Page):
     """The existing text without separator is preserved."""
     logger.info("Checking if existing text without separator is preserved")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -523,13 +442,9 @@ def user_unchecks_separator_checkbox_url_extraction(page: Page):
     """User unchecks the automatic separator checkbox (URL extraction context)."""
     logger.info("Unchecking auto separator checkbox (URL extraction context)")
 
-    checkbox = page.locator(
-        'label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]'
-    )
+    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
     if not checkbox.is_visible():
-        checkbox = page.locator('input[type="checkbox"]').nth(
-            0
-        )  # Fallback to first checkbox
+        checkbox = page.locator('input[type="checkbox"]').nth(0)  # Fallback to first checkbox
     expect(checkbox).to_be_visible()
 
     # チェックボックスがチェック済みの場合のみクリック
@@ -544,14 +459,10 @@ def text_area_contains_specific_text_url(page: Page, text: str):
     """The extracted text area contains the specific text (URL context)."""
     logger.info(f"Checking if extracted text area contains: {text}")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert text in text_content, (
-        f"Expected '{text}' in content, but found: '{text_content[:200]}...'"
-    )
+    assert text in text_content, f"Expected '{text}' in content, but found: '{text_content[:200]}...'"
 
     logger.info(f"Text area contains expected text: {text}")

@@ -145,9 +145,7 @@ class GeminiModel:
             }
 
             generated_text: str = response.text
-            logger.info(
-                f"Text generation completed. Length: {len(generated_text)} characters"
-            )
+            logger.info(f"Text generation completed. Length: {len(generated_text)} characters")
             logger.info(f"Token usage: {self.last_token_usage}")
 
             return generated_text
@@ -161,9 +159,7 @@ class GeminiModel:
                 logger.error("Prompt was blocked: Contains prohibited content")
                 return "Error: Your request contains content that is flagged as inappropriate or against usage policies."
             elif "StopCandidate" in error_class:
-                logger.error(
-                    "Generation stopped: Output may contain prohibited content"
-                )
+                logger.error("Generation stopped: Output may contain prohibited content")
                 return "Error: The generation was stopped as the potential response may contain inappropriate content."
             else:
                 logger.error(f"Error during Gemini API request: {error_class} - {e}")

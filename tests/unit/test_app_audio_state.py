@@ -48,9 +48,7 @@ class TestUserSessionAudioState:
     def test_reset_audio_generation_state(self):
         """Test resetting audio generation state."""
         # First update state
-        self.user_session.update_audio_generation_state(
-            is_generating=True, status="generating", progress=0.8
-        )
+        self.user_session.update_audio_generation_state(is_generating=True, status="generating", progress=0.8)
 
         # Then reset
         self.user_session.reset_audio_generation_state()
@@ -67,21 +65,15 @@ class TestUserSessionAudioState:
         assert self.user_session.is_audio_generation_active() is False
 
         # Set to generating but wrong status
-        self.user_session.update_audio_generation_state(
-            is_generating=True, status="idle"
-        )
+        self.user_session.update_audio_generation_state(is_generating=True, status="idle")
         assert self.user_session.is_audio_generation_active() is False
 
         # Set to correct status
-        self.user_session.update_audio_generation_state(
-            is_generating=True, status="generating"
-        )
+        self.user_session.update_audio_generation_state(is_generating=True, status="generating")
         assert self.user_session.is_audio_generation_active() is True
 
         # Complete generation
-        self.user_session.update_audio_generation_state(
-            is_generating=False, status="completed"
-        )
+        self.user_session.update_audio_generation_state(is_generating=False, status="completed")
         assert self.user_session.is_audio_generation_active() is False
 
     def test_has_generated_audio(self):
@@ -90,16 +82,12 @@ class TestUserSessionAudioState:
         assert self.user_session.has_generated_audio() is False
 
         # Add streaming parts
-        self.user_session.update_audio_generation_state(
-            streaming_parts=["part1.wav", "part2.wav"]
-        )
+        self.user_session.update_audio_generation_state(streaming_parts=["part1.wav", "part2.wav"])
         assert self.user_session.has_generated_audio() is True
 
         # Reset and add final audio
         self.user_session.reset_audio_generation_state()
-        self.user_session.update_audio_generation_state(
-            final_audio_path="final_audio.wav"
-        )
+        self.user_session.update_audio_generation_state(final_audio_path="final_audio.wav")
         assert self.user_session.has_generated_audio() is True
 
 
@@ -114,9 +102,7 @@ class TestPaperPodcastAppAudioRecovery:
 
     def test_check_and_restore_audio_generation_no_audio(self):
         """Test audio restoration when no audio exists."""
-        streaming_audio, final_audio, status = (
-            self.app.check_and_restore_audio_generation(self.user_session)
-        )
+        streaming_audio, final_audio, status = self.app.check_and_restore_audio_generation(self.user_session)
 
         assert streaming_audio is None
         assert final_audio is None
@@ -132,9 +118,7 @@ class TestPaperPodcastAppAudioRecovery:
             final_audio_path="final_audio.wav",
         )
 
-        streaming_audio, final_audio, status = (
-            self.app.check_and_restore_audio_generation(self.user_session)
-        )
+        streaming_audio, final_audio, status = self.app.check_and_restore_audio_generation(self.user_session)
 
         assert streaming_audio == "part2.wav"  # Latest streaming part
         assert final_audio == "final_audio.wav"
@@ -150,9 +134,7 @@ class TestPaperPodcastAppAudioRecovery:
             streaming_parts=["part1.wav"],
         )
 
-        streaming_audio, final_audio, status = (
-            self.app.check_and_restore_audio_generation(self.user_session)
-        )
+        streaming_audio, final_audio, status = self.app.check_and_restore_audio_generation(self.user_session)
 
         assert streaming_audio == "part1.wav"
         assert final_audio is None
@@ -170,20 +152,14 @@ class TestPaperPodcastAppAudioRecovery:
         )
 
         # Test direct audio restoration
-        streaming_audio, final_audio, status = (
-            self.app.check_and_restore_audio_generation(self.user_session)
-        )
+        streaming_audio, final_audio, status = self.app.check_and_restore_audio_generation(self.user_session)
 
         assert streaming_audio == "part2.wav"
         assert final_audio == "final_audio.wav"
         assert "復帰" in status
 
         # Test connection recovery integration
-        streaming_audio_recovery, progress_html, final_audio_recovery, button_state = (
-            self.app.handle_connection_recovery(
-                self.user_session, terms_agreed=True, podcast_text="Test script"
-            )
-        )
+        streaming_audio_recovery, progress_html, final_audio_recovery, button_state = self.app.handle_connection_recovery(self.user_session, terms_agreed=True, podcast_text="Test script")
 
         # Both should return the same audio content
         assert streaming_audio_recovery == streaming_audio
@@ -193,11 +169,7 @@ class TestPaperPodcastAppAudioRecovery:
 
     def test_handle_connection_recovery_no_audio(self):
         """Test connection recovery when no audio exists."""
-        streaming_audio, progress_html, final_audio, button_state = (
-            self.app.handle_connection_recovery(
-                self.user_session, terms_agreed=True, podcast_text="Test script"
-            )
-        )
+        streaming_audio, progress_html, final_audio, button_state = self.app.handle_connection_recovery(self.user_session, terms_agreed=True, podcast_text="Test script")
 
         assert streaming_audio is None
         assert progress_html == ""
@@ -215,11 +187,7 @@ class TestPaperPodcastAppAudioRecovery:
             final_audio_path="final_audio.wav",
         )
 
-        streaming_audio, progress_html, final_audio, button_state = (
-            self.app.handle_connection_recovery(
-                self.user_session, terms_agreed=True, podcast_text="Test script"
-            )
-        )
+        streaming_audio, progress_html, final_audio, button_state = self.app.handle_connection_recovery(self.user_session, terms_agreed=True, podcast_text="Test script")
 
         assert streaming_audio == "part2.wav"
         assert "✅ 音声生成完了（復帰）" in progress_html
@@ -236,11 +204,7 @@ class TestPaperPodcastAppAudioRecovery:
             streaming_parts=["part1.wav"],
         )
 
-        streaming_audio, progress_html, final_audio, button_state = (
-            self.app.handle_connection_recovery(
-                self.user_session, terms_agreed=True, podcast_text="Test script"
-            )
-        )
+        streaming_audio, progress_html, final_audio, button_state = self.app.handle_connection_recovery(self.user_session, terms_agreed=True, podcast_text="Test script")
 
         # During active generation, audio components should return gr.update() to avoid race conditions
         import gradio as gr
@@ -260,11 +224,7 @@ class TestPaperPodcastAppAudioRecovery:
             final_audio_path="final_audio.wav",
         )
 
-        streaming_audio, progress_html, final_audio, button_state = (
-            self.app.handle_connection_recovery(
-                self.user_session, terms_agreed=False, podcast_text="Test script"
-            )
-        )
+        streaming_audio, progress_html, final_audio, button_state = self.app.handle_connection_recovery(self.user_session, terms_agreed=False, podcast_text="Test script")
 
         assert streaming_audio == "part1.wav"
         assert "✅ 音声生成完了（復帰）" in progress_html
@@ -275,14 +235,10 @@ class TestPaperPodcastAppAudioRecovery:
     def test_reset_audio_state_and_components(self):
         """Test resetting audio state and components."""
         # Set up some state first
-        self.user_session.update_audio_generation_state(
-            is_generating=True, status="generating", progress=0.7
-        )
+        self.user_session.update_audio_generation_state(is_generating=True, status="generating", progress=0.7)
 
         # Reset
-        streaming_clear, progress_clear, audio_clear = (
-            self.app.reset_audio_state_and_components(self.user_session)
-        )
+        streaming_clear, progress_clear, audio_clear = self.app.reset_audio_state_and_components(self.user_session)
 
         # Check components are cleared
         assert streaming_clear is None
@@ -297,45 +253,35 @@ class TestPaperPodcastAppAudioRecovery:
 
     def test_enable_generate_button_both_conditions_met(self):
         """Test enable button when both conditions are met."""
-        button_state = self.app.enable_generate_button(
-            terms_agreed=True, podcast_text="Test script content"
-        )
+        button_state = self.app.enable_generate_button(terms_agreed=True, podcast_text="Test script content")
 
         assert button_state["interactive"] is True
         assert button_state["value"] == "音声を生成"
 
     def test_enable_generate_button_terms_not_agreed(self):
         """Test enable button when terms are not agreed."""
-        button_state = self.app.enable_generate_button(
-            terms_agreed=False, podcast_text="Test script content"
-        )
+        button_state = self.app.enable_generate_button(terms_agreed=False, podcast_text="Test script content")
 
         assert button_state["interactive"] is False
         assert button_state["value"] == "音声を生成（VOICEVOX利用規約に同意が必要です）"
 
     def test_enable_generate_button_no_text(self):
         """Test enable button when no text is provided."""
-        button_state = self.app.enable_generate_button(
-            terms_agreed=True, podcast_text=""
-        )
+        button_state = self.app.enable_generate_button(terms_agreed=True, podcast_text="")
 
         assert button_state["interactive"] is False
         assert button_state["value"] == "音声を生成（トーク原稿が必要です）"
 
     def test_enable_generate_button_neither_condition_met(self):
         """Test enable button when neither condition is met."""
-        button_state = self.app.enable_generate_button(
-            terms_agreed=False, podcast_text=""
-        )
+        button_state = self.app.enable_generate_button(terms_agreed=False, podcast_text="")
 
         assert button_state["interactive"] is False
         assert button_state["value"] == "音声を生成（VOICEVOX利用規約に同意が必要です）"
 
     def test_enable_generate_button_whitespace_text(self):
         """Test enable button with whitespace-only text."""
-        button_state = self.app.enable_generate_button(
-            terms_agreed=True, podcast_text="   \n\t   "
-        )
+        button_state = self.app.enable_generate_button(terms_agreed=True, podcast_text="   \n\t   ")
 
         assert button_state["interactive"] is False
         assert button_state["value"] == "音声を生成（トーク原稿が必要です）"

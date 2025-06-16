@@ -68,9 +68,7 @@ def openai_api_key_is_set(page: Page):
         if success_msg.is_visible():
             logger.info("APIキーが正常に設定されました")
     else:
-        logger.info(
-            "APIキー入力欄が見つかりません。既に設定されているか、UIが変更されている可能性があります。"
-        )
+        logger.info("APIキー入力欄が見つかりません。既に設定されているか、UIが変更されている可能性があります。")
 
 
 @when('I click the "トーク原稿を生成" button')
@@ -126,9 +124,7 @@ def podcast_script_is_generated(page: Page):
     # Verify that the script content is in conversation format
     script_content = script_textarea.input_value()
     assert len(script_content) > 50, "Generated script is too short"
-    assert ":" in script_content, (
-        "Generated script does not contain conversation markers"
-    )
+    assert ":" in script_content, "Generated script does not contain conversation markers"
 
 
 @then("token usage information should be displayed")

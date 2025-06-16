@@ -92,34 +92,26 @@ class UserSession:
         current_time = time.time()
         max_age_seconds = max_age_days * 86400  # Convert days to seconds
 
-        logger.debug(
-            f"Starting cleanup of sessions older than {max_age_days} days ({max_age_seconds} seconds)"
-        )
+        logger.debug(f"Starting cleanup of sessions older than {max_age_days} days ({max_age_seconds} seconds)")
         logger.debug(f"Current time: {time.ctime(current_time)}")
 
         try:
             # Clean up temp directory
             if BASE_TEMP_DIR.exists():
                 logger.debug(f"Scanning temp directory: {BASE_TEMP_DIR}")
-                removed_count += self._cleanup_directory(
-                    BASE_TEMP_DIR, current_time, max_age_seconds
-                )
+                removed_count += self._cleanup_directory(BASE_TEMP_DIR, current_time, max_age_seconds)
             else:
                 logger.debug(f"Temp directory does not exist: {BASE_TEMP_DIR}")
 
             # Clean up output directory
             if BASE_OUTPUT_DIR.exists():
                 logger.debug(f"Scanning output directory: {BASE_OUTPUT_DIR}")
-                removed_count += self._cleanup_directory(
-                    BASE_OUTPUT_DIR, current_time, max_age_seconds
-                )
+                removed_count += self._cleanup_directory(BASE_OUTPUT_DIR, current_time, max_age_seconds)
             else:
                 logger.debug(f"Output directory does not exist: {BASE_OUTPUT_DIR}")
 
             if removed_count > 0:
-                logger.info(
-                    f"Removed {removed_count} old session folders older than {max_age_days} days"
-                )
+                logger.info(f"Removed {removed_count} old session folders older than {max_age_days} days")
             else:
                 logger.debug("No old sessions found to remove")
 
@@ -128,9 +120,7 @@ class UserSession:
             logger.error(f"Error during old session cleanup: {str(e)}")
             return 0
 
-    def _cleanup_directory(
-        self, base_dir: Path, current_time: float, max_age_seconds: float
-    ) -> int:
+    def _cleanup_directory(self, base_dir: Path, current_time: float, max_age_seconds: float) -> int:
         """
         Clean up old session folders in a directory.
 
@@ -161,9 +151,7 @@ class UserSession:
                 try:
                     mod_time = item.stat().st_mtime
                 except Exception as e:
-                    logger.error(
-                        f"Error getting modification time for {item}: {str(e)}"
-                    )
+                    logger.error(f"Error getting modification time for {item}: {str(e)}")
                     logger.debug(f"Could not get modification time for: {item}")
                     continue
 
@@ -171,22 +159,16 @@ class UserSession:
                 age_seconds = current_time - mod_time
                 age_days = age_seconds / 86400
 
-                logger.debug(
-                    f"Directory: {item}, Last modified: {time.ctime(mod_time)}, Age: {age_days:.1f} days"
-                )
+                logger.debug(f"Directory: {item}, Last modified: {time.ctime(mod_time)}, Age: {age_days:.1f} days")
 
                 # max_age_seconds（デフォルト1日）より古い場合は削除
                 if age_seconds > max_age_seconds:
                     try:
-                        logger.info(
-                            f"Removing old session directory: {item} (age: {age_days:.1f} days)"
-                        )
+                        logger.info(f"Removing old session directory: {item} (age: {age_days:.1f} days)")
                         shutil.rmtree(item, ignore_errors=True)
                         removed_count += 1
                     except Exception as e:
-                        logger.error(
-                            f"Failed to remove old session directory {item}: {str(e)}"
-                        )
+                        logger.error(f"Failed to remove old session directory {item}: {str(e)}")
                 else:
                     logger.debug(f"Keeping directory (not old enough): {item}")
         except Exception as e:
@@ -349,10 +331,7 @@ class UserSession:
         Returns:
             bool: True if audio generation is active
         """
-        return (
-            bool(self.audio_generation_state["is_generating"])
-            and self.audio_generation_state["status"] == "generating"
-        )
+        return bool(self.audio_generation_state["is_generating"]) and self.audio_generation_state["status"] == "generating"
 
     def get_audio_generation_status(self) -> Dict[str, Any]:
         """Get current audio generation status.
@@ -368,10 +347,7 @@ class UserSession:
         Returns:
             bool: True if audio has been generated
         """
-        return (
-            self.audio_generation_state["final_audio_path"] is not None
-            or len(list(self.audio_generation_state["streaming_parts"])) > 0
-        )
+        return self.audio_generation_state["final_audio_path"] is not None or len(list(self.audio_generation_state["streaming_parts"])) > 0
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize session state to dictionary for persistence.
@@ -383,11 +359,7 @@ class UserSession:
             "session_id": self.session_id,
             "audio_generation_state": self.audio_generation_state.copy(),
             "text_processor_state": {
-                "current_api_type": (
-                    self.text_processor.current_api_type.value
-                    if self.text_processor.current_api_type
-                    else None
-                ),
+                "current_api_type": (self.text_processor.current_api_type.value if self.text_processor.current_api_type else None),
                 "openai_api_key_set": bool(self.text_processor.openai_model.api_key),
                 "gemini_api_key_set": bool(self.text_processor.gemini_model.api_key),
                 "openai_max_tokens": self.text_processor.openai_model.get_max_tokens(),
@@ -433,21 +405,13 @@ class UserSession:
 
             # Restore model settings
             if "openai_max_tokens" in text_state:
-                session.text_processor.openai_model.set_max_tokens(
-                    text_state["openai_max_tokens"]
-                )
+                session.text_processor.openai_model.set_max_tokens(text_state["openai_max_tokens"])
             if "gemini_max_tokens" in text_state:
-                session.text_processor.gemini_model.set_max_tokens(
-                    text_state["gemini_max_tokens"]
-                )
+                session.text_processor.gemini_model.set_max_tokens(text_state["gemini_max_tokens"])
             if "openai_model_name" in text_state:
-                session.text_processor.openai_model.set_model_name(
-                    text_state["openai_model_name"]
-                )
+                session.text_processor.openai_model.set_model_name(text_state["openai_model_name"])
             if "gemini_model_name" in text_state:
-                session.text_processor.gemini_model.set_model_name(
-                    text_state["gemini_model_name"]
-                )
+                session.text_processor.gemini_model.set_model_name(text_state["gemini_model_name"])
 
             # Restore prompt manager state
             if "prompt_manager_state" in text_state:
@@ -456,9 +420,7 @@ class UserSession:
                     # Find DocumentType by value
                     for doc_type in DocumentType:
                         if doc_type.value == pm_state["current_document_type"]:
-                            session.text_processor.prompt_manager.set_document_type(
-                                doc_type
-                            )
+                            session.text_processor.prompt_manager.set_document_type(doc_type)
                             break
                 if "current_mode" in pm_state:
                     # Find PodcastMode by value
@@ -467,9 +429,7 @@ class UserSession:
                             session.text_processor.prompt_manager.set_podcast_mode(mode)
                             break
                 if "char_mapping" in pm_state:
-                    session.text_processor.prompt_manager.char_mapping = pm_state[
-                        "char_mapping"
-                    ].copy()
+                    session.text_processor.prompt_manager.char_mapping = pm_state["char_mapping"].copy()
 
         logger.info(f"Session restored from saved state: {session.session_id}")
         return session
@@ -544,11 +504,7 @@ class UserSession:
         return {
             "session_id": self.session_id,
             "missing_api_keys": missing_keys,
-            "current_api_type": (
-                self.text_processor.current_api_type.value
-                if self.text_processor.current_api_type
-                else None
-            ),
+            "current_api_type": (self.text_processor.current_api_type.value if self.text_processor.current_api_type else None),
             "has_generated_audio": self.has_generated_audio(),
             "last_save_time": time.time(),
         }

@@ -22,22 +22,14 @@ class TestAudioGenerator:
         self.session_temp_dir = Path("/tmp/test_temp")
 
         # Create a patch for VOICEVOX Core availability
-        self.voicevox_patch = patch(
-            "yomitalk.components.audio_generator.VOICEVOX_CORE_AVAILABLE", True
-        )
+        self.voicevox_patch = patch("yomitalk.components.audio_generator.VOICEVOX_CORE_AVAILABLE", True)
         self.voicevox_patch.start()
 
         # Create patches for Synthesizer and other imported classes
-        self.synthesizer_patch = patch(
-            "yomitalk.components.audio_generator.Synthesizer"
-        )
+        self.synthesizer_patch = patch("yomitalk.components.audio_generator.Synthesizer")
         self.openjtalk_patch = patch("yomitalk.components.audio_generator.OpenJtalk")
-        self.onnxruntime_patch = patch(
-            "yomitalk.components.audio_generator.Onnxruntime"
-        )
-        self.voicemodelfile_patch = patch(
-            "yomitalk.components.audio_generator.VoiceModelFile"
-        )
+        self.onnxruntime_patch = patch("yomitalk.components.audio_generator.Onnxruntime")
+        self.voicemodelfile_patch = patch("yomitalk.components.audio_generator.VoiceModelFile")
 
         # Start patches
         self.mock_synthesizer = self.synthesizer_patch.start()
@@ -76,20 +68,13 @@ class TestAudioGenerator:
     def test_directory_creation(self):
         """Test directory creation."""
         # ディレクトリが存在するかどうかをテスト
-        assert self.audio_generator.output_dir.is_dir() or str(
-            self.audio_generator.output_dir
-        ) == str(self.session_output_dir)
-        assert self.audio_generator.temp_dir.is_dir() or str(
-            self.audio_generator.temp_dir
-        ) == str(self.session_temp_dir)
+        assert self.audio_generator.output_dir.is_dir() or str(self.audio_generator.output_dir) == str(self.session_output_dir)
+        assert self.audio_generator.temp_dir.is_dir() or str(self.audio_generator.temp_dir) == str(self.session_temp_dir)
 
     def test_core_initialization(self):
         """Test core initialization."""
         # コアの初期化状態をテスト
-        if (
-            hasattr(self.audio_generator, "core_synthesizer")
-            and self.audio_generator.core_synthesizer is not None
-        ):
+        if hasattr(self.audio_generator, "core_synthesizer") and self.audio_generator.core_synthesizer is not None:
             assert self.audio_generator.core_initialized is True
         elif not VOICEVOX_CORE_AVAILABLE:
             assert self.audio_generator.core_initialized is False
@@ -101,9 +86,7 @@ class TestAudioGenerator:
         assert callable(getattr(self.audio_generator, "_text_to_speech", None))
 
         # グローバルVOICEVOXマネージャーをモック
-        with patch(
-            "yomitalk.components.audio_generator.get_global_voicevox_manager"
-        ) as mock_get_manager:
+        with patch("yomitalk.components.audio_generator.get_global_voicevox_manager") as mock_get_manager:
             mock_manager = MagicMock()
             mock_manager.is_available.return_value = True
             mock_manager.text_to_speech.return_value = b"dummy_wav_data"
@@ -117,9 +100,7 @@ class TestAudioGenerator:
     def test_audio_format_conversion(self):
         """オーディオフォーマット変換機能のテスト。"""
         # WAVデータ結合メソッドのテスト
-        with patch.object(
-            self.audio_generator, "_combine_wav_data_in_memory"
-        ) as mock_combine:
+        with patch.object(self.audio_generator, "_combine_wav_data_in_memory") as mock_combine:
             mock_combine.return_value = b"combined_wav_data"
 
             # ダミーのWAVデータリストを作成

@@ -83,9 +83,7 @@ class TestEnvironment:
         # Use default Python if virtual environment Python does not exist
         if not os.path.exists(python_executable):
             python_executable = "python"
-            logger.warning(
-                f"Virtual environment Python not found at {python_executable}, using system Python"
-            )
+            logger.warning(f"Virtual environment Python not found at {python_executable}, using system Python")
         else:
             logger.info(f"Using Python from virtual environment: {python_executable}")
 
@@ -116,9 +114,7 @@ class TestEnvironment:
             try:
                 response = requests.get(self.app_url, timeout=2)
                 if response.status_code == 200:
-                    logger.info(
-                        f"✓ Application started successfully on port {self._app_port}"
-                    )
+                    logger.info(f"✓ Application started successfully on port {self._app_port}")
 
                     # Check if process is running
                     if self._app_process and self._app_process.poll() is None:
@@ -126,9 +122,7 @@ class TestEnvironment:
                         return True
                     else:
                         if self._app_process:
-                            raise Exception(
-                                f"Application process terminated unexpectedly with code {self._app_process.returncode}"
-                            )
+                            raise Exception(f"Application process terminated unexpectedly with code {self._app_process.returncode}")
                         else:
                             raise Exception("Application process not found")
             except (requests.ConnectionError, requests.Timeout) as e:
@@ -137,18 +131,12 @@ class TestEnvironment:
                 if self._app_process and self._app_process.poll() is not None:
                     # Process has terminated
                     stdout, stderr = self._app_process.communicate()
-                    logger.error(
-                        f"Application process exited with code {self._app_process.returncode}"
-                    )
+                    logger.error(f"Application process exited with code {self._app_process.returncode}")
                     logger.error(f"stdout: {stdout.decode('utf-8', errors='ignore')}")
                     logger.error(f"stderr: {stderr.decode('utf-8', errors='ignore')}")
-                    raise Exception(
-                        f"Application process exited prematurely with code {self._app_process.returncode}"
-                    ) from None
+                    raise Exception(f"Application process exited prematurely with code {self._app_process.returncode}") from None
 
-                logger.info(
-                    f"Waiting for application to start (attempt {i + 1}/{max_retries}): {error_msg[:100]}..."
-                )
+                logger.info(f"Waiting for application to start (attempt {i + 1}/{max_retries}): {error_msg[:100]}...")
                 time.sleep(retry_interval)
 
         # Final failure
@@ -156,15 +144,11 @@ class TestEnvironment:
             logger.error("No application process found")
         elif self._app_process.poll() is None:
             # Process is still running but not responding
-            logger.error(
-                "Application is still running but not responding to HTTP requests."
-            )
+            logger.error("Application is still running but not responding to HTTP requests.")
         else:
             # Process has terminated
             stdout, stderr = self._app_process.communicate()
-            logger.error(
-                f"Application process exited with code {self._app_process.returncode}"
-            )
+            logger.error(f"Application process exited with code {self._app_process.returncode}")
             logger.error(f"stdout: {stdout.decode('utf-8', errors='ignore')}")
             logger.error(f"stderr: {stderr.decode('utf-8', errors='ignore')}")
 
@@ -188,9 +172,7 @@ class TestEnvironment:
                 self._app_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 # Force termination
-                logger.warning(
-                    "Application did not terminate gracefully, killing process..."
-                )
+                logger.warning("Application did not terminate gracefully, killing process...")
                 self._app_process.kill()
                 self._app_process.wait(timeout=2)
         except Exception as e:
@@ -200,9 +182,7 @@ class TestEnvironment:
         if self._app_process.poll() is None:
             logger.warning("WARNING: Application process could not be terminated")
         else:
-            logger.info(
-                f"Application process terminated with code {self._app_process.returncode}"
-            )
+            logger.info(f"Application process terminated with code {self._app_process.returncode}")
 
         # Clear resources
         self._app_process = None

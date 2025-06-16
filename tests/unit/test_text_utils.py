@@ -37,6 +37,4 @@ class TestTextUtils:
     def test_is_romaji_readable(self, input_text, expected_result):
         """Test checking if text is romaji readable."""
         result = is_romaji_readable(input_text)
-        assert result == expected_result, (
-            f"Expected {expected_result} for '{input_text}', but got {result}"
-        )
+        assert result == expected_result, f"Expected {expected_result} for '{input_text}', but got {result}"

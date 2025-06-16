@@ -42,10 +42,7 @@ class TestUIInitializationProtection:
         for update in result:
             assert isinstance(update, dict)
             # Each update should have some combination of interactive, value, placeholder, etc.
-            assert any(
-                key in update
-                for key in ["interactive", "value", "placeholder", "variant"]
-            )
+            assert any(key in update for key in ["interactive", "value", "placeholder", "variant"])
 
     def test_file_input_enabled_after_initialization(self):
         """Test that file input is properly enabled after initialization."""
@@ -138,10 +135,7 @@ class TestUIInitializationProtection:
         # Podcast text area
         podcast_text_update = result[17]
         assert podcast_text_update["interactive"] is True
-        assert (
-            podcast_text_update["placeholder"]
-            == "テキストを処理してトーク原稿を生成してください..."
-        )
+        assert podcast_text_update["placeholder"] == "テキストを処理してトーク原稿を生成してください..."
 
     def test_checkboxes_enabled_after_initialization(self):
         """Test that checkbox components are properly enabled after initialization."""
@@ -182,9 +176,7 @@ class TestUIInitializationProtection:
         self.app.enable_ui_components_after_initialization(self.user_session)
 
         # Check that info log was called with session ID
-        mock_logger.info.assert_called_with(
-            f"Enabling UI components for session {self.user_session.session_id}"
-        )
+        mock_logger.info.assert_called_with(f"Enabling UI components for session {self.user_session.session_id}")
 
     def test_session_values_reflected_in_ui_updates(self):
         """Test that session values are properly reflected in UI component updates."""
@@ -197,7 +189,4 @@ class TestUIInitializationProtection:
         for update in result:
             assert isinstance(update, dict)
             # Each update should have some combination of interactive, value, placeholder, etc.
-            assert any(
-                key in update
-                for key in ["interactive", "value", "placeholder", "variant"]
-            )
+            assert any(key in update for key in ["interactive", "value", "placeholder", "variant"])

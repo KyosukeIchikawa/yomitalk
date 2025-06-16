@@ -31,9 +31,7 @@ def setup_logger(name="yomitalk_test", level=logging.INFO):
     console_handler.setLevel(level)
 
     # Formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     console_handler.setFormatter(formatter)
 
     # Add console handler to logger

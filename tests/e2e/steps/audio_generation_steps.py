@@ -109,9 +109,7 @@ def click_generate_audio_button(page: Page):
         # スクリーンショットを撮影
         screenshot_path = "audio_generation_error.png"
         page.screenshot(path=screenshot_path)
-        pytest.fail(
-            f"音声生成ボタンのクリックに失敗しました: {str(e)}, スクリーンショットを保存しました: {screenshot_path}"
-        )
+        pytest.fail(f"音声生成ボタンのクリックに失敗しました: {str(e)}, スクリーンショットを保存しました: {screenshot_path}")
 
 
 @then("audio should be generated")
@@ -176,9 +174,7 @@ def audio_file_is_generated(page: Page):
         except Exception:
             pass
 
-    logger.info(
-        f"Positive indicators found: {', '.join(found_indicators) if found_indicators else 'None'}"
-    )
+    logger.info(f"Positive indicators found: {', '.join(found_indicators) if found_indicators else 'None'}")
     logger.info("Audio generation check completed in test environment")
 
 
@@ -250,9 +246,7 @@ def audio_player_is_displayed(page: Page):
         logger.info(f"Status indicators found: {', '.join(status_info)}")
 
     # Final failure with detailed information
-    pytest.fail(
-        f"Audio player not displayed. Found elements: {found_elements}. Status: {status_info}"
-    )
+    pytest.fail(f"Audio player not displayed. Found elements: {found_elements}. Status: {status_info}")
 
 
 @given("audio generation was interrupted and reconnected")
@@ -571,9 +565,7 @@ def progress_updates_during_generation(page: Page):
             "progress_has_content": progress_has_content,
             "progress_content": progress_content[:50] if progress_content else "",
             "audio_output_has_content": audio_output_has_content,
-            "audio_output_content": (
-                audio_output_content[:50] if audio_output_content else ""
-            ),
+            "audio_output_content": (audio_output_content[:50] if audio_output_content else ""),
             "timestamp": page.evaluate("Date.now()"),
         }
 
@@ -585,21 +577,15 @@ def progress_updates_during_generation(page: Page):
             break
 
     # Verify we saw some progress indication (either button state or progress content)
-    generating_states = [
-        s for s in progress_states if s["button_state"] == "generating"
-    ]
+    generating_states = [s for s in progress_states if s["button_state"] == "generating"]
     progress_content_states = [s for s in progress_states if s["progress_has_content"]]
 
-    assert len(generating_states) > 0 or len(progress_content_states) > 0, (
-        f"No 'generating' state or progress content observed. States: {progress_states}"
-    )
+    assert len(generating_states) > 0 or len(progress_content_states) > 0, f"No 'generating' state or progress content observed. States: {progress_states}"
 
     if len(generating_states) > 0:
         logger.info(f"Successfully observed {len(generating_states)} generating states")
     if len(progress_content_states) > 0:
-        logger.info(
-            f"Successfully observed {len(progress_content_states)} progress content updates"
-        )
+        logger.info(f"Successfully observed {len(progress_content_states)} progress content updates")
 
 
 @then("final audio should be displayed when complete")

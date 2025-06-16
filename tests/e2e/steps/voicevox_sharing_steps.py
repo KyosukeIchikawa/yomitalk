@@ -130,9 +130,7 @@ def user_generates_audio(test_context, text):
 
     # Generate audio
     test_context.generated_files = []
-    for audio_file in test_context.audio_generator.generate_character_conversation(
-        podcast_text
-    ):
+    for audio_file in test_context.audio_generator.generate_character_conversation(podcast_text):
         if audio_file:
             test_context.generated_files.append(audio_file)
 
@@ -159,12 +157,8 @@ def all_users_generate_simultaneously(test_context):
             test_context.generation_results.put((user_id, False, str(e)))
 
     # Start threads for concurrent generation
-    for i, (session, text) in enumerate(
-        zip(test_context.sessions, test_context.test_texts, strict=False)
-    ):
-        thread = threading.Thread(
-            target=generate_audio_for_user, args=(session.audio_generator, text, i)
-        )
+    for i, (session, text) in enumerate(zip(test_context.sessions, test_context.test_texts, strict=False)):
+        thread = threading.Thread(target=generate_audio_for_user, args=(session.audio_generator, text, i))
         threads.append(thread)
         thread.start()
 

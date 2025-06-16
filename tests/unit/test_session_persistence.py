@@ -69,9 +69,7 @@ class TestSessionPersistence:
         original_session.text_processor.set_document_type(DocumentType.MANUAL)
         original_session.text_processor.set_podcast_mode("standard")
         original_session.text_processor.gemini_model.set_max_tokens(1500)
-        original_session.text_processor.gemini_model.set_model_name(
-            "gemini-2.5-pro-preview-05-06"
-        )
+        original_session.text_processor.gemini_model.set_model_name("gemini-2.5-pro-preview-05-06")
 
         # Serialize to dict
         session_dict = original_session.to_dict()
@@ -82,19 +80,10 @@ class TestSessionPersistence:
         # Verify session was restored correctly
         assert restored_session.session_id == "test_deserialization"
         assert restored_session.text_processor.current_api_type == APIType.GEMINI
-        assert (
-            restored_session.text_processor.prompt_manager.current_document_type
-            == DocumentType.MANUAL
-        )
-        assert (
-            restored_session.text_processor.prompt_manager.current_mode
-            == PodcastMode.STANDARD
-        )
+        assert restored_session.text_processor.prompt_manager.current_document_type == DocumentType.MANUAL
+        assert restored_session.text_processor.prompt_manager.current_mode == PodcastMode.STANDARD
         assert restored_session.text_processor.gemini_model.get_max_tokens() == 1500
-        assert (
-            restored_session.text_processor.gemini_model.model_name
-            == "gemini-2.5-pro-preview-05-06"
-        )
+        assert restored_session.text_processor.gemini_model.model_name == "gemini-2.5-pro-preview-05-06"
 
     def test_session_file_save_and_load(self, temp_session_dir):
         """Test session save/load to/from file."""
@@ -108,18 +97,14 @@ class TestSessionPersistence:
             session.text_processor.openai_model.set_max_tokens(3000)
 
             # Update audio state
-            session.update_audio_generation_state(
-                status="generating", progress=0.5, current_script="Test script content"
-            )
+            session.update_audio_generation_state(status="generating", progress=0.5, current_script="Test script content")
 
             # Save to file
             success = session.save_to_file()
             assert success is True
 
             # Verify file was created
-            session_file = (
-                temp_session_dir / "test_file_persistence" / "session_state.json"
-            )
+            session_file = temp_session_dir / "test_file_persistence" / "session_state.json"
             assert session_file.exists()
 
             # Verify file content is valid JSON
@@ -132,10 +117,7 @@ class TestSessionPersistence:
             assert loaded_session is not None
             assert loaded_session.session_id == "test_file_persistence"
             assert loaded_session.text_processor.current_api_type == APIType.OPENAI
-            assert (
-                loaded_session.text_processor.prompt_manager.current_document_type
-                == DocumentType.BLOG
-            )
+            assert loaded_session.text_processor.prompt_manager.current_document_type == DocumentType.BLOG
             assert loaded_session.text_processor.openai_model.get_max_tokens() == 3000
 
             # Verify audio state was restored
@@ -173,9 +155,7 @@ class TestSessionPersistence:
     def test_session_restoration_info(self):
         """Test session restoration information."""
         # Clear any environment API keys for this test
-        with patch.dict(
-            os.environ, {"OPENAI_API_KEY": "", "GOOGLE_API_KEY": ""}, clear=False
-        ):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "", "GOOGLE_API_KEY": ""}, clear=False):
             session = UserSession("test_restoration_info")
 
             # Get restoration info
@@ -205,9 +185,7 @@ class TestSessionPersistence:
     def test_session_needs_api_key_restoration(self):
         """Test API key restoration detection."""
         # Clear any environment API keys for this test
-        with patch.dict(
-            os.environ, {"OPENAI_API_KEY": "", "GOOGLE_API_KEY": ""}, clear=False
-        ):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "", "GOOGLE_API_KEY": ""}, clear=False):
             session = UserSession("test_api_key_restoration")
 
             # Initially both API keys should be missing
@@ -255,15 +233,11 @@ class TestSessionPersistence:
             original_session.text_processor.set_api_type(APIType.GEMINI)
             original_session.text_processor.set_document_type(DocumentType.MINUTES)
             original_session.text_processor.set_podcast_mode("section_by_section")
-            original_session.text_processor.set_character_mapping(
-                "九州そら", "中国うさぎ"
-            )
+            original_session.text_processor.set_character_mapping("九州そら", "中国うさぎ")
             original_session.text_processor.openai_model.set_max_tokens(4000)
             original_session.text_processor.openai_model.set_model_name("gpt-4.1")
             original_session.text_processor.gemini_model.set_max_tokens(2500)
-            original_session.text_processor.gemini_model.set_model_name(
-                "gemini-2.5-pro-preview-05-06"
-            )
+            original_session.text_processor.gemini_model.set_model_name("gemini-2.5-pro-preview-05-06")
 
             # Update audio generation state
             original_session.update_audio_generation_state(
@@ -283,14 +257,8 @@ class TestSessionPersistence:
 
             # Verify all settings were preserved
             assert loaded_session.text_processor.current_api_type == APIType.GEMINI
-            assert (
-                loaded_session.text_processor.prompt_manager.current_document_type
-                == DocumentType.MINUTES
-            )
-            assert (
-                loaded_session.text_processor.prompt_manager.current_mode
-                == PodcastMode.SECTION_BY_SECTION
-            )
+            assert loaded_session.text_processor.prompt_manager.current_document_type == DocumentType.MINUTES
+            assert loaded_session.text_processor.prompt_manager.current_mode == PodcastMode.SECTION_BY_SECTION
 
             char1, char2 = loaded_session.current_character_mapping
             assert char1 == "九州そら"
@@ -299,10 +267,7 @@ class TestSessionPersistence:
             assert loaded_session.text_processor.openai_model.get_max_tokens() == 4000
             assert loaded_session.text_processor.openai_model.model_name == "gpt-4.1"
             assert loaded_session.text_processor.gemini_model.get_max_tokens() == 2500
-            assert (
-                loaded_session.text_processor.gemini_model.model_name
-                == "gemini-2.5-pro-preview-05-06"
-            )
+            assert loaded_session.text_processor.gemini_model.model_name == "gemini-2.5-pro-preview-05-06"
 
             # Verify audio state was preserved
             audio_state = loaded_session.get_audio_generation_status()

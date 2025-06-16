@@ -142,9 +142,7 @@ class TestSessionCleanup:
             nonexistent_dir = Path("tests/data/nonexistent")
             try:
                 _ = nonexistent_dir.stat().st_mtime
-                raise AssertionError(
-                    "Should have raised an exception for nonexistent directory"
-                )
+                raise AssertionError("Should have raised an exception for nonexistent directory")
             except Exception:
                 # Expected behavior - exception should be raised
                 pass

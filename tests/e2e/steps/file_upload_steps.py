@@ -61,9 +61,7 @@ def text_is_extracted(page: Page):
     """
     # Text extraction result should be displayed in the specific text box for extracted text
     # Use the placeholder text to identify the correct textarea
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
 
     # Wait up to 10 seconds for text to appear in the textbox
     expect(text_area).not_to_be_empty(timeout=10000)
@@ -169,9 +167,7 @@ def file_input_should_be_cleared(page: Page):
     logger.info(f"File input value: '{input_value}'")
 
     # File input should be empty after automatic extraction
-    assert input_value == "" or input_value is None, (
-        "File input should be cleared after extraction"
-    )
+    assert input_value == "" or input_value is None, "File input should be cleared after extraction"
 
     logger.info("File input is cleared as expected")
 
@@ -183,19 +179,13 @@ def text_should_contain_file_content(page: Page):
 
     logger.info("Checking if extracted text contains file content")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert len(text_content.strip()) > 0, (
-        "Extracted text area should contain file content"
-    )
+    assert len(text_content.strip()) > 0, "Extracted text area should contain file content"
 
-    content_preview = (
-        text_content[:100] + "..." if len(text_content) > 100 else text_content
-    )
+    content_preview = text_content[:100] + "..." if len(text_content) > 100 else text_content
     logger.info(f"File content extracted: {content_preview}")
 
 
@@ -231,25 +221,17 @@ def text_should_accumulate_contents(page: Page):
 
     logger.info("Checking if extracted text accumulates content from multiple files")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    assert len(text_content.strip()) > 0, (
-        "Extracted text area should contain accumulated content"
-    )
+    assert len(text_content.strip()) > 0, "Extracted text area should contain accumulated content"
 
     # Check for content from both files or separator indicators
-    has_multiple_sources = (
-        "**Source:" in text_content or len(text_content.split("\n")) > 5
-    )
+    has_multiple_sources = "**Source:" in text_content or len(text_content.split("\n")) > 5
     assert has_multiple_sources, "Text should contain content from multiple sources"
 
-    content_preview = (
-        text_content[:200] + "..." if len(text_content) > 200 else text_content
-    )
+    content_preview = text_content[:200] + "..." if len(text_content) > 200 else text_content
     logger.info(f"Accumulated content: {content_preview}")
 
 
@@ -260,9 +242,7 @@ def text_extracted_with_source_separator(page: Page):
 
     logger.info("Checking if text is extracted with source separator")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -270,13 +250,9 @@ def text_extracted_with_source_separator(page: Page):
 
     # Check for separator and source information
     assert "---" in text_content, "Separator should be present in extracted text"
-    assert "**Source:" in text_content, (
-        "Source information should be present in extracted text"
-    )
+    assert "**Source:" in text_content, "Source information should be present in extracted text"
 
-    content_preview = (
-        text_content[:200] + "..." if len(text_content) > 200 else text_content
-    )
+    content_preview = text_content[:200] + "..." if len(text_content) > 200 else text_content
     logger.info(f"Extracted text content: '{content_preview}'")
     logger.info("Text extracted with source separator as expected")
 
@@ -288,22 +264,16 @@ def text_extracted_without_separator(page: Page):
 
     logger.info("Checking if text is extracted without separator")
 
-    text_area = page.locator(
-        'textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]'
-    )
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
     assert len(text_content.strip()) > 0, "Extracted text area should contain content"
 
     # Check that separator is not present (but allow for natural line breaks)
-    assert "---" not in text_content, (
-        "Separator should not be present in extracted text"
-    )
+    assert "---" not in text_content, "Separator should not be present in extracted text"
 
-    content_preview = (
-        text_content[:200] + "..." if len(text_content) > 200 else text_content
-    )
+    content_preview = text_content[:200] + "..." if len(text_content) > 200 else text_content
     logger.info(f"Extracted text content: '{content_preview}'")
     logger.info("Text extracted without separator as expected")
 
@@ -331,9 +301,7 @@ def user_uploads_text_file_with_name(page: Page, filename: str):
     if not test_file.exists():
         test_file.parent.mkdir(parents=True, exist_ok=True)
         if filename == "another_file.txt":
-            test_file.write_text(
-                "This is content from another test file for testing file accumulation."
-            )
+            test_file.write_text("This is content from another test file for testing file accumulation.")
         else:
             test_file.write_text("This is a sample text file content for testing.")
 
@@ -352,13 +320,9 @@ def user_unchecks_separator_checkbox(page: Page):
 
     logger.info("Unchecking auto separator checkbox (file upload context)")
 
-    checkbox = page.locator(
-        'label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]'
-    )
+    checkbox = page.locator('label:has-text("追加時に自動で区切りを挿入") input[type="checkbox"]')
     if not checkbox.is_visible():
-        checkbox = page.locator('input[type="checkbox"]').nth(
-            0
-        )  # Fallback to first checkbox
+        checkbox = page.locator('input[type="checkbox"]').nth(0)  # Fallback to first checkbox
     expect(checkbox).to_be_visible()
 
     # チェックボックスがチェック済みの場合のみクリック

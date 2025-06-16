@@ -35,9 +35,7 @@ class DocumentType(Enum):
         for doc_type in cls:
             if doc_type.label_name == label_name:
                 return doc_type
-        raise ValueError(
-            f"ラベル名 '{label_name}' に該当するドキュメントタイプが見つかりません。"
-        )
+        raise ValueError(f"ラベル名 '{label_name}' に該当するドキュメントタイプが見つかりません。")
 
     @classmethod
     def get_all_label_names(cls) -> List[str]:
@@ -61,9 +59,7 @@ class PodcastMode(Enum):
         for mode in cls:
             if mode.label_name == label_name:
                 return mode
-        raise ValueError(
-            f"ラベル名 '{label_name}' に該当するポッドキャストモードが見つかりません。"
-        )
+        raise ValueError(f"ラベル名 '{label_name}' に該当するポッドキャストモードが見つかりません。")
 
     @classmethod
     def get_all_label_names(cls) -> List[str]:
@@ -102,20 +98,14 @@ class PromptManager:
         for mode, template_file in cls.TEMPLATE_MAPPING.items():
             template_path = cls.TEMPLATE_DIR / template_file
             if not template_path.exists():
-                logger.warning(
-                    f"テンプレートファイルが見つかりません: {template_path} (モード: {mode.value})"
-                )
+                logger.warning(f"テンプレートファイルが見つかりません: {template_path} (モード: {mode.value})")
         else:
-            logger.info(
-                f"テンプレートファイル確認: {template_path} (モード: {mode.value})"
-            )
+            logger.info(f"テンプレートファイル確認: {template_path} (モード: {mode.value})")
 
         # 共通ユーティリティテンプレートの存在を確認
         utils_template = cls.TEMPLATE_DIR / "common_podcast_utils.j2"
         if not utils_template.exists():
-            logger.warning(
-                f"共通ユーティリティテンプレートファイルが見つかりません: {utils_template}"
-            )
+            logger.warning(f"共通ユーティリティテンプレートファイルが見つかりません: {utils_template}")
         else:
             logger.info(f"共通ユーティリティテンプレートファイル確認: {utils_template}")
 
@@ -130,9 +120,7 @@ class PromptManager:
             bool: True if successful, False otherwise.
         """
         if char1 not in DISPLAY_NAMES or char2 not in DISPLAY_NAMES:
-            logger.warning(
-                f"無効なキャラクター名: char1={char1}, char2={char2}、有効なキャラクター: {DISPLAY_NAMES}"
-            )
+            logger.warning(f"無効なキャラクター名: char1={char1}, char2={char2}、有効なキャラクター: {DISPLAY_NAMES}")
             return False
 
         self.char_mapping = {"Character1": char1, "Character2": char2}
@@ -149,9 +137,7 @@ class PromptManager:
         """
         try:
             template_content = self.get_template_content()
-            return self._render_template(
-                template_content, paper_text=paper_text, char_mapping=self.char_mapping
-            )
+            return self._render_template(template_content, paper_text=paper_text, char_mapping=self.char_mapping)
         except Exception as e:
             logger.error(f"会話生成エラー: {e}")
             return f"エラー: 会話の生成に失敗しました: {e}"
@@ -166,17 +152,11 @@ class PromptManager:
         template_file = self.TEMPLATE_MAPPING.get(self.current_mode)
 
         if not template_file:
-            logger.warning(
-                f"モード '{self.current_mode.value}' に対応するテンプレートが見つかりません。デフォルトを使用します。"
-            )
+            logger.warning(f"モード '{self.current_mode.value}' に対応するテンプレートが見つかりません。デフォルトを使用します。")
             template_file = self.TEMPLATE_MAPPING[PodcastMode.STANDARD]
 
         logger.info(f"テンプレートファイルパス: {self.TEMPLATE_DIR / template_file}")
-        logger.info(
-            f"使用するドキュメントタイプ: {self.current_document_type.name}, "
-            f"モード: {self.current_mode.name}, "
-            f"テンプレート: {template_file}"
-        )
+        logger.info(f"使用するドキュメントタイプ: {self.current_document_type.name}, モード: {self.current_mode.name}, テンプレート: {template_file}")
 
         try:
             with open(self.TEMPLATE_DIR / template_file, "r", encoding="utf-8") as f:
@@ -186,15 +166,9 @@ class PromptManager:
         except FileNotFoundError:
             logger.error(f"テンプレートファイルが見つかりません: {template_file}")
             # 最低限の情報を含むフォールバックテンプレート
-            return (
-                "Character1: こんにちは、今日は{{document_type}}の解説をします。\n"
-                "Character2: よろしくお願いします。\n"
-                "Character1: では始めましょう。"
-            )
+            return "Character1: こんにちは、今日は{{document_type}}の解説をします。\nCharacter2: よろしくお願いします。\nCharacter1: では始めましょう。"
 
-    def _render_template(
-        self, template_content: str, paper_text: str, char_mapping: Dict[str, str]
-    ) -> str:
+    def _render_template(self, template_content: str, paper_text: str, char_mapping: Dict[str, str]) -> str:
         """Render template with jinja2.
 
         Args:
@@ -218,15 +192,11 @@ class PromptManager:
             # プロジェクトのテンプレートディレクトリから共通テンプレートをコピー
             common_utils_src = self.TEMPLATE_DIR / "common_podcast_utils.j2"
             if common_utils_src.exists():
-                common_utils_dest = os.path.join(
-                    temp_templates_dir, "common_podcast_utils.j2"
-                )
+                common_utils_dest = os.path.join(temp_templates_dir, "common_podcast_utils.j2")
                 shutil.copy(common_utils_src, common_utils_dest)
 
             # テンプレートコンテンツをファイルとして保存
-            with open(
-                os.path.join(temp_templates_dir, "template.j2"), "w", encoding="utf-8"
-            ) as f:
+            with open(os.path.join(temp_templates_dir, "template.j2"), "w", encoding="utf-8") as f:
                 f.write(template_content)
 
             # Jinja2環境をセットアップ
@@ -307,9 +277,7 @@ class PromptManager:
             TypeError: If mode is not a PodcastMode instance.
         """
         if not isinstance(mode, PodcastMode):
-            raise TypeError(
-                f"mode must be an instance of PodcastMode, not {type(mode)}"
-            )
+            raise TypeError(f"mode must be an instance of PodcastMode, not {type(mode)}")
 
         self.current_mode = mode
         return True
