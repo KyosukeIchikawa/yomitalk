@@ -39,7 +39,7 @@ class UserSession:
         self.audio_generation_state: Dict[str, Any] = {
             "is_generating": False,
             "progress": 0.0,
-            "status": "idle",  # idle, generating, completed, failed
+            "status": "idle",  # idle, generating, completed, failed, partial
             "current_script": "",
             "generated_parts": [],
             "final_audio_path": None,
@@ -47,6 +47,7 @@ class UserSession:
             "generation_id": None,
             "start_time": None,
             "last_update": None,
+            "estimated_total_parts": 1,
         }
 
         # Default API type is Gemini
@@ -319,6 +320,7 @@ class UserSession:
             "generation_id": None,
             "start_time": None,
             "last_update": None,
+            "estimated_total_parts": 1,
         }
         logger.debug("Audio generation state reset")
 
@@ -507,4 +509,75 @@ class UserSession:
             "current_api_type": (self.text_processor.current_api_type.value if self.text_processor.current_api_type else None),
             "has_generated_audio": self.has_generated_audio(),
             "last_save_time": time.time(),
+        }
+
+    def prepare_network_recovery(self) -> None:
+        """Prepare session for network recovery by checking audio generation state."""
+        if self.is_audio_generation_active():
+            logger.info(f"Session {self.session_id}: Audio generation was active before disconnect")
+            # Check if generation process is still running or has completed
+            self._check_audio_generation_completion()
+
+        # Save current state for recovery
+        self.auto_save()
+
+    def _check_audio_generation_completion(self) -> None:
+        """Check if audio generation has completed during network disconnection."""
+        final_audio_path = self.audio_generation_state.get("final_audio_path")
+
+        # If final audio exists and is valid, mark as completed
+        if final_audio_path and Path(final_audio_path).exists():
+            logger.info(f"Audio generation completed during disconnect: {final_audio_path}")
+            self.update_audio_generation_state(is_generating=False, status="completed", progress=1.0)
+        else:
+            # Check if any streaming parts were generated
+            streaming_parts = self.audio_generation_state.get("streaming_parts", [])
+            if streaming_parts:
+                # Verify which files still exist
+                valid_parts = [part for part in streaming_parts if Path(part).exists()]
+                if valid_parts != streaming_parts:
+                    logger.warning(f"Some streaming parts no longer exist: {len(streaming_parts) - len(valid_parts)} missing")
+                    self.update_audio_generation_state(streaming_parts=valid_parts)
+
+                # If no final audio but we have parts, mark as partial completion
+                if not final_audio_path and valid_parts:
+                    logger.info("Audio generation partially completed during disconnect")
+                    self.update_audio_generation_state(is_generating=False, status="partial", progress=0.8)
+                elif not valid_parts:
+                    # No valid parts, mark as failed
+                    logger.warning("Audio generation failed - no valid parts remain during disconnect")
+                    self.update_audio_generation_state(is_generating=False, status="failed", progress=0.0)
+            else:
+                # No progress made, mark as failed
+                logger.warning("Audio generation did not make progress during disconnect")
+                self.update_audio_generation_state(is_generating=False, status="failed", progress=0.0)
+
+    def can_resume_audio_generation(self) -> bool:
+        """Check if audio generation can be resumed after network recovery.
+
+        Returns:
+            bool: True if audio generation can be resumed
+        """
+        if not self.is_audio_generation_active():
+            return False
+
+        # Check if we have a valid script and generation ID
+        return bool(self.audio_generation_state.get("current_script")) and bool(self.audio_generation_state.get("generation_id"))
+
+    def get_recovery_progress_info(self) -> Dict[str, Any]:
+        """Get audio generation progress information for recovery display.
+
+        Returns:
+            Dict[str, Any]: Progress information for UI display
+        """
+        state = self.audio_generation_state
+        return {
+            "is_active": self.is_audio_generation_active(),
+            "status": state.get("status", "idle"),
+            "progress": state.get("progress", 0.0),
+            "streaming_parts_count": len(state.get("streaming_parts", [])),
+            "estimated_total_parts": state.get("estimated_total_parts", 1),
+            "final_audio_available": bool(state.get("final_audio_path")),
+            "generation_id": state.get("generation_id"),
+            "start_time": state.get("start_time"),
         }

@@ -195,24 +195,26 @@ class TestPaperPodcastAppAudioRecovery:
         assert button_state["interactive"] is True
 
     def test_handle_connection_recovery_with_active_generation(self):
-        """Test connection recovery when generation is active."""
+        """Test connection recovery when generation is active with BrowserState."""
         # Set up active generation state
         self.user_session.update_audio_generation_state(
             is_generating=True,
             status="generating",
             progress=0.6,
             streaming_parts=["part1.wav"],
+            estimated_total_parts=3,
         )
 
         streaming_audio, progress_html, final_audio, button_state = self.app.handle_connection_recovery(self.user_session, terms_agreed=True, podcast_text="Test script")
 
-        # During active generation, audio components should return gr.update() to avoid race conditions
-        import gradio as gr
-
-        assert isinstance(streaming_audio, gr.update().__class__)
+        # BrowserState should return the actual streaming audio for recovery
+        assert streaming_audio == "part1.wav"
         assert "音声生成中" in progress_html
-        assert isinstance(final_audio, gr.update().__class__)
+        assert "60%" in progress_html
+        assert "復帰" in progress_html
+        assert final_audio is None
         assert button_state["interactive"] is False
+        assert "復帰" in button_state["value"]
 
     def test_handle_connection_recovery_terms_not_agreed(self):
         """Test connection recovery when terms are not agreed."""
@@ -285,3 +287,101 @@ class TestPaperPodcastAppAudioRecovery:
 
         assert button_state["interactive"] is False
         assert button_state["value"] == "音声を生成（トーク原稿が必要です）"
+
+
+class TestUserSessionNetworkRecovery:
+    """Test class for UserSession network recovery functionality."""
+
+    def setup_method(self):
+        """Set up test fixtures before each test method is run."""
+        self.session_id = "test_recovery_session"
+        self.user_session = UserSession(self.session_id)
+
+    def test_prepare_network_recovery_no_active_generation(self):
+        """Test network recovery preparation when no generation is active."""
+        # Call prepare_network_recovery
+        self.user_session.prepare_network_recovery()
+
+        # State should remain unchanged
+        state = self.user_session.get_audio_generation_status()
+        assert state["is_generating"] is False
+        assert state["status"] == "idle"
+
+    def test_prepare_network_recovery_with_active_generation(self):
+        """Test network recovery preparation with active generation."""
+        # Set up active generation
+        self.user_session.update_audio_generation_state(is_generating=True, status="generating", current_script="Test script", generation_id="test_gen_id")
+
+        # Call prepare_network_recovery
+        self.user_session.prepare_network_recovery()
+
+        # Should check and potentially update completion status
+        state = self.user_session.get_audio_generation_status()
+        # Without actual files, should mark as failed
+        assert state["is_generating"] is False
+        assert state["status"] == "failed"
+
+    def test_get_recovery_progress_info(self):
+        """Test getting recovery progress information."""
+        # Set up some generation state
+        self.user_session.update_audio_generation_state(
+            is_generating=True, status="generating", progress=0.7, streaming_parts=["part1.wav", "part2.wav"], estimated_total_parts=4, generation_id="test_gen_id", start_time=1000000000
+        )
+
+        # Get recovery info
+        info = self.user_session.get_recovery_progress_info()
+
+        # Verify information
+        assert info["is_active"] is True
+        assert info["status"] == "generating"
+        assert info["progress"] == 0.7
+        assert info["streaming_parts_count"] == 2
+        assert info["estimated_total_parts"] == 4
+        assert info["final_audio_available"] is False
+        assert info["generation_id"] == "test_gen_id"
+        assert info["start_time"] == 1000000000
+
+    def test_can_resume_audio_generation(self):
+        """Test checking if audio generation can be resumed."""
+        # Initially cannot resume
+        assert self.user_session.can_resume_audio_generation() is False
+
+        # Set up incomplete state (missing script)
+        self.user_session.update_audio_generation_state(is_generating=True, status="generating", generation_id="test_gen_id")
+        assert self.user_session.can_resume_audio_generation() is False
+
+        # Set up complete state
+        self.user_session.update_audio_generation_state(is_generating=True, status="generating", current_script="Test script", generation_id="test_gen_id")
+        assert self.user_session.can_resume_audio_generation() is True
+
+        # Mark as not generating
+        self.user_session.update_audio_generation_state(is_generating=False)
+        assert self.user_session.can_resume_audio_generation() is False
+
+    def test_check_audio_generation_completion_no_files(self):
+        """Test checking completion when no files exist."""
+        # Set up active generation
+        self.user_session.update_audio_generation_state(is_generating=True, status="generating")
+
+        # Check completion (no files exist)
+        self.user_session._check_audio_generation_completion()
+
+        # Should mark as failed
+        state = self.user_session.get_audio_generation_status()
+        assert state["is_generating"] is False
+        assert state["status"] == "failed"
+        assert state["progress"] == 0.0
+
+    def test_check_audio_generation_completion_with_parts(self):
+        """Test checking completion with streaming parts but no final audio."""
+        # Set up active generation with parts
+        self.user_session.update_audio_generation_state(is_generating=True, status="generating", streaming_parts=["nonexistent1.wav", "nonexistent2.wav"])
+
+        # Check completion
+        self.user_session._check_audio_generation_completion()
+
+        # Should mark as failed since files don't exist
+        state = self.user_session.get_audio_generation_status()
+        assert state["is_generating"] is False
+        assert state["status"] == "failed"
+        assert state["streaming_parts"] == []  # Invalid parts removed

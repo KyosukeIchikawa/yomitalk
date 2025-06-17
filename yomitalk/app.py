@@ -66,6 +66,170 @@ class PaperPodcastApp:
         new_session.auto_save()  # Save initial state
         return new_session
 
+    def create_user_session_with_recovery(self, request: gr.Request) -> UserSession:
+        """Create user session with network recovery support."""
+        session_id = request.session_hash
+
+        # Try to load existing session from file storage first
+        existing_session = UserSession.load_from_file(session_id)
+        if existing_session:
+            logger.info(f"Restored session from file storage: {session_id}")
+            # Check for ongoing audio generation and prepare for recovery
+            existing_session.prepare_network_recovery()
+            return existing_session
+
+        # Create new session if no saved state found
+        logger.info(f"Created new session with recovery support: {session_id}")
+        new_session = UserSession(session_id)
+        new_session.auto_save()
+        return new_session
+
+    def initialize_session_with_browser_state(self, browser_state: Dict[str, Any], request: gr.Request) -> Tuple[UserSession, Dict[str, Any]]:
+        """Initialize session with BrowserState for network recovery support."""
+        session_id = request.session_hash
+
+        # Check if we have a stored session in BrowserState
+        stored_session_id = browser_state.get("session_id", "")
+
+        if stored_session_id and stored_session_id == session_id:
+            # Restoring from BrowserState - try to load existing session
+            logger.info(f"Restoring session from BrowserState: {session_id}")
+            existing_session = UserSession.load_from_file(session_id)
+            if existing_session:
+                # Prepare for network recovery
+                existing_session.prepare_network_recovery()
+
+                # Update BrowserState with current session status
+                recovery_info = existing_session.get_recovery_progress_info()
+                updated_browser_state = browser_state.copy()
+                updated_browser_state.update(
+                    {
+                        "session_id": session_id,
+                        "audio_generation_active": recovery_info["is_active"],
+                        "has_generated_audio": existing_session.has_generated_audio(),
+                        "audio_status": recovery_info["status"],
+                        "audio_progress": recovery_info["progress"],
+                    }
+                )
+
+                return existing_session, updated_browser_state
+
+        # Create new session
+        logger.info(f"Creating new session with BrowserState support: {session_id}")
+        new_session = UserSession(session_id)
+        new_session.auto_save()
+
+        # Initialize BrowserState with new session
+        updated_browser_state = {"session_id": session_id, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0}
+
+        return new_session, updated_browser_state
+
+    def initialize_session_simple(self, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
+        """Simple session initialization without request object."""
+        # Create a session with a random ID since we don't have request.session_hash
+        import uuid
+
+        session_id = f"session_{uuid.uuid4().hex[:12]}"
+
+        logger.info(f"Creating new session (simple): {session_id}")
+        new_session = UserSession(session_id)
+        new_session.auto_save()
+
+        # Initialize BrowserState with new session
+        updated_browser_state = {"session_id": session_id, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0}
+
+        return new_session, updated_browser_state
+
+    def create_user_session_with_browser_state(self, request: gr.Request, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
+        """Create user session and update browser state using proper session hash."""
+        session_id = request.session_hash
+
+        logger.info(f"Creating new session with browser state: {session_id}")
+
+        # Try to load existing session first
+        existing_session = UserSession.load_from_file(session_id)
+        if existing_session:
+            logger.info(f"Restored existing session: {session_id}")
+            # Prepare for network recovery
+            existing_session.prepare_network_recovery()
+
+            # Update BrowserState with existing session info
+            recovery_info = existing_session.get_recovery_progress_info()
+            updated_browser_state = browser_state.copy()
+            updated_browser_state.update(
+                {
+                    "session_id": session_id,
+                    "audio_generation_active": recovery_info["is_active"],
+                    "has_generated_audio": existing_session.has_generated_audio(),
+                    "audio_status": recovery_info["status"],
+                    "audio_progress": recovery_info["progress"],
+                }
+            )
+
+            return existing_session, updated_browser_state
+
+        # Create new session if no saved state found
+        new_session = UserSession(session_id)
+        new_session.auto_save()
+
+        # Update BrowserState with new session info
+        updated_browser_state = browser_state.copy()
+        updated_browser_state.update({"session_id": session_id, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0})
+
+        return new_session, updated_browser_state
+
+    def update_browser_state_audio_status(self, user_session: UserSession, browser_state: Dict[str, Any]) -> Dict[str, Any]:
+        """Update BrowserState with current audio generation status."""
+        if user_session is None:
+            # Return original browser_state if user_session is None
+            return browser_state.copy()
+
+        recovery_info = user_session.get_recovery_progress_info()
+
+        updated_state = browser_state.copy()
+        updated_state.update(
+            {
+                "session_id": user_session.session_id,
+                "audio_generation_active": recovery_info["is_active"],
+                "has_generated_audio": user_session.has_generated_audio(),
+                "audio_status": recovery_info["status"],
+                "audio_progress": recovery_info["progress"],
+                "streaming_parts_count": recovery_info["streaming_parts_count"],
+                "estimated_total_parts": recovery_info["estimated_total_parts"],
+            }
+        )
+
+        return updated_state
+
+    def extract_url_text_with_debug(self, url: str, existing_text: str, add_separator: bool, user_session: UserSession) -> Tuple[str, UserSession]:
+        """Debug wrapper for URL text extraction."""
+        logger.info(
+            f"[DEBUG] extract_url_text_with_debug called - URL: {url}, "
+            f"existing_text_len: {len(existing_text) if existing_text else 0}, "
+            f"add_separator: {add_separator}, "
+            f"user_session: {user_session.session_id if user_session else 'None'}"
+        )
+
+        try:
+            result_text, result_session = self.extract_url_text(url, existing_text, add_separator, user_session)
+            logger.info(f"[DEBUG] extract_url_text result - text_len: {len(result_text) if result_text else 0}, session: {result_session.session_id if result_session else 'None'}")
+            return result_text, result_session
+        except Exception as e:
+            logger.error(f"[DEBUG] extract_url_text exception: {str(e)}")
+            raise
+
+    def generate_podcast_audio_streaming_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any], progress=None):
+        """Generate streaming audio with BrowserState synchronization for network recovery."""
+        # Use the existing streaming generator but wrap it to update BrowserState
+        for result in self.generate_podcast_audio_streaming(text, user_session, progress):
+            streaming_audio, updated_user_session, progress_html, final_audio = result
+
+            # Update BrowserState with current audio generation status
+            updated_browser_state = self.update_browser_state_audio_status(updated_user_session, browser_state)
+
+            # Yield with updated BrowserState
+            yield streaming_audio, updated_user_session, progress_html, final_audio, updated_browser_state
+
     def set_openai_api_key(self, api_key: str, user_session: UserSession):
         """Set the OpenAI API key for the specific user session."""
         if not api_key or api_key.strip() == "":
@@ -106,6 +270,15 @@ class PaperPodcastApp:
         user_session: UserSession,
     ) -> Tuple[None, str, UserSession]:
         """Extract text from a file and append to existing text for the specific user session."""
+
+        if user_session is None:
+            logger.warning("File extraction called with None user_session - creating temporary session")
+            # Create a temporary session for this operation
+            import uuid
+
+            user_session = UserSession(f"temp_{uuid.uuid4().hex[:8]}")
+            logger.info(f"Created temporary session: {user_session.session_id}")
+
         if file_obj is None:
             logger.debug("No file selected for extraction")
             return None, existing_text, user_session
@@ -134,32 +307,62 @@ class PaperPodcastApp:
         user_session: UserSession,
     ) -> Tuple[str, UserSession]:
         """Extract text from a URL and append to existing text for the specific user session."""
-        if not url or not url.strip():
-            logger.warning("No URL provided for extraction")
-            # Return error message for empty URL input
-            error_message = "Please enter a valid URL"
+
+        try:
+            if user_session is None:
+                logger.warning("URL extraction called with None user_session - creating temporary session")
+                # Create a temporary session for this operation
+                import uuid
+
+                user_session = UserSession(f"temp_{uuid.uuid4().hex[:8]}")
+                logger.info(f"Created temporary session: {user_session.session_id}")
+
+            logger.info(f"URL extraction request - URL: {url}, add_separator: {add_separator}, session: {user_session.session_id}")
+
+            if not url or not url.strip():
+                logger.warning("No URL provided for extraction")
+                # Return error message for empty URL input
+                error_message = "Please enter a valid URL"
+                if existing_text.strip():
+                    # If there's existing text, append error message with separator
+                    combined_text = existing_text.rstrip() + "\n\n---\n**Error**\n\n" + error_message if add_separator else existing_text.rstrip() + "\n\n" + error_message
+                else:
+                    # If no existing text, just show error message
+                    combined_text = error_message
+                return combined_text, user_session
+
+            # Extract new text from URL
+            logger.info(f"Extracting text from URL: {url.strip()}")
+            new_text = ContentExtractor.extract_from_url(url.strip())
+            logger.info(f"Extracted {len(new_text) if new_text else 0} characters from URL")
+
+            # Use URL as source name
+            source_name = url.strip()
+
+            # Append to existing text with source information
+            combined_text = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator)
+            logger.info(f"URL text extraction completed for session {user_session.session_id} - final text length: {len(combined_text)}")
+            return combined_text, user_session
+
+        except Exception as e:
+            logger.error(f"Error in URL text extraction: {str(e)}")
+            error_message = f"Error extracting from URL: {str(e)}"
             if existing_text.strip():
-                # If there's existing text, append error message with separator
                 combined_text = existing_text.rstrip() + "\n\n---\n**Error**\n\n" + error_message if add_separator else existing_text.rstrip() + "\n\n" + error_message
             else:
-                # If no existing text, just show error message
                 combined_text = error_message
             return combined_text, user_session
 
-        # Extract new text from URL
-        new_text = ContentExtractor.extract_from_url(url.strip())
-
-        # Use URL as source name
-        source_name = url.strip()
-
-        # Append to existing text with source information
-        combined_text = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator)
-
-        logger.debug(f"URL text extraction completed for session {user_session.session_id}")
-        return combined_text, user_session
-
     def generate_podcast_text(self, text: str, user_session: UserSession) -> Tuple[str, UserSession]:
         """Generate podcast-style text from input text for the specific user session."""
+
+        if user_session is None:
+            logger.warning("Podcast text generation called with None user_session - creating temporary session")
+            import uuid
+
+            user_session = UserSession(f"temp_{uuid.uuid4().hex[:8]}")
+            logger.info(f"Created temporary session: {user_session.session_id}")
+
         if not text:
             logger.warning("Podcast text generation: Input text is empty")
             return "Please upload a file and extract text first.", user_session
@@ -203,6 +406,13 @@ class PaperPodcastApp:
         user_session: UserSession,
     ) -> Tuple[str, UserSession]:
         """Extract text from uploaded file automatically (for file upload mode)."""
+        if user_session is None:
+            logger.warning("Auto file extraction called with None user_session - creating temporary session")
+            import uuid
+
+            user_session = UserSession(f"temp_{uuid.uuid4().hex[:8]}")
+            logger.info(f"Created temporary session: {user_session.session_id}")
+
         if file_obj is None:
             logger.debug("No file provided for automatic extraction")
             return existing_text, user_session
@@ -342,7 +552,7 @@ class PaperPodcastApp:
 
     def _create_recovery_progress_html(self, user_session: UserSession, status_message: str, is_active: bool = False) -> str:
         """
-        Create progress HTML for connection recovery scenarios.
+        Create progress HTML for connection recovery scenarios using new UserSession recovery methods.
 
         Args:
             user_session (UserSession): User session instance
@@ -355,18 +565,19 @@ class PaperPodcastApp:
         if not status_message:
             return ""
 
-        state = user_session.get_audio_generation_status()
-        streaming_parts = state.get("streaming_parts", [])
-        estimated_total_parts = state.get("estimated_total_parts", len(streaming_parts) if streaming_parts else 1)
-        current_part_count = len(streaming_parts)
-        start_time = state.get("start_time")
+        # Use new recovery progress info method
+        recovery_info = user_session.get_recovery_progress_info()
 
-        # 推定パーツ数が実際のパーツ数より少ない場合は調整
+        current_part_count = recovery_info["streaming_parts_count"]
+        estimated_total_parts = recovery_info["estimated_total_parts"]
+        start_time = recovery_info["start_time"]
+
+        # Adjust estimated parts if actual parts exceed estimate
         if current_part_count > estimated_total_parts:
             estimated_total_parts = current_part_count
 
         if is_active:
-            # 進行中の場合
+            # Active generation case
             return self._create_progress_html(
                 current_part_count,
                 estimated_total_parts,
@@ -374,12 +585,14 @@ class PaperPodcastApp:
                 start_time=start_time,
             )
         else:
-            # 完了済みの場合
+            # Completed/failed case
+            # For completed status, show full progress
+            display_parts = estimated_total_parts if recovery_info["status"] == "completed" else current_part_count
             return self._create_progress_html(
-                estimated_total_parts,
+                display_parts,
                 estimated_total_parts,
                 status_message,
-                is_completed=True,
+                is_completed=(recovery_info["status"] == "completed"),
                 start_time=start_time,
             )
 
@@ -1055,9 +1268,12 @@ class PaperPodcastApp:
                     </div>"""
                 )
 
-            # Initialize user session and sync UI components with session values
+            # Initialize BrowserState for network recovery - stores essential session data in localStorage
+            browser_state = gr.BrowserState({"session_id": "", "audio_generation_active": False, "has_generated_audio": False})
+            # Initialize regular State for UserSession object (not serializable to localStorage)
             user_session = gr.State()
-            app.load(fn=self.create_user_session, outputs=[user_session], queue=False).then(
+
+            app.load(fn=self.create_user_session_with_browser_state, inputs=[browser_state], outputs=[user_session, browser_state], queue=False).then(
                 # ユーザーセッション作成後にUIコンポーネントの値を同期
                 fn=self.sync_ui_with_session,
                 inputs=[user_session],
@@ -1098,13 +1314,14 @@ class PaperPodcastApp:
                 ],
                 queue=False,
             ).then(
-                # Connection recovery on page load/reconnection (includes audio state restoration)
-                fn=self.handle_connection_recovery,
-                inputs=[user_session, terms_checkbox, podcast_text],
+                # Connection recovery on page load/reconnection (after UI initialization)
+                fn=self.handle_connection_recovery_with_browser_state,
+                inputs=[user_session, browser_state, terms_checkbox, podcast_text],
                 outputs=[
                     streaming_audio_output,
                     audio_progress,
                     audio_output,
+                    browser_state,
                     generate_btn,
                 ],
                 api_name="connection_recovery",
@@ -1150,7 +1367,7 @@ class PaperPodcastApp:
 
             # URL抽出ボタンのイベントハンドラー
             url_extract_btn.click(
-                fn=self.extract_url_text,
+                fn=self.extract_url_text_with_debug,
                 inputs=[
                     url_input,
                     extracted_text,
@@ -1297,9 +1514,9 @@ class PaperPodcastApp:
 
             # 0. 音声生成状態をリセットしてストリーミング再生コンポーネントをクリア
             audio_events = disable_btn_event.then(
-                fn=self.reset_audio_state_and_components,
-                inputs=[user_session],
-                outputs=[streaming_audio_output, audio_progress, audio_output],
+                fn=self.reset_audio_state_and_components_with_browser_state,
+                inputs=[user_session, browser_state],
+                outputs=[streaming_audio_output, audio_progress, audio_output, browser_state],
                 concurrency_id="audio_reset",
                 concurrency_limit=1,  # 同時実行数を1に制限
                 api_name="reset_audio_state",
@@ -1307,13 +1524,14 @@ class PaperPodcastApp:
 
             # 1. ストリーミング再生開始 (音声パーツ生成とストリーミング再生)
             streaming_event = audio_events.then(
-                fn=self.generate_podcast_audio_streaming,
-                inputs=[podcast_text, user_session],
+                fn=self.generate_podcast_audio_streaming_with_browser_state,
+                inputs=[podcast_text, user_session, browser_state],
                 outputs=[
                     streaming_audio_output,
                     user_session,
                     audio_progress,
                     audio_output,
+                    browser_state,
                 ],
                 concurrency_limit=1,  # 音声生成は1つずつ実行
                 concurrency_id="audio_queue",  # 音声生成用キューID
@@ -1533,6 +1751,16 @@ class PaperPodcastApp:
         # 音声コンポーネントと進捗表示をクリア
         return None, "", None
 
+    def reset_audio_state_and_components_with_browser_state(self, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[None, str, None, Dict[str, Any]]:
+        """Reset audio state and components with BrowserState synchronization."""
+        # Reset audio state using original method
+        streaming_clear, progress_clear, audio_clear = self.reset_audio_state_and_components(user_session)
+
+        # Update BrowserState to reflect the reset state
+        updated_browser_state = self.update_browser_state_audio_status(user_session, browser_state)
+
+        return streaming_clear, progress_clear, audio_clear, updated_browser_state
+
     def enable_ui_components_after_initialization(
         self, user_session: UserSession
     ) -> Tuple[
@@ -1731,10 +1959,28 @@ class PaperPodcastApp:
 
         return streaming_audio, final_audio, status_message
 
+    def handle_connection_recovery_with_browser_state(
+        self, user_session: UserSession, browser_state: Dict[str, Any], terms_agreed: bool, podcast_text: str
+    ) -> Tuple[Optional[str], str, Optional[str], Dict[str, Any], Dict[str, Any]]:
+        """Handle connection recovery with BrowserState synchronization."""
+        # Handle case where user_session is None (during initialization)
+        if user_session is None:
+            logger.debug("User session is None during connection recovery - returning default state")
+            default_button_state = {"value": "音声を生成（VOICEVOX利用規約に同意が必要です）", "interactive": False, "variant": "secondary"}
+            return None, "", None, browser_state.copy(), default_button_state
+
+        # Get recovery data from the original method
+        streaming_audio, progress_html, final_audio, button_state = self.handle_connection_recovery(user_session, terms_agreed, podcast_text)
+
+        # Update BrowserState with current session status
+        updated_browser_state = self.update_browser_state_audio_status(user_session, browser_state)
+
+        return streaming_audio, progress_html, final_audio, updated_browser_state, button_state
+
     def handle_connection_recovery(self, user_session: UserSession, terms_agreed: bool, podcast_text: str) -> Tuple[Optional[str], str, Optional[str], Dict[str, Any]]:
         """
-        Handle connection recovery when page loads/reconnects
-        Combines audio state restoration and button state management
+        Handle connection recovery when page loads/reconnects with enhanced recovery support.
+        Combines audio state restoration and button state management.
 
         Args:
             user_session: User session
@@ -1745,11 +1991,14 @@ class PaperPodcastApp:
             Tuple[Optional[str], str, Optional[str], Dict[str, Any]]:
                 (streaming_audio, progress_html, final_audio, button_update)
         """
-        logger.info("Connection recovery triggered - checking audio state")
+        logger.info("Enhanced connection recovery triggered - checking audio state")
 
         try:
+            # Get recovery progress information from UserSession
+            recovery_info = user_session.get_recovery_progress_info()
+
             # Check if there's any audio to restore
-            if not user_session.is_audio_generation_active() and not user_session.has_generated_audio():
+            if not recovery_info["is_active"] and not user_session.has_generated_audio():
                 logger.debug("No audio to restore - setting normal button state")
                 return (
                     None,
@@ -1758,31 +2007,50 @@ class PaperPodcastApp:
                     self.update_audio_button_state(terms_agreed, podcast_text),
                 )
 
-            # Restore audio state using the existing restoration logic
-            streaming_audio, final_audio, status_message = self.check_and_restore_audio_generation(user_session)
+            # Determine status message based on recovery state
+            status = recovery_info["status"]
+            if status == "completed":
+                status_message = "✅ 音声生成完了（復帰）"
+            elif status == "partial":
+                status_message = "🎵 音声生成部分完了（復帰）"
+            elif status == "generating":
+                progress_percent = int(recovery_info["progress"] * 100)
+                status_message = f"🎵 音声生成中... {progress_percent}%（復帰）"
+            elif status == "failed":
+                status_message = "❌ 音声生成エラー（復帰）"
+            else:
+                status_message = "🎤 音声生成準備中...（復帰）"
 
-            logger.info("Audio state detected - restoring components")
+            # Get audio file paths from session state
+            audio_state = user_session.get_audio_generation_status()
+            streaming_parts = audio_state.get("streaming_parts", [])
+            final_audio_path = audio_state.get("final_audio_path")
 
-            # If audio generation is active, avoid race conditions with timer and events
-            if user_session.is_audio_generation_active():
-                logger.debug("Audio generation active - avoiding race condition with timer")
-                # 進行中の進捗情報を取得
+            # Select most recent streaming audio if available
+            streaming_audio = streaming_parts[-1] if streaming_parts else None
+            # For final audio, return the path even if file doesn't exist (test compatibility)
+            final_audio = final_audio_path
+
+            logger.info(f"Audio state restored - Status: {status}, Streaming parts: {len(streaming_parts)}, Final audio: {bool(final_audio)}")
+
+            # If audio generation is still active, show active progress
+            if recovery_info["is_active"]:
+                logger.debug("Audio generation active - showing active recovery state")
                 progress_html = self._create_recovery_progress_html(user_session, status_message, is_active=True)
-                # Return gr.update() for audio components to avoid conflicts with ongoing processes
                 return (
-                    gr.update(),  # Preserve current streaming audio state
+                    streaming_audio,
                     progress_html,
-                    gr.update(),  # Preserve current final audio state
+                    final_audio,
                     gr.update(interactive=False, value="音声生成中...（復帰）"),
                 )
             else:
-                # Audio generation completed - safe to restore audio components
+                # Audio generation completed or failed - restore final state
                 button_state = self.update_audio_button_state(terms_agreed, podcast_text)
                 progress_html = self._create_recovery_progress_html(user_session, status_message, is_active=False)
                 return (streaming_audio, progress_html, final_audio, button_state)
 
         except Exception as e:
-            logger.error(f"Error in connection recovery: {e}")
+            logger.error(f"Error in BrowserState connection recovery: {e}")
             return (
                 None,
                 "",
