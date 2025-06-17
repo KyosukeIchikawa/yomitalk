@@ -68,7 +68,7 @@ def agree_to_voicevox_terms(page: Page):
         for checkbox in checkboxes:
             if not checkbox.is_checked():
                 checkbox.check()
-                page.wait_for_timeout(500)  # 少し待機
+                page.wait_for_timeout(200)  # 少し待機
 
         logger.info("VOICEVOX利用規約に同意しました")
     except Exception as e:
@@ -104,7 +104,7 @@ def click_generate_audio_button(page: Page):
         generate_button.click()
 
         # 処理が開始されるのを待つ
-        page.wait_for_timeout(2000)  # 少なくとも2秒待機
+        page.wait_for_timeout(1000)  # 少なくとも1秒待機
     except Exception as e:
         # スクリーンショットを撮影
         screenshot_path = "audio_generation_error.png"
@@ -122,7 +122,11 @@ def audio_file_is_generated(page: Page):
     """
     # Wait for audio generation process to start
     logger.info("Waiting for audio generation to start...")
-    page.wait_for_timeout(5000)
+    # Try to wait for progress indicators or status changes instead of fixed timeout
+    try:
+        page.wait_for_selector(".progress, [class*='progress'], text=/生成中|処理中/", timeout=8000)
+    except Exception:
+        page.wait_for_timeout(3000)  # Fallback to shorter timeout
 
     # Debug: Check current page state
     logger.info("Checking page state after audio generation...")
@@ -187,7 +191,7 @@ def audio_player_is_displayed(page: Page):
         page: Playwright page object
     """
     # Wait for any dynamic updates to complete
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(1000)
 
     # Debug: Take screenshot and log page content
     logger.info("Debugging audio player display...")
@@ -261,14 +265,14 @@ def audio_generation_interrupted_and_reconnected(page: Page):
     click_generate_audio_button(page)
 
     # Wait a bit for generation to start
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(1000)
 
     # Simulate reconnection by reloading the page
     logger.info("Simulating connection interruption and reconnection")
     page.reload()
 
     # Wait for page to load
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(1500)
 
 
 @then("audio generation should resume after reconnection")
@@ -291,7 +295,7 @@ def audio_generation_resumes_after_reconnection(page: Page):
             logger.info(f"Audio generation state restored: {button_text}")
             return
 
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(500)
 
     # If no restoration state found, check if audio components exist
     audio_elements = [
@@ -525,7 +529,7 @@ def progress_updates_during_generation(page: Page):
     # First check immediately to catch the generating state
     for i in range(max_checks):
         if i > 0:  # Don't wait on the first check
-            page.wait_for_timeout(500)  # Wait 500ms between checks
+            page.wait_for_timeout(300)  # Wait 300ms between checks
 
         # Check button state
         button_state = None
@@ -598,12 +602,15 @@ def final_audio_displayed_when_complete(page: Page):
     """
     logger.info("Verifying final audio display...")
 
-    # Wait for completion (longer timeout for audio generation)
-    page.wait_for_timeout(15000)
+    # Wait for completion with smart timeout for audio generation
+    try:
+        page.wait_for_selector("audio, .audio-player, [class*='audio']", timeout=20000)
+    except Exception:
+        page.wait_for_timeout(8000)  # Fallback to shorter timeout
 
     # Check that generation button is back to normal state
     try:
-        page.wait_for_selector("text=音声を生成", timeout=30000)
+        page.wait_for_selector("text=音声を生成", timeout=15000)
         logger.info("Generation button returned to normal state")
     except Exception:
         logger.warning("Generation button state unclear")

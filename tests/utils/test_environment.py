@@ -98,7 +98,7 @@ class TestEnvironment:
 
         # Initial wait for application startup
         logger.info(f"Starting application on port {self._app_port}...")
-        time.sleep(3)  # Initial longer wait
+        time.sleep(1)  # Reduced initial wait
 
         # Wait for application to start with retry logic
         self._wait_for_application_start()
@@ -107,12 +107,12 @@ class TestEnvironment:
 
     def _wait_for_application_start(self):
         """Wait for application to start with retry logic."""
-        max_retries = 20
-        retry_interval = 1.5
+        max_retries = 15
+        retry_interval = 0.8
 
         for i in range(max_retries):
             try:
-                response = requests.get(self.app_url, timeout=2)
+                response = requests.get(self.app_url, timeout=1)
                 if response.status_code == 200:
                     logger.info(f"✓ Application started successfully on port {self._app_port}")
 

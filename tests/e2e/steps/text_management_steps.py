@@ -115,7 +115,7 @@ def user_clicks_clear_text_button(page: Page):
     clear_button.click()
 
     # クリア処理の完了を少し待つ
-    time.sleep(1)
+    time.sleep(0.5)
 
     logger.info("Clear text button clicked successfully")
 
@@ -151,7 +151,7 @@ def user_clicks_file_upload_tab(page: Page):
     if not tab_clicked:
         raise Exception("File upload tab not found")
 
-    time.sleep(1)
+    time.sleep(0.5)
     logger.info("File upload tab clicked successfully")
 
 
@@ -186,7 +186,7 @@ def user_clicks_web_extraction_tab(page: Page):
     if not tab_clicked:
         raise Exception("Web page extraction tab not found")
 
-    time.sleep(1)
+    time.sleep(0.5)
     logger.info("Web page extraction tab clicked successfully")
 
 
@@ -200,8 +200,35 @@ def user_clicks_file_extract_button(page: Page):
     expect(extract_button).to_be_visible()
     extract_button.click()
 
+    # Get the current content length before extraction
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    initial_content = text_area.input_value() or ""
+    initial_length = len(initial_content.strip())
+    logger.info(f"Initial content length before URL extraction: {initial_length}")
+
     # 抽出処理の完了を待つ
-    time.sleep(3)
+    # Wait for processing with smart timeout - URL extraction needs more time
+    try:
+        if initial_length > 0:
+            # If there's existing content, wait for length to increase or separator to appear
+            page.wait_for_function(
+                f"() => {{"
+                f"  const textarea = document.querySelector('textarea[placeholder*=\"ファイルをアップロードするか\"]');"
+                f"  if (!textarea) return false;"
+                f"  const content = textarea.value || '';"
+                f"  return content.length > {initial_length} || content.includes('---') || content.includes('エラー');"
+                f"}}",
+                timeout=15000,
+            )
+        else:
+            # If textarea is empty, wait for any content to appear
+            page.wait_for_function(
+                "() => {  const textarea = document.querySelector('textarea[placeholder*=\"ファイルをアップロードするか\"]');  return textarea && textarea.value && textarea.value.trim().length > 0;}",
+                timeout=15000,
+            )
+    except Exception:
+        logger.warning("Wait for URL extraction completion timed out, using fallback sleep")
+        time.sleep(5)  # Fallback to longer timeout for URL extraction
 
     logger.info("File extract button clicked successfully")
 

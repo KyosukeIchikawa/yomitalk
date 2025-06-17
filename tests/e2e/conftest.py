@@ -77,7 +77,7 @@ def page(browser: Browser) -> Generator[Page, None, None]:
     page = browser.new_page(viewport={"width": 1280, "height": 720})
 
     # Set timeout
-    page.set_default_timeout(20000)  # 20 seconds
+    page.set_default_timeout(10000)  # 10 seconds
 
     yield page
 
@@ -94,7 +94,27 @@ def browser():
         Browser: Playwrightブラウザインスタンス
     """
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True) if os.environ.get("HEADLESS", "true").lower() == "true" else playwright.chromium.launch(headless=False, slow_mo=100)
+        # Launch browser with optimized settings for faster execution
+        launch_args = [
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--disable-extensions",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--disable-features=TranslateUI",
+            "--disable-component-extensions-with-background-pages",
+        ]
+
+        if os.environ.get("HEADLESS", "true").lower() == "true":
+            browser = playwright.chromium.launch(headless=True, args=launch_args)
+        else:
+            browser = playwright.chromium.launch(
+                headless=False,
+                slow_mo=50,  # Reduced from 100
+                args=launch_args,
+            )
 
         yield browser
 

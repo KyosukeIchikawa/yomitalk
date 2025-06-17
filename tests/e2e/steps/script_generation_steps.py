@@ -61,7 +61,7 @@ def openai_api_key_is_set(page: Page):
         set_api_button = page.get_by_role("button", name="APIキーを設定")
         if set_api_button.is_visible():
             set_api_button.click()
-            page.wait_for_timeout(1000)
+            page.wait_for_timeout(500)
 
         # 設定完了メッセージが表示されることを確認
         success_msg = page.locator("text=✅").first
@@ -96,7 +96,7 @@ def click_generate_script_button(page: Page):
     script_textarea.fill(sample_script)
 
     # 処理完了を確認する時間を確保
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(1000)
 
 
 @then("a podcast-format script should be generated")
@@ -119,7 +119,7 @@ def podcast_script_is_generated(page: Page):
             break
         if i == max_retries - 1:
             pytest.fail("Script was not generated")
-        page.wait_for_timeout(2000)  # Wait for 2 seconds
+        page.wait_for_timeout(1000)  # Wait for 2 seconds
 
     # Verify that the script content is in conversation format
     script_content = script_textarea.input_value()

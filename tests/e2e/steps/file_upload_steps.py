@@ -25,8 +25,8 @@ def upload_file(page: Page, file_type, file_name):
     file_input = page.locator('input[type="file"]').first
     file_input.set_input_files(str(file_path))
 
-    # Wait for the file to be uploaded (max 2 seconds)
-    page.wait_for_timeout(2000)  # Wait for 2 seconds
+    # Wait for the file to be uploaded (max 1 second)
+    page.wait_for_timeout(1000)  # Wait for 1 second
 
 
 @when(parsers.parse('the user uploads a {file_type} file "{file_name}"'))
@@ -47,8 +47,8 @@ def user_uploads_file(page: Page, file_type, file_name):
     file_input = page.locator('input[type="file"]').first
     file_input.set_input_files(str(file_path))
 
-    # Wait for the file to be uploaded (max 2 seconds)
-    page.wait_for_timeout(2000)  # Wait for 2 seconds
+    # Wait for the file to be uploaded (max 1 second)
+    page.wait_for_timeout(1000)  # Wait for 1 second
 
 
 @then("text should be extracted")
@@ -94,7 +94,7 @@ def process_button_is_active(page: Page):
         set_api_button = page.get_by_role("button", name="APIキーを設定").first
         if set_api_button.is_visible():
             set_api_button.click()
-            page.wait_for_timeout(1000)
+            page.wait_for_timeout(500)
 
 
 @when('the user clicks the "ファイルからテキストを抽出" button')
@@ -108,8 +108,11 @@ def user_clicks_file_extract_button(page: Page):
     expect(extract_button).to_be_visible()
     extract_button.click()
 
-    # Wait for processing
-    page.wait_for_timeout(3000)
+    # Wait for file processing with smart timeout
+    try:
+        page.wait_for_function("() => document.querySelector('textarea').value.length > 0", timeout=5000)
+    except Exception:
+        page.wait_for_timeout(1500)  # Fallback to shorter timeout
 
     logger.info("File extraction button clicked successfully")
 
@@ -147,7 +150,7 @@ def user_clicks_file_upload_tab(page: Page):
     if not tab_clicked:
         raise Exception("File upload tab not found")
 
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(500)
     logger.info("File upload tab clicked successfully")
 
 

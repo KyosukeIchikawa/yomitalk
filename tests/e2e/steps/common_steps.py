@@ -104,7 +104,7 @@ def process_button_is_enabled(page: Page):
             logger.info("Setting dummy API key for testing")
             api_input.fill("sk-dummy-key-for-testing")
             # Wait a bit before checking button state
-            page.wait_for_timeout(1000)
+            page.wait_for_timeout(500)
         else:
             # Also check Gemini API key field
             gemini_input = page.locator('input[placeholder="AIza..."]')
@@ -113,7 +113,7 @@ def process_button_is_enabled(page: Page):
             if gemini_input.is_visible():
                 logger.info("Setting dummy Gemini API key for testing")
                 gemini_input.fill("AIza-dummy-key-for-testing")
-                page.wait_for_timeout(1000)
+                page.wait_for_timeout(500)
             else:
                 logger.warning("No API key input fields found")
     except Exception as e:

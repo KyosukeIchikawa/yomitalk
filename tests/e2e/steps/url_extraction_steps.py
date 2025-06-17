@@ -17,7 +17,7 @@ def user_enters_url(page: Page, url: str):
     web_tab = page.get_by_role("tab", name="Webページ抽出")
     if web_tab.is_visible():
         web_tab.click()
-        time.sleep(1)
+        time.sleep(0.5)
 
     # URL入力フィールドを見つけて入力
     url_input = page.locator('textarea[placeholder="https://example.com/page"]')
@@ -37,7 +37,7 @@ def user_enters_github_readme_url(page: Page):
     web_tab = page.get_by_role("tab", name="Webページ抽出")
     if web_tab.is_visible():
         web_tab.click()
-        time.sleep(1)
+        time.sleep(0.5)
 
     url_input = page.locator('textarea[placeholder="https://example.com/page"]')
     expect(url_input).to_be_visible()
@@ -55,7 +55,7 @@ def user_leaves_url_field_empty(page: Page):
     web_tab = page.get_by_role("tab", name="Webページ抽出")
     if web_tab.is_visible():
         web_tab.click()
-        time.sleep(1)
+        time.sleep(0.5)
 
     # URL入力フィールドが存在することを確認（何も入力しない）
     url_input = page.locator('textarea[placeholder="https://example.com/page"]')
@@ -74,8 +74,35 @@ def user_clicks_url_extract_button(page: Page):
     expect(extract_button).to_be_visible()
     extract_button.click()
 
+    # Get the current content length before extraction
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    initial_content = text_area.input_value() or ""
+    initial_length = len(initial_content.strip())
+    logger.info(f"Initial content length: {initial_length}")
+
     # 抽出処理の完了を待つ（より長い時間待機）
-    time.sleep(5)
+    # Wait for content to change (either addition or error message)
+    try:
+        if initial_length > 0:
+            # If there's existing content, wait for length to increase or separator to appear
+            page.wait_for_function(
+                f"() => {{"
+                f"  const textarea = document.querySelector('textarea[placeholder*=\"ファイルをアップロードするか\"]');"
+                f"  if (!textarea) return false;"
+                f"  const content = textarea.value || '';"
+                f"  return content.length > {initial_length} || content.includes('---') || content.includes('エラー');"
+                f"}}",
+                timeout=15000,
+            )
+        else:
+            # If textarea is empty, wait for any content to appear
+            page.wait_for_function(
+                "() => {  const textarea = document.querySelector('textarea[placeholder*=\"ファイルをアップロードするか\"]');  return textarea && textarea.value && textarea.value.trim().length > 0;}",
+                timeout=15000,
+            )
+    except Exception:
+        logger.warning("Wait for content change timed out, using fallback sleep")
+        time.sleep(5)  # Fallback to longer timeout for URL extraction
 
     logger.info("URL extract button clicked successfully")
 
@@ -244,7 +271,11 @@ def user_uploads_text_file(page: Page):
     file_input.set_input_files(str(test_file))
 
     # ファイル処理の完了を待つ
-    time.sleep(3)
+    # Wait for file processing with smart timeout
+    try:
+        page.wait_for_function("() => document.querySelector('textarea').value.length > 0", timeout=5000)
+    except Exception:
+        time.sleep(1.5)  # Fallback to shorter timeout
 
     logger.info(f"Text file uploaded successfully: {test_file}")
 
@@ -308,7 +339,7 @@ def user_clicks_clear_text_button(page: Page):
     expect(clear_button).to_be_visible()
     clear_button.click()
 
-    time.sleep(1)
+    time.sleep(0.5)
     logger.info("Clear text button clicked")
 
 
@@ -382,7 +413,7 @@ def user_enters_initial_text(page: Page):
     initial_text = "This is some initial text that was already in the text area."
     text_area.fill(initial_text)
 
-    time.sleep(1)
+    time.sleep(0.5)
     logger.info("Initial text entered successfully")
 
 
