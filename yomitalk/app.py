@@ -84,64 +84,8 @@ class PaperPodcastApp:
         new_session.auto_save()
         return new_session
 
-    def initialize_session_with_browser_state(self, browser_state: Dict[str, Any], request: gr.Request) -> Tuple[UserSession, Dict[str, Any]]:
-        """Initialize session with BrowserState for network recovery support."""
-        session_id = request.session_hash
-
-        # Check if we have a stored session in BrowserState
-        stored_session_id = browser_state.get("session_id", "")
-
-        if stored_session_id and stored_session_id == session_id:
-            # Restoring from BrowserState - try to load existing session
-            logger.info(f"Restoring session from BrowserState: {session_id}")
-            existing_session = UserSession.load_from_file(session_id)
-            if existing_session:
-                # Prepare for network recovery
-                existing_session.prepare_network_recovery()
-
-                # Update BrowserState with current session status
-                recovery_info = existing_session.get_recovery_progress_info()
-                updated_browser_state = browser_state.copy()
-                updated_browser_state.update(
-                    {
-                        "session_id": session_id,
-                        "audio_generation_active": recovery_info["is_active"],
-                        "has_generated_audio": existing_session.has_generated_audio(),
-                        "audio_status": recovery_info["status"],
-                        "audio_progress": recovery_info["progress"],
-                    }
-                )
-
-                return existing_session, updated_browser_state
-
-        # Create new session
-        logger.info(f"Creating new session with BrowserState support: {session_id}")
-        new_session = UserSession(session_id)
-        new_session.auto_save()
-
-        # Initialize BrowserState with new session
-        updated_browser_state = {"session_id": session_id, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0}
-
-        return new_session, updated_browser_state
-
-    def initialize_session_simple(self, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
-        """Simple session initialization without request object."""
-        # Create a session with a random ID since we don't have request.session_hash
-        import uuid
-
-        session_id = f"session_{uuid.uuid4().hex[:12]}"
-
-        logger.info(f"Creating new session (simple): {session_id}")
-        new_session = UserSession(session_id)
-        new_session.auto_save()
-
-        # Initialize BrowserState with new session
-        updated_browser_state = {"session_id": session_id, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0}
-
-        return new_session, updated_browser_state
-
-    def create_user_session_with_browser_state(self, request: gr.Request, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
-        """Create user session and update browser state using proper session hash."""
+    def create_user_session_with_browser_state(self, request: gr.Request) -> Tuple[UserSession, Dict[str, Any]]:
+        """Create user session and create browser state using proper session hash."""
         session_id = request.session_hash
 
         logger.info(f"Creating new session with browser state: {session_id}")
@@ -153,30 +97,26 @@ class PaperPodcastApp:
             # Prepare for network recovery
             existing_session.prepare_network_recovery()
 
-            # Update BrowserState with existing session info
+            # Create BrowserState with existing session info
             recovery_info = existing_session.get_recovery_progress_info()
-            updated_browser_state = browser_state.copy()
-            updated_browser_state.update(
-                {
-                    "session_id": session_id,
-                    "audio_generation_active": recovery_info["is_active"],
-                    "has_generated_audio": existing_session.has_generated_audio(),
-                    "audio_status": recovery_info["status"],
-                    "audio_progress": recovery_info["progress"],
-                }
-            )
+            browser_state = {
+                "session_id": session_id,
+                "audio_generation_active": recovery_info["is_active"],
+                "has_generated_audio": existing_session.has_generated_audio(),
+                "audio_status": recovery_info["status"],
+                "audio_progress": recovery_info["progress"],
+            }
 
-            return existing_session, updated_browser_state
+            return existing_session, browser_state
 
         # Create new session if no saved state found
         new_session = UserSession(session_id)
         new_session.auto_save()
 
-        # Update BrowserState with new session info
-        updated_browser_state = browser_state.copy()
-        updated_browser_state.update({"session_id": session_id, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0})
+        # Create BrowserState with new session info
+        browser_state = {"session_id": session_id, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0}
 
-        return new_session, updated_browser_state
+        return new_session, browser_state
 
     def update_browser_state_audio_status(self, user_session: UserSession, browser_state: Dict[str, Any]) -> Dict[str, Any]:
         """Update BrowserState with current audio generation status."""
@@ -1273,7 +1213,12 @@ class PaperPodcastApp:
             # Initialize regular State for UserSession object (not serializable to localStorage)
             user_session = gr.State()
 
-            app.load(fn=self.create_user_session_with_browser_state, inputs=[browser_state], outputs=[user_session, browser_state], queue=False).then(
+            app.load(
+                fn=self.create_user_session_with_browser_state,
+                inputs=[],  # No inputs needed - request is automatically provided
+                outputs=[user_session, browser_state],
+                queue=False,
+            ).then(
                 # ユーザーセッション作成後にUIコンポーネントの値を同期
                 fn=self.sync_ui_with_session,
                 inputs=[user_session],
