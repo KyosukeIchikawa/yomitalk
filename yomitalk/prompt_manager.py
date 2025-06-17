@@ -72,7 +72,7 @@ class PromptManager:
 
     TEMPLATE_DIR = Path("yomitalk/templates")
     TEMPLATE_MAPPING = {
-        PodcastMode.STANDARD: "paper_to_podcast.j2",
+        PodcastMode.STANDARD: "standard.j2",
         PodcastMode.SECTION_BY_SECTION: "section_by_section.j2",
     }
     DEFAULT_DOCUMENT_TYPE = DocumentType.PAPER
@@ -103,7 +103,7 @@ class PromptManager:
             logger.info(f"テンプレートファイル確認: {template_path} (モード: {mode.value})")
 
         # 共通ユーティリティテンプレートの存在を確認
-        utils_template = cls.TEMPLATE_DIR / "common_podcast_utils.j2"
+        utils_template = cls.TEMPLATE_DIR / "common.j2"
         if not utils_template.exists():
             logger.warning(f"共通ユーティリティテンプレートファイルが見つかりません: {utils_template}")
         else:
@@ -190,9 +190,9 @@ class PromptManager:
             os.makedirs(temp_templates_dir, exist_ok=True)
 
             # プロジェクトのテンプレートディレクトリから共通テンプレートをコピー
-            common_utils_src = self.TEMPLATE_DIR / "common_podcast_utils.j2"
+            common_utils_src = self.TEMPLATE_DIR / "common.j2"
             if common_utils_src.exists():
-                common_utils_dest = os.path.join(temp_templates_dir, "common_podcast_utils.j2")
+                common_utils_dest = os.path.join(temp_templates_dir, "common.j2")
                 shutil.copy(common_utils_src, common_utils_dest)
 
             # テンプレートコンテンツをファイルとして保存

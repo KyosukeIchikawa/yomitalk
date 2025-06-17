@@ -86,8 +86,8 @@ yomitalk/ - メインアプリケーションコード
 │   ├── logger.py - ロギング設定
 │   └── text_utils.py - テキスト処理ユーティリティ
 ├── templates/ - LLMプロンプトテンプレート
-│   ├── common_podcast_utils.j2 - 共通ポッドキャスト生成ユーティリティ
-│   ├── paper_to_podcast.j2 - 論文解説用テンプレート
+│   ├── common.j2 - 共通ポッドキャスト生成ユーティリティ
+│   ├── standard.j2 - 論文解説用テンプレート
 │   └── section_by_section.j2 - セクション別詳細解説用テンプレート
 ├── app.py - メインGradioアプリケーション（進捗表示統合）
 ├── prompt_manager.py - プロンプト管理および生成
