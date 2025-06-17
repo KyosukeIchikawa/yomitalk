@@ -84,39 +84,78 @@ class PaperPodcastApp:
         new_session.auto_save()
         return new_session
 
-    def create_user_session_with_browser_state(self, request: gr.Request) -> Tuple[UserSession, Dict[str, Any]]:
-        """Create user session and create browser state using proper session hash."""
-        session_id = request.session_hash
+    def create_user_session_with_browser_state(self, request: gr.Request, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
+        """Create user session with browser state restoration support."""
+        current_session_hash = request.session_hash
+        stored_session_id = browser_state.get("session_id", "") if browser_state else ""
 
-        logger.info(f"Creating new session with browser state: {session_id}")
+        logger.info(f"Creating session - current hash: {current_session_hash}, stored ID: {stored_session_id}")
 
-        # Try to load existing session first
-        existing_session = UserSession.load_from_file(session_id)
+        # Try to restore from browser state first (persistent session ID)
+        if stored_session_id and stored_session_id != current_session_hash:
+            logger.info(f"Attempting to restore session from browser state: {stored_session_id}")
+            existing_session = UserSession.load_from_file(stored_session_id)
+            if existing_session:
+                logger.info(f"Successfully restored session from browser state: {stored_session_id}")
+                # Create a new session with current session hash and copy data from old session
+                restored_session = UserSession(current_session_hash)
+
+                # Copy the state from the old session
+                restored_session.text_processor = existing_session.text_processor
+                restored_session.audio_generation_state = existing_session.audio_generation_state.copy()
+
+                # Update component paths to use new session ID
+                restored_session.audio_generator = existing_session.audio_generator
+                restored_session.audio_generator.output_dir = restored_session.get_output_dir()
+                restored_session.audio_generator.temp_dir = restored_session.get_talk_temp_dir()
+
+                # Copy session files to new session directory
+                restored_session.copy_session_data_from(stored_session_id)
+
+                # Prepare for network recovery
+                restored_session.prepare_network_recovery()
+
+                # Update browser state with current session hash
+                recovery_info = restored_session.get_recovery_progress_info()
+                updated_browser_state = {
+                    "session_id": current_session_hash,
+                    "persistent_session_id": stored_session_id,  # Keep original for future reference
+                    "audio_generation_active": recovery_info["is_active"],
+                    "has_generated_audio": restored_session.has_generated_audio(),
+                    "audio_status": recovery_info["status"],
+                    "audio_progress": recovery_info["progress"],
+                }
+
+                # Save the restored session under the new session hash
+                restored_session.auto_save()
+                return restored_session, updated_browser_state
+
+        # Try to load session using current session hash
+        existing_session = UserSession.load_from_file(current_session_hash)
         if existing_session:
-            logger.info(f"Restored existing session: {session_id}")
-            # Prepare for network recovery
+            logger.info(f"Restored existing session: {current_session_hash}")
             existing_session.prepare_network_recovery()
 
-            # Create BrowserState with existing session info
             recovery_info = existing_session.get_recovery_progress_info()
-            browser_state = {
-                "session_id": session_id,
+            updated_browser_state = {
+                "session_id": current_session_hash,
                 "audio_generation_active": recovery_info["is_active"],
                 "has_generated_audio": existing_session.has_generated_audio(),
                 "audio_status": recovery_info["status"],
                 "audio_progress": recovery_info["progress"],
             }
 
-            return existing_session, browser_state
+            return existing_session, updated_browser_state
 
         # Create new session if no saved state found
-        new_session = UserSession(session_id)
+        logger.info(f"Creating new session: {current_session_hash}")
+        new_session = UserSession(current_session_hash)
         new_session.auto_save()
 
-        # Create BrowserState with new session info
-        browser_state = {"session_id": session_id, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0}
+        # Create initial browser state
+        initial_browser_state = {"session_id": current_session_hash, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0}
 
-        return new_session, browser_state
+        return new_session, initial_browser_state
 
     def update_browser_state_audio_status(self, user_session: UserSession, browser_state: Dict[str, Any]) -> Dict[str, Any]:
         """Update BrowserState with current audio generation status."""
@@ -1215,7 +1254,7 @@ class PaperPodcastApp:
 
             app.load(
                 fn=self.create_user_session_with_browser_state,
-                inputs=[],  # No inputs needed - request is automatically provided
+                inputs=[browser_state],  # Pass browser_state as input for restoration
                 outputs=[user_session, browser_state],
                 queue=False,
             ).then(

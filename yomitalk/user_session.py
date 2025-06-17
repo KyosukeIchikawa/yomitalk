@@ -478,6 +478,56 @@ class UserSession:
             logger.error(f"Failed to load session state: {str(e)}")
             return None
 
+    def copy_session_data_from(self, source_session_id: str) -> bool:
+        """Copy session data from another session directory.
+
+        This is used when the session hash changes but we want to preserve
+        the user's session data and files.
+
+        Args:
+            source_session_id: Source session ID to copy data from
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            source_temp_dir = BASE_TEMP_DIR / source_session_id
+            source_output_dir = BASE_OUTPUT_DIR / source_session_id
+            target_temp_dir = self.get_temp_dir()
+            target_output_dir = self.get_output_dir()
+
+            logger.info(f"Copying session data from {source_session_id} to {self.session_id}")
+
+            # Create target directories if they don't exist
+            target_temp_dir.mkdir(parents=True, exist_ok=True)
+            target_output_dir.mkdir(parents=True, exist_ok=True)
+
+            # Copy temp directory contents (excluding session_state.json which will be saved separately)
+            if source_temp_dir.exists():
+                for item in source_temp_dir.iterdir():
+                    if item.name != "session_state.json":
+                        target_item = target_temp_dir / item.name
+                        if item.is_dir():
+                            shutil.copytree(item, target_item, dirs_exist_ok=True)
+                        else:
+                            shutil.copy2(item, target_item)
+
+            # Copy output directory contents
+            if source_output_dir.exists():
+                for item in source_output_dir.iterdir():
+                    target_item = target_output_dir / item.name
+                    if item.is_dir():
+                        shutil.copytree(item, target_item, dirs_exist_ok=True)
+                    else:
+                        shutil.copy2(item, target_item)
+
+            logger.info(f"Successfully copied session data from {source_session_id} to {self.session_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to copy session data from {source_session_id}: {str(e)}")
+            return False
+
     def auto_save(self) -> None:
         """Automatically save session state if significant changes occurred."""
         try:
