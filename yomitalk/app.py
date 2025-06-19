@@ -66,24 +66,6 @@ class PaperPodcastApp:
         new_session.auto_save()  # Save initial state
         return new_session
 
-    def create_user_session_with_recovery(self, request: gr.Request) -> UserSession:
-        """Create user session with network recovery support."""
-        session_id = request.session_hash
-
-        # Try to load existing session from file storage first
-        existing_session = UserSession.load_from_file(session_id)
-        if existing_session:
-            logger.info(f"Restored session from file storage: {session_id}")
-            # Check for ongoing audio generation and prepare for recovery
-            existing_session.prepare_network_recovery()
-            return existing_session
-
-        # Create new session if no saved state found
-        logger.info(f"Created new session with recovery support: {session_id}")
-        new_session = UserSession(session_id)
-        new_session.auto_save()
-        return new_session
-
     def create_user_session_with_browser_state(self, request: gr.Request, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
         """Create user session with browser state restoration support."""
         current_session_hash = request.session_hash
@@ -1870,78 +1852,6 @@ class PaperPodcastApp:
             Tuple[str, str, str, str, int, int]: (document_type, podcast_mode, character1, character2, openai_max_tokens, gemini_max_tokens)
         """
         return user_session.get_ui_sync_values()
-
-    def check_and_restore_audio_generation(self, user_session: UserSession) -> Tuple[Optional[str], Optional[str], str]:
-        """
-        接続復帰時に音声生成の状態をチェックして復元する
-
-        Args:
-            user_session: ユーザーセッション
-
-        Returns:
-            Tuple[Optional[str], Optional[str], str]: (streaming_audio, final_audio, status_message)
-        """
-        try:
-            # 音声生成が進行中かチェック
-            if user_session.is_audio_generation_active():
-                # 生成中の場合、バックグラウンドプロセスをチェック
-                logger.info("Active audio generation detected, checking progress...")
-                return self._resume_audio_generation_monitoring(user_session)
-
-            # 完了済みの音声があるかチェック
-            elif user_session.has_generated_audio():
-                logger.info("Completed audio detected, restoring audio components...")
-                status = user_session.get_audio_generation_status()
-
-                streaming_audio = None
-                final_audio = status.get("final_audio_path")
-
-                # ストリーミング音声が残っている場合
-                streaming_parts = status.get("streaming_parts", [])
-                if streaming_parts:
-                    # 最新のストリーミング音声を使用
-                    streaming_audio = streaming_parts[-1] if streaming_parts else None
-
-                return streaming_audio, final_audio, "✅ 音声生成完了（復帰）"
-
-            else:
-                # 音声生成がない場合
-                return None, None, ""
-
-        except Exception as e:
-            logger.error(f"Error during audio generation restoration: {e}")
-            return None, None, "⚠️ 音声復帰中にエラーが発生"
-
-    def _resume_audio_generation_monitoring(self, user_session: UserSession) -> Tuple[Optional[str], Optional[str], str]:
-        """
-        音声生成の監視を再開する
-
-        Args:
-            user_session: ユーザーセッション
-
-        Returns:
-            Tuple[Optional[str], Optional[str], str]: (streaming_audio, final_audio, status_message)
-        """
-        status = user_session.get_audio_generation_status()
-        progress = status.get("progress", 0.0)
-
-        # 生成された部分があるかチェック
-        streaming_parts = status.get("streaming_parts", [])
-        final_audio = status.get("final_audio_path")
-
-        # 最新のストリーミング音声
-        streaming_audio = streaming_parts[-1] if streaming_parts else None
-
-        # プログレスに基づくステータスメッセージ
-        if progress >= 1.0:
-            status_message = "✅ 音声生成完了（復帰）"
-        elif progress > 0.0:
-            progress_percent = int(progress * 100)
-            status_message = f"🎵 音声生成中... {progress_percent}%（復帰）"
-        else:
-            status_message = "🎤 音声生成開始中...（復帰）"
-
-        return streaming_audio, final_audio, status_message
 
     def handle_connection_recovery_with_browser_state(
         self, user_session: UserSession, browser_state: Dict[str, Any], terms_agreed: bool, podcast_text: str
