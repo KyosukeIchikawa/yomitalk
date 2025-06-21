@@ -154,6 +154,9 @@ pre-commit-run: setup-lint
 # Run linting checks for CI (check only, no modifications)
 lint-ci: setup-lint
 	@echo "Running linting checks for CI (check only)..."
+	@echo "Ruff version: $$($(VENV_DIR)/bin/ruff --version)"
+	@echo "Current directory: $$(pwd)"
+	@echo "Python version: $$($(VENV_DIR)/bin/python --version)"
 	$(VENV_DIR)/bin/ruff check $(SRC_DIRS)
 	$(VENV_DIR)/bin/ruff format --check $(SRC_DIRS)
 	@echo "Linting checks completed"
