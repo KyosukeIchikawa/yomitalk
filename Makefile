@@ -151,11 +151,13 @@ pre-commit-run: setup-lint
 	$(VENV_PRECOMMIT) run --all-files
 	@echo "Pre-commit hooks execution completed"
 
-# Run pre-commit hooks in CI mode (check only, no modifications)
-pre-commit-run-ci: setup-lint
-	@echo "Running pre-commit hooks in CI mode (check only)..."
-	$(VENV_PRECOMMIT) run --all-files --hook-stage manual
-	@echo "Pre-commit hooks execution completed"
+# Run linting checks for CI (check only, no modifications)
+lint-ci: setup-lint
+	@echo "Running linting checks for CI (check only)..."
+	$(VENV_DIR)/bin/ruff check $(SRC_DIRS)
+	$(VENV_DIR)/bin/ruff format --check $(SRC_DIRS)
+	$(VENV_DIR)/bin/mypy $(SRC_DIRS)
+	@echo "Linting checks completed"
 
 #--------------------------------------------------------------
 # Testing

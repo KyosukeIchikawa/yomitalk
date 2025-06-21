@@ -28,9 +28,9 @@ jobs:
       run: |
         make setup-lint
 
-    - name: Run pre-commit hooks
+    - name: Run linting checks
       run: |
-        make pre-commit-run-ci
+        make lint-ci
 
   e2e-tests:
     runs-on: ubuntu-latest
