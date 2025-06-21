@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from yomitalk.components.audio_generator import (
-    VOICEVOX_CORE_AVAILABLE,
     AudioGenerator,
     WordType,
 )
@@ -20,10 +19,6 @@ class TestAudioGenerator:
         # Mock session directories for testing (convert to Path objects)
         self.session_output_dir = Path("/tmp/test_output")
         self.session_temp_dir = Path("/tmp/test_temp")
-
-        # Create a patch for VOICEVOX Core availability
-        self.voicevox_patch = patch("yomitalk.components.audio_generator.VOICEVOX_CORE_AVAILABLE", True)
-        self.voicevox_patch.start()
 
         # Create patches for Synthesizer and other imported classes
         self.synthesizer_patch = patch("yomitalk.components.audio_generator.Synthesizer")
@@ -46,7 +41,6 @@ class TestAudioGenerator:
     def teardown_method(self):
         """Tear down test fixtures after each test method is run."""
         # Stop patches
-        self.voicevox_patch.stop()
         self.synthesizer_patch.stop()
         self.openjtalk_patch.stop()
         self.onnxruntime_patch.stop()
@@ -76,8 +70,7 @@ class TestAudioGenerator:
         # コアの初期化状態をテスト
         if hasattr(self.audio_generator, "core_synthesizer") and self.audio_generator.core_synthesizer is not None:
             assert self.audio_generator.core_initialized is True
-        elif not VOICEVOX_CORE_AVAILABLE:
-            assert self.audio_generator.core_initialized is False
+        # Core initialization depends on VOICEVOX Core availability
 
     def test_text_to_speech_method(self):
         """テキスト合成メソッドのテスト。"""

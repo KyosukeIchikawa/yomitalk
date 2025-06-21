@@ -16,6 +16,14 @@ from typing import Generator, List, Optional, Tuple
 
 import e2k
 
+# VOICEVOX Core imports
+from voicevox_core.blocking import (
+    Onnxruntime,
+    OpenJtalk,
+    Synthesizer,
+    UserDict,
+    VoiceModelFile,
+)
 from yomitalk.common.character import (
     DISPLAY_NAMES,
     REQUIRED_MODEL_FILES,
@@ -24,23 +32,6 @@ from yomitalk.common.character import (
 )
 from yomitalk.utils.logger import logger
 from yomitalk.utils.text_utils import is_romaji_readable
-
-# VOICEVOX Core imports
-try:
-    from voicevox_core.blocking import (
-        Onnxruntime,
-        OpenJtalk,
-        Synthesizer,
-        UserDict,
-        VoiceModelFile,
-    )
-
-    VOICEVOX_CORE_AVAILABLE = True
-except ImportError as e:
-    logger.error(f"VOICEVOX import error: {e}")
-    logger.warning("VOICEVOX Core installation is required for audio generation.")
-    logger.warning("Run 'make download-voicevox-core' to set up VOICEVOX.")
-    VOICEVOX_CORE_AVAILABLE = False
 
 
 class VoicevoxCoreManager:
@@ -60,9 +51,8 @@ class VoicevoxCoreManager:
         self.core_synthesizer: Optional[Synthesizer] = None
         self.user_dict_words: set = set()
 
-        # Initialize VOICEVOX Core if available
-        if VOICEVOX_CORE_AVAILABLE:
-            self._init_voicevox_core()
+        # Initialize VOICEVOX Core
+        self._init_voicevox_core()
 
     def _init_voicevox_core(self) -> None:
         """Initialize VOICEVOX Core if components are available."""

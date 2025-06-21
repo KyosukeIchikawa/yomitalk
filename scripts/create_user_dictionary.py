@@ -11,27 +11,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+from voicevox_core import UserDictWord  # type: ignore  # noqa: E402
+from voicevox_core.blocking import UserDict  # type: ignore  # noqa: E402
 from yomitalk.utils.logger import logger  # noqa: E402
-
-try:
-    from voicevox_core import UserDictWord  # type: ignore
-    from voicevox_core.blocking import UserDict  # type: ignore
-
-    VOICEVOX_CORE_AVAILABLE = True
-except ImportError as e:
-    logger.error(f"VOICEVOX import error: {e}")
-    logger.error("VOICEVOX Core installation is required.")
-    logger.error("Run 'make download-voicevox-core' to set up VOICEVOX.")
-    VOICEVOX_CORE_AVAILABLE = False
-    sys.exit(1)
 
 
 def create_user_dictionary():
     """Create a user dictionary with custom word pronunciations."""
-
-    if not VOICEVOX_CORE_AVAILABLE:
-        logger.error("VOICEVOX Core is not available")
-        return False
 
     # VOICEVOX Core paths (matching audio_generator.py)
     VOICEVOX_BASE_PATH = Path("voicevox_core/voicevox_core")
