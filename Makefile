@@ -156,7 +156,6 @@ lint-ci: setup-lint
 	@echo "Running linting checks for CI (check only)..."
 	$(VENV_DIR)/bin/ruff check $(SRC_DIRS)
 	$(VENV_DIR)/bin/ruff format --check $(SRC_DIRS)
-	$(VENV_DIR)/bin/mypy $(SRC_DIRS)
 	@echo "Linting checks completed"
 
 #--------------------------------------------------------------

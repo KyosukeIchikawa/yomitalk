@@ -16,7 +16,6 @@ from typing import Generator, List, Optional, Tuple
 
 import e2k
 
-# VOICEVOX Core imports
 from voicevox_core.blocking import (
     Onnxruntime,
     OpenJtalk,
