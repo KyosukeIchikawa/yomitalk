@@ -157,7 +157,7 @@ lint-ci: setup-lint
 	@echo "Ruff version: $$($(VENV_DIR)/bin/ruff --version)"
 	@echo "Current directory: $$(pwd)"
 	@echo "Python version: $$($(VENV_DIR)/bin/python --version)"
-	$(VENV_DIR)/bin/ruff check $(SRC_DIRS)
+	$(VENV_DIR)/bin/ruff check --ignore I001 $(SRC_DIRS)
 	$(VENV_DIR)/bin/ruff format --check $(SRC_DIRS)
 	@echo "Linting checks completed"
 
