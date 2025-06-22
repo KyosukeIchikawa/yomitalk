@@ -1901,28 +1901,30 @@ class PaperPodcastApp:
                     self.update_audio_button_state(terms_agreed, podcast_text),
                 )
 
-            # Determine status message based on recovery state
+            # Determine status message based on recovery state (without emoji prefix to avoid duplication)
             status = recovery_info["status"]
             if status == "completed":
-                status_message = "✅ 音声生成完了（復帰）"
+                status_message = "音声生成完了（復帰）"
             elif status == "partial":
-                status_message = "🎵 音声生成部分完了（復帰）"
+                status_message = "音声生成部分完了（復帰）"
             elif status == "generating":
                 progress_percent = int(recovery_info["progress"] * 100)
-                status_message = f"🎵 音声生成中... {progress_percent}%（復帰）"
+                status_message = f"音声生成中... {progress_percent}%（復帰）"
             elif status == "failed":
-                status_message = "❌ 音声生成エラー（復帰）"
+                status_message = "音声生成エラー（復帰）"
             else:
-                status_message = "🎤 音声生成準備中...（復帰）"
+                status_message = "音声生成準備中...（復帰）"
 
             # Get audio file paths from session state
             audio_state = user_session.get_audio_generation_status()
             streaming_parts = audio_state.get("streaming_parts", [])
             final_audio_path = audio_state.get("final_audio_path")
 
-            # Select most recent streaming audio if available
-            streaming_audio = streaming_parts[-1] if streaming_parts else None
-            # For final audio, return the path even if file doesn't exist (test compatibility)
+            # For streaming UI, prioritize final audio over streaming parts to show complete audio
+            # If final audio is available, use it for streaming playback to show complete result
+            streaming_audio = final_audio_path if final_audio_path and os.path.exists(final_audio_path) else streaming_parts[-1] if streaming_parts else None
+
+            # For final audio component, always use final audio path
             final_audio = final_audio_path
 
             logger.info(f"Audio state restored - Status: {status}, Streaming parts: {len(streaming_parts)}, Final audio: {bool(final_audio)}")
