@@ -162,6 +162,18 @@ class PaperPodcastApp:
 
         return updated_state
 
+    def update_browser_state_ui_content(self, browser_state: Dict[str, Any], podcast_text: str, terms_agreed: bool, extracted_text: str = "") -> Dict[str, Any]:
+        """Update BrowserState with UI content for recovery."""
+        updated_state = browser_state.copy()
+        updated_state.update(
+            {
+                "podcast_text": podcast_text or "",
+                "terms_agreed": bool(terms_agreed),
+                "extracted_text": extracted_text or "",
+            }
+        )
+        return updated_state
+
     def extract_url_text_with_debug(self, url: str, existing_text: str, add_separator: bool, user_session: UserSession) -> Tuple[str, UserSession]:
         """Debug wrapper for URL text extraction."""
         logger.info(
@@ -178,6 +190,17 @@ class PaperPodcastApp:
         except Exception as e:
             logger.error(f"[DEBUG] extract_url_text exception: {str(e)}")
             raise
+
+    def extract_url_text_with_debug_and_browser_state(
+        self, url: str, existing_text: str, add_separator: bool, user_session: UserSession, browser_state: Dict[str, Any]
+    ) -> Tuple[str, UserSession, Dict[str, Any]]:
+        """Debug wrapper for URL text extraction with browser state update."""
+        result_text, result_session = self.extract_url_text_with_debug(url, existing_text, add_separator, user_session)
+
+        # Update browser state with extracted text
+        updated_browser_state = self.update_browser_state_ui_content(browser_state, "", False, result_text)
+
+        return result_text, result_session, updated_browser_state
 
     def generate_podcast_audio_streaming_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any], progress=None):
         """Generate streaming audio with BrowserState synchronization for network recovery."""
@@ -359,6 +382,15 @@ class PaperPodcastApp:
             logger.error(error_msg)
             return f"Error: {str(e)}", user_session
 
+    def generate_podcast_text_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[str, UserSession, Dict[str, Any]]:
+        """Generate podcast text with browser state update."""
+        podcast_text, updated_user_session = self.generate_podcast_text(text, user_session)
+
+        # Update browser state with generated podcast text
+        updated_browser_state = self.update_browser_state_ui_content(browser_state, podcast_text, browser_state.get("terms_agreed", False), text)
+
+        return podcast_text, updated_user_session, updated_browser_state
+
     def extract_file_text_auto(
         self,
         file_obj,
@@ -389,6 +421,22 @@ class PaperPodcastApp:
 
         logger.debug(f"Auto file text extraction completed for session {user_session.session_id}")
         return combined_text, user_session
+
+    def extract_file_text_auto_with_browser_state(
+        self,
+        file_obj,
+        existing_text: str,
+        add_separator: bool,
+        user_session: UserSession,
+        browser_state: Dict[str, Any],
+    ) -> Tuple[str, UserSession, Dict[str, Any]]:
+        """Extract text from uploaded file automatically with browser state update."""
+        combined_text, updated_user_session = self.extract_file_text_auto(file_obj, existing_text, add_separator, user_session)
+
+        # Update browser state with extracted text
+        updated_browser_state = self.update_browser_state_ui_content(browser_state, "", False, combined_text)
+
+        return combined_text, updated_user_session, updated_browser_state
 
     def _estimate_audio_parts_count(self, text: str) -> int:
         """
@@ -1230,7 +1278,7 @@ class PaperPodcastApp:
                 )
 
             # Initialize BrowserState for network recovery - stores essential session data in localStorage
-            browser_state = gr.BrowserState({"session_id": "", "audio_generation_active": False, "has_generated_audio": False})
+            browser_state = gr.BrowserState({"session_id": "", "audio_generation_active": False, "has_generated_audio": False, "podcast_text": "", "terms_agreed": False, "extracted_text": ""})
             # Initialize regular State for UserSession object (not serializable to localStorage)
             user_session = gr.State()
 
@@ -1282,8 +1330,11 @@ class PaperPodcastApp:
             ).then(
                 # Connection recovery on page load/reconnection (after UI initialization)
                 fn=self.handle_connection_recovery_with_browser_state,
-                inputs=[user_session, browser_state, terms_checkbox, podcast_text],
+                inputs=[user_session, browser_state],
                 outputs=[
+                    extracted_text,
+                    podcast_text,
+                    terms_checkbox,
                     streaming_audio_output,
                     audio_progress,
                     audio_output,
@@ -1297,22 +1348,24 @@ class PaperPodcastApp:
             # Set up event handlers
             # Clear text button
             clear_text_btn.click(
-                fn=lambda: "",
-                outputs=[extracted_text],
+                fn=lambda browser_state: ("", self.update_browser_state_ui_content(browser_state, "", False, "")),
+                inputs=[browser_state],
+                outputs=[extracted_text, browser_state],
                 queue=False,
             )
 
             # Auto file extraction when file is uploaded (file upload mode)
             # Use upload event instead of change to avoid duplicate triggers
             file_upload_event = file_input.upload(
-                fn=self.extract_file_text_auto,
+                fn=self.extract_file_text_auto_with_browser_state,
                 inputs=[
                     file_input,
                     extracted_text,
                     auto_separator_checkbox,
                     user_session,
+                    browser_state,
                 ],
-                outputs=[extracted_text, user_session],
+                outputs=[extracted_text, user_session, browser_state],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="file_queue",  # ファイル処理用キューID
                 trigger_mode="once",  # 処理中の重複実行を防止
@@ -1333,14 +1386,15 @@ class PaperPodcastApp:
 
             # URL抽出ボタンのイベントハンドラー
             url_extract_btn.click(
-                fn=self.extract_url_text_with_debug,
+                fn=self.extract_url_text_with_debug_and_browser_state,
                 inputs=[
                     url_input,
                     extracted_text,
                     auto_separator_checkbox,
                     user_session,
+                    browser_state,
                 ],
-                outputs=[extracted_text, user_session],
+                outputs=[extracted_text, user_session, browser_state],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="url_queue",  # URL処理用キューID
             ).then(
@@ -1426,9 +1480,9 @@ class PaperPodcastApp:
 
             # VOICEVOX Terms checkbox - 音声生成ボタンに対してイベントハンドラを更新
             terms_checkbox.change(
-                fn=self.update_audio_button_state,
-                inputs=[terms_checkbox, podcast_text],
-                outputs=[generate_btn],
+                fn=self.update_audio_button_state_with_browser_state,
+                inputs=[terms_checkbox, podcast_text, browser_state],
+                outputs=[generate_btn, browser_state],
             )
 
             # トーク原稿の生成処理（時間のかかるLLM処理なのでキューイングを適用）
@@ -1443,9 +1497,9 @@ class PaperPodcastApp:
 
             # 2. トーク原稿の生成処理
             process_events.then(
-                fn=self.generate_podcast_text,
-                inputs=[extracted_text, user_session],
-                outputs=[podcast_text, user_session],
+                fn=self.generate_podcast_text_with_browser_state,
+                inputs=[extracted_text, user_session, browser_state],
+                outputs=[podcast_text, user_session, browser_state],
                 concurrency_limit=1,  # 同時実行数を1に制限（Hugging Face Spaces対応）
                 concurrency_id="llm_queue",  # LLM関連のリクエスト用キューID
             ).then(
@@ -1454,9 +1508,9 @@ class PaperPodcastApp:
                 inputs=[user_session],
                 outputs=[token_usage_info],
             ).then(
-                # トーク原稿生成後に音声生成ボタンの状態を更新
-                fn=self.update_audio_button_state,
-                inputs=[terms_checkbox, podcast_text],
+                # トーク原稿生成後に音声生成ボタンの状態を更新（再開機能付き）
+                fn=self.update_audio_button_state_with_resume_check,
+                inputs=[terms_checkbox, podcast_text, user_session],
                 outputs=[generate_btn],
             ).then(
                 # 3. 最後にトーク原稿生成ボタンを再度有効化
@@ -1505,11 +1559,11 @@ class PaperPodcastApp:
                 api_name="generate_streaming_audio",  # APIエンドポイント名（デバッグ用）
             )
 
-            # 2. 処理完了後にボタンを再度有効化
+            # 2. 処理完了後にボタンを再度有効化（再開機能付き）
             # Note: audio_outputはgenerate_podcast_audio_streamingで直接更新される
             streaming_event.then(
-                fn=self.enable_generate_button,
-                inputs=[terms_checkbox, podcast_text],
+                fn=self.update_audio_button_state_with_resume_check,
+                inputs=[terms_checkbox, podcast_text, user_session],
                 outputs=[generate_btn],
                 queue=False,  # 即時実行
                 api_name="enable_generate_button",
@@ -1531,9 +1585,17 @@ class PaperPodcastApp:
 
             # podcast_textの変更時にも音声生成ボタンの状態を更新
             podcast_text.change(
-                fn=self.update_audio_button_state,
-                inputs=[terms_checkbox, podcast_text],
-                outputs=[generate_btn],
+                fn=self.update_audio_button_state_with_browser_state,
+                inputs=[terms_checkbox, podcast_text, browser_state],
+                outputs=[generate_btn, browser_state],
+            )
+
+            # extracted_textの変更時にもbrowser_stateを更新
+            extracted_text.change(
+                fn=self.update_browser_state_extracted_text,
+                inputs=[extracted_text, browser_state],
+                outputs=[browser_state],
+                queue=False,
             )
 
         return app
@@ -1670,13 +1732,57 @@ class PaperPodcastApp:
         elif not has_text:
             message = "（トーク原稿が必要です）"
 
+        # Default button text
+        button_text = "音声を生成"
+
         # gr.update()を使用して、既存のボタンを更新
         result: Dict[str, Any] = gr.update(
-            value=f"音声を生成{message}",
+            value=f"{button_text}{message}",
             interactive=is_enabled,
             variant="primary" if is_enabled else "secondary",
         )
         return result
+
+    def update_audio_button_state_with_browser_state(self, checked: bool, podcast_text: Optional[str], browser_state: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Update audio button state and browser state."""
+        button_update = self.update_audio_button_state(checked, podcast_text)
+
+        # Update browser state with terms agreement and podcast text
+        updated_browser_state = self.update_browser_state_ui_content(browser_state, podcast_text or "", checked)
+
+        return button_update, updated_browser_state
+
+    def update_audio_button_state_with_resume_check(self, checked: bool, podcast_text: Optional[str], user_session: UserSession) -> Dict[str, Any]:
+        """Update audio button state with resume functionality check."""
+        has_text = bool(podcast_text and podcast_text.strip() != "")
+        is_enabled = bool(checked and has_text)
+
+        message = ""
+        button_text = "音声を生成"
+
+        if not checked:
+            message = "（VOICEVOX利用規約に同意が必要です）"
+        elif not has_text:
+            message = "（トーク原稿が必要です）"
+        elif has_text and checked and user_session:
+            # Check if we can resume (script unchanged and has previous audio)
+            audio_state = user_session.get_audio_generation_status()
+            current_script = audio_state.get("current_script", "")
+
+            # If script is unchanged and we have generated audio, show resume option
+            if current_script == podcast_text and user_session.has_generated_audio():
+                button_text = "音声生成を再開"
+
+        result: Dict[str, Any] = gr.update(
+            value=f"{button_text}{message}",
+            interactive=is_enabled,
+            variant="primary" if is_enabled else "secondary",
+        )
+        return result
+
+    def update_browser_state_extracted_text(self, extracted_text: str, browser_state: Dict[str, Any]) -> Dict[str, Any]:
+        """Update browser state with extracted text changes."""
+        return self.update_browser_state_ui_content(browser_state, browser_state.get("podcast_text", ""), browser_state.get("terms_agreed", False), extracted_text)
 
     def set_document_type(self, doc_type: str, user_session: UserSession) -> UserSession:
         """
@@ -1854,22 +1960,50 @@ class PaperPodcastApp:
         return user_session.get_ui_sync_values()
 
     def handle_connection_recovery_with_browser_state(
-        self, user_session: UserSession, browser_state: Dict[str, Any], terms_agreed: bool, podcast_text: str
-    ) -> Tuple[Optional[str], str, Optional[str], Dict[str, Any], Dict[str, Any]]:
-        """Handle connection recovery with BrowserState synchronization."""
+        self, user_session: UserSession, browser_state: Dict[str, Any]
+    ) -> Tuple[str, str, bool, Optional[str], str, Optional[str], Dict[str, Any], Dict[str, Any]]:
+        """Handle connection recovery with BrowserState synchronization and UI restoration."""
         # Handle case where user_session is None (during initialization)
         if user_session is None:
             logger.debug("User session is None during connection recovery - returning default state")
             default_button_state = {"value": "音声を生成（VOICEVOX利用規約に同意が必要です）", "interactive": False, "variant": "secondary"}
-            return None, "", None, browser_state.copy(), default_button_state
+            return "", "", False, None, "", None, browser_state.copy(), default_button_state
+
+        # Restore UI content from browser state
+        restored_extracted_text = browser_state.get("extracted_text", "")
+        restored_podcast_text = browser_state.get("podcast_text", "")
+        restored_terms_agreed = browser_state.get("terms_agreed", False)
 
         # Get recovery data from the original method
-        streaming_audio, progress_html, final_audio, button_state = self.handle_connection_recovery(user_session, terms_agreed, podcast_text)
+        streaming_audio, progress_html, final_audio, button_state = self.handle_connection_recovery(user_session, restored_terms_agreed, restored_podcast_text)
+
+        # Update button state to include resume functionality
+        button_state = self.update_audio_button_state_with_resume_check(restored_terms_agreed, restored_podcast_text, user_session)
+
+        # For streaming audio UI, prioritize combined final audio over parts
+        # This ensures users see the complete audio on recovery instead of just the last part
+        audio_state = user_session.get_audio_generation_status()
+        final_audio_path = audio_state.get("final_audio_path")
+        streaming_parts = audio_state.get("streaming_parts", [])
+
+        # If we have final audio, use it for streaming component to show complete result
+        if final_audio_path and os.path.exists(final_audio_path):
+            streaming_audio = final_audio_path
+            logger.info(f"Recovery: Using final audio for streaming component: {final_audio_path}")
+        elif streaming_parts:
+            # If no final audio but we have streaming parts, use the last one
+            # But log that we should have combined audio
+            valid_parts = [part for part in streaming_parts if os.path.exists(part)]
+            if valid_parts:
+                streaming_audio = valid_parts[-1]
+                logger.warning(f"Recovery: Using last streaming part instead of combined audio: {streaming_audio}")
 
         # Update BrowserState with current session status
         updated_browser_state = self.update_browser_state_audio_status(user_session, browser_state)
+        # Also update with restored UI content
+        updated_browser_state = self.update_browser_state_ui_content(updated_browser_state, restored_podcast_text, restored_terms_agreed, restored_extracted_text)
 
-        return streaming_audio, progress_html, final_audio, updated_browser_state, button_state
+        return restored_extracted_text, restored_podcast_text, restored_terms_agreed, streaming_audio, progress_html, final_audio, updated_browser_state, button_state
 
     def handle_connection_recovery(self, user_session: UserSession, terms_agreed: bool, podcast_text: str) -> Tuple[Optional[str], str, Optional[str], Dict[str, Any]]:
         """
