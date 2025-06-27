@@ -1457,14 +1457,6 @@ class PaperPodcastApp:
                 outputs=[generate_btn, browser_state],
             )
 
-            # Podcast text changes - update browser state
-            podcast_text.change(
-                fn=self.update_browser_state_podcast_text,
-                inputs=[podcast_text, browser_state],
-                outputs=[browser_state],
-                queue=False,
-            )
-
             # トーク原稿の生成処理（時間のかかるLLM処理なのでキューイングを適用）
             # 1. まずボタンを無効化
             process_events = process_btn.click(
@@ -1763,10 +1755,6 @@ class PaperPodcastApp:
     def update_browser_state_extracted_text(self, extracted_text: str, browser_state: Dict[str, Any]) -> Dict[str, Any]:
         """Update browser state with extracted text changes."""
         return self.update_browser_state_ui_content(browser_state, browser_state.get("podcast_text", ""), browser_state.get("terms_agreed", False), extracted_text)
-
-    def update_browser_state_podcast_text(self, podcast_text: str, browser_state: Dict[str, Any]) -> Dict[str, Any]:
-        """Update browser state with podcast text changes."""
-        return self.update_browser_state_ui_content(browser_state, podcast_text, browser_state.get("terms_agreed", False), browser_state.get("extracted_text", ""))
 
     def set_document_type(self, doc_type: str, user_session: UserSession) -> UserSession:
         """

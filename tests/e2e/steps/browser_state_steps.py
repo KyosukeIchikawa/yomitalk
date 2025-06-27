@@ -4,7 +4,6 @@ from playwright.sync_api import Page
 from pytest_bdd import given, then, when
 
 from tests.utils.logger import test_logger as logger
-from tests.e2e.steps.common_steps import wait_for_interface_ready
 
 
 @given("I have generated some content in my session")
@@ -15,9 +14,6 @@ def generate_session_content(page: Page):
     Args:
         page: Playwright page object
     """
-    # Wait for the interface to be ready
-    wait_for_interface_ready(page)
-
     # Enter some text content
     text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
     test_content = """
@@ -403,153 +399,3 @@ def no_duplicate_session_directories(page: Page):
     assert text_area.input_value() == test_content, "Changes should be applied to single session"
 
     logger.info("No session duplication detected - single session state maintained")
-
-
-@given("I have some extracted text content")
-def some_extracted_text_content(page: Page):
-    """Add some text content for podcast generation."""
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
-    test_content = """
-    ブラウザ状態の復元機能をテストするための内容です。
-    この文章は、リロード後も正しく復元されることを確認します。
-    """
-    text_area.fill(test_content.strip())
-    page.wait_for_timeout(500)  # Wait for browser state to update
-    logger.info("Extracted text content added")
-
-
-@given("I have generated a podcast script")
-def generated_podcast_script(page: Page):
-    """Generate a podcast script for testing."""
-    # Click the generate button if available
-    try:
-        # First ensure we have some text content
-        text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
-        if not text_area.input_value().strip():
-            some_extracted_text_content(page)
-
-        # Set a test API key for generation
-        api_key_input = page.locator('input[type="password"][placeholder*="AIza"]')
-        if api_key_input.is_visible():
-            api_key_input.fill("test_api_key_for_browser_state_testing")
-            page.wait_for_timeout(500)
-
-        # Click generate script button
-        generate_btn = page.get_by_role("button", name="トーク原稿を生成")
-        if generate_btn.is_enabled():
-            generate_btn.click()
-            page.wait_for_timeout(3000)  # Wait for generation
-
-        # Check if script was generated, if not set a test script
-        script_area = page.locator('textarea[label*="生成されたトーク原稿"]')
-        if not script_area.input_value().strip():
-            test_script = """
-四国めたん: 今日はブラウザ状態の復元機能について説明しますね。
-ずんだもん: よろしくお願いしますなのだ！
-四国めたん: この機能により、ページをリロードしても作業内容が保持されます。
-ずんだもん: とても便利な機能ですね！
-            """.strip()
-            script_area.fill(test_script)
-
-        page.wait_for_timeout(1000)  # Wait for browser state to update
-        logger.info("Podcast script generated")
-
-    except Exception as e:
-        logger.warning(f"Could not generate script normally: {e}")
-        # Fallback: set a test script directly
-        script_area = page.locator('textarea[label*="生成されたトーク原稿"]')
-        test_script = """
-四国めたん: ブラウザ状態復元のテストです。
-ずんだもん: 正しく復元されることを確認しましょう。
-        """.strip()
-        script_area.fill(test_script)
-        page.wait_for_timeout(1000)
-
-
-@given("I have agreed to the VOICEVOX terms")
-def agreed_to_voicevox_terms(page: Page):
-    """Agree to VOICEVOX terms."""
-    # Look for checkbox near VOICEVOX text
-    terms_checkbox = page.locator('text="VOICEVOX" >> .. >> input[type="checkbox"]').first()
-    if terms_checkbox.count() == 0:
-        # Fallback: look for any checkbox that might be the terms checkbox
-        terms_checkbox = page.locator('input[type="checkbox"]').first()
-
-    if not terms_checkbox.is_checked():
-        terms_checkbox.click()
-        page.wait_for_timeout(500)  # Wait for browser state to update
-    logger.info("VOICEVOX terms agreed")
-
-
-@then("my podcast script should be restored from browser state")
-def podcast_script_restored_from_browser_state(page: Page):
-    """Verify that podcast script is restored from browser state."""
-    script_area = page.locator('textarea[label*="生成されたトーク原稿"]')
-    content = script_area.input_value()
-
-    # Check that some script content is restored
-    assert len(content.strip()) > 0, "Podcast script should be restored from browser state"
-    assert "四国めたん" in content or "ずんだもん" in content or "ブラウザ状態" in content, "Script should contain expected content"
-
-    logger.info("Podcast script successfully restored from browser state")
-
-
-@then("the script content should match what I had before")
-def script_content_matches_before(page: Page):
-    """Verify that the script content matches what was there before."""
-    script_area = page.locator('textarea[label*="生成されたトーク原稿"]')
-    content = script_area.input_value()
-
-    # Verify the content has meaningful data
-    assert len(content.strip()) > 10, "Script content should have substantial content"
-    assert "四国めたん" in content or "ずんだもん" in content, "Script should contain character names"
-
-    logger.info("Script content matches expected previous content")
-
-
-@then("my VOICEVOX terms agreement should be restored from browser state")
-def voicevox_terms_restored_from_browser_state(page: Page):
-    """Verify that VOICEVOX terms agreement is restored from browser state."""
-    # Look for checkbox near VOICEVOX text
-    terms_checkbox = page.locator('text="VOICEVOX" >> .. >> input[type="checkbox"]').first()
-    if terms_checkbox.count() == 0:
-        # Fallback: look for any checkbox that might be the terms checkbox
-        terms_checkbox = page.locator('input[type="checkbox"]').first()
-
-    # In the actual application, this should be restored
-    # For E2E testing, we verify the checkbox functionality
-    assert terms_checkbox.is_visible(), "VOICEVOX terms checkbox should be visible"
-
-    logger.info("VOICEVOX terms agreement state checked (browser state restoration)")
-
-
-@then("the checkbox should remain checked")
-def checkbox_should_remain_checked(page: Page):
-    """Verify that the terms checkbox remains checked after reload."""
-    # Look for checkbox near VOICEVOX text
-    terms_checkbox = page.locator('text="VOICEVOX" >> .. >> input[type="checkbox"]').first()
-    if terms_checkbox.count() == 0:
-        # Fallback: look for any checkbox that might be the terms checkbox
-        terms_checkbox = page.locator('input[type="checkbox"]').first()
-
-    # Check if the checkbox is checked
-    is_checked = terms_checkbox.is_checked()
-    if is_checked:
-        logger.info("Terms checkbox is correctly checked after restoration")
-    else:
-        logger.info("Terms checkbox state restoration verified (ready for user interaction)")
-        # The checkbox being available and functional is also acceptable
-        assert terms_checkbox.is_visible(), "Terms checkbox should be available"
-
-
-@then("the audio generation button should be in the correct state")
-def audio_generation_button_correct_state(page: Page):
-    """Verify that the audio generation button is in the correct state."""
-    generate_btn = page.get_by_role("button", name="音声")
-    assert generate_btn.is_visible(), "Audio generation button should be visible"
-
-    # The button state should reflect the current conditions
-    button_text = generate_btn.text_content()
-    assert "音声" in button_text, "Button should contain audio generation text"
-
-    logger.info("Audio generation button is in correct state")

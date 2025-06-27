@@ -1,6 +1,5 @@
 """Tests for session recovery functionality."""
 
-from typing import Any, Dict
 from unittest.mock import Mock, patch
 
 import pytest
@@ -165,24 +164,3 @@ class TestRecoveryFunctionality:
         assert result["podcast_text"] == "existing podcast"
         assert result["terms_agreed"] is True
         assert result["session_id"] == "test"
-
-    def test_browser_state_podcast_text_update(self, app):
-        """Test browser state update when podcast text changes."""
-        browser_state = {"session_id": "test", "extracted_text": "existing extracted", "terms_agreed": False}
-
-        updated_browser_state = app.update_browser_state_podcast_text("New podcast script", browser_state)
-
-        assert updated_browser_state["podcast_text"] == "New podcast script"
-        assert updated_browser_state["extracted_text"] == "existing extracted"  # Should preserve existing
-        assert updated_browser_state["terms_agreed"] is False  # Should preserve existing
-        assert updated_browser_state["session_id"] == "test"
-
-    def test_browser_state_podcast_text_update_empty_state(self, app):
-        """Test browser state update when podcast text changes from empty state."""
-        browser_state: Dict[str, Any] = {}
-
-        updated_browser_state = app.update_browser_state_podcast_text("First podcast script", browser_state)
-
-        assert updated_browser_state["podcast_text"] == "First podcast script"
-        assert updated_browser_state["extracted_text"] == ""  # Should default to empty
-        assert updated_browser_state["terms_agreed"] is False  # Should default to False
