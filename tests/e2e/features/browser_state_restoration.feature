@@ -26,3 +26,28 @@ Feature: Browser State Restoration
     Then the latest browser state should always be used for restoration
     And session data should be properly migrated between session IDs
     And no duplicate session directories should be created
+
+  Scenario: Podcast script state is preserved in browser state
+    Given the user has accessed the application page
+    And I have some extracted text content
+    And I have generated a podcast script
+    When I reload the browser page
+    Then my podcast script should be restored from browser state
+    And the script content should match what I had before
+
+  Scenario: Terms agreement state is preserved in browser state
+    Given the user has accessed the application page
+    And I have agreed to the VOICEVOX terms
+    When I reload the browser page
+    Then my VOICEVOX terms agreement should be restored from browser state
+    And the checkbox should remain checked
+
+  Scenario: Both podcast script and terms state are preserved together
+    Given the user has accessed the application page
+    And I have some extracted text content
+    And I have generated a podcast script
+    And I have agreed to the VOICEVOX terms
+    When I reload the browser page
+    Then my podcast script should be restored from browser state
+    And my VOICEVOX terms agreement should be restored from browser state
+    And the audio generation button should be in the correct state
