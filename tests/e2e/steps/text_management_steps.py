@@ -442,6 +442,24 @@ def text_area_contains_source_information(page: Page, filename: str):
     logger.info(f"Source information for {filename} found as expected")
 
 
+@then('the extracted text area contains source information for "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"')
+def text_area_contains_github_source_info(page: Page):
+    """The extracted text area contains source information for the GitHub README URL."""
+    url = "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"
+    logger.info(f"Checking if text area contains source information for GitHub URL: {url}")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    logger.info(f"Text area content: {text_content[:200]}...")
+
+    expected_source = f"**Source: {url}**"
+    assert expected_source in text_content, f"Expected source information '{expected_source}' not found in text content"
+
+    logger.info("Source information for GitHub URL found in text content")
+
+
 @then("the automatic separator is disabled")
 def automatic_separator_is_disabled(page: Page):
     """The automatic separator is disabled."""

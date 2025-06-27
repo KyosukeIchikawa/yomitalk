@@ -24,7 +24,7 @@ def application_is_running(page: Page, app_environment):
     # ブラウザでアプリケーションにアクセス
     app_url = app_environment.app_url
     logger.info(f"Opening application in browser at {app_url}")
-    page.goto(app_url)
+    page.goto(app_url, timeout=30000)  # Increase timeout to 30 seconds
 
     # ページの基本的な読み込み完了を待つ
     page.wait_for_load_state("domcontentloaded")
@@ -56,6 +56,43 @@ def application_is_running(page: Page, app_environment):
     title = page.title()
     assert title != "", "Application failed to load properly"
     logger.info(f"Successfully loaded application in browser with title: {title}")
+
+
+@given("I wait for the interface to be ready")
+def wait_for_interface_ready(page: Page):
+    """
+    Wait for the UI interface to be fully initialized and interactive.
+    This step waits for the app initialization to complete and UI components to become enabled.
+    """
+    logger.info("Waiting for interface to be ready")
+
+    # Wait for the main UI components to be available and interactive
+    try:
+        # Wait for key input elements to be enabled (not in loading state)
+        page.wait_for_function(
+            """() => {
+                // Check if URL input is available and interactive
+                const urlInput = document.querySelector('input[placeholder*="https://"]');
+                const hasUrlInput = urlInput && !urlInput.disabled;
+
+                // Check if any non-disabled buttons exist
+                const buttons = document.querySelectorAll('button:not([disabled])');
+                const hasEnabledButtons = buttons.length > 0;
+
+                // Check if text areas are available
+                const textAreas = document.querySelectorAll('textarea:not([disabled])');
+                const hasTextAreas = textAreas.length > 0;
+
+                return hasUrlInput && hasEnabledButtons && hasTextAreas;
+            }""",
+            timeout=15000,
+        )
+        logger.info("Interface is ready - UI components are initialized and interactive")
+
+    except Exception as e:
+        logger.warning(f"Interface readiness check failed, proceeding anyway: {e}")
+        # Fallback: just wait a bit for the interface to stabilize
+        page.wait_for_timeout(2000)
 
 
 @given("the user has accessed the application page")

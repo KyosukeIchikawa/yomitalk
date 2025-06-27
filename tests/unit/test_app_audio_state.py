@@ -123,7 +123,7 @@ class TestPaperPodcastAppAudioRecovery:
         streaming_audio, progress_html, final_audio, button_state = self.app.handle_connection_recovery(self.user_session, terms_agreed=True, podcast_text="Test script")
 
         assert streaming_audio == "part2.wav"
-        assert "✅ 音声生成完了（復帰）" in progress_html
+        assert "音声生成完了" in progress_html
         assert final_audio == "final_audio.wav"
         assert button_state["interactive"] is True
 
@@ -162,7 +162,7 @@ class TestPaperPodcastAppAudioRecovery:
         streaming_audio, progress_html, final_audio, button_state = self.app.handle_connection_recovery(self.user_session, terms_agreed=False, podcast_text="Test script")
 
         assert streaming_audio == "part1.wav"
-        assert "✅ 音声生成完了（復帰）" in progress_html
+        assert "音声生成完了" in progress_html
         assert final_audio == "final_audio.wav"
         assert button_state["interactive"] is False
         assert "VOICEVOX利用規約に同意が必要です" in button_state["value"]

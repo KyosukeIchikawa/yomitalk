@@ -101,57 +101,6 @@ class TestRecoveryFunctionality:
         assert "音声を生成" in result["value"]
         assert "再開" not in result["value"]
 
-    def test_connection_recovery_with_browser_state(self, app):
-        """Test connection recovery with browser state restoration."""
-        user_session = UserSession("test_session")
-        browser_state = {
-            "session_id": "test_session",
-            "podcast_text": "Test podcast content",
-            "terms_agreed": True,
-            "extracted_text": "Test extracted content",
-        }
-
-        # Set up audio generation state
-        user_session.update_audio_generation_state(
-            current_script="Test podcast content", final_audio_path="/test/final_audio.wav", streaming_parts=["/test/part1.wav", "/test/part2.wav"], status="completed", is_generating=False
-        )
-
-        with patch("os.path.exists", return_value=True):
-            result = app.handle_connection_recovery_with_browser_state(user_session, browser_state)
-
-        (extracted_text, podcast_text, terms_agreed, streaming_audio, progress_html, final_audio, updated_browser_state, button_state) = result
-
-        assert extracted_text == "Test extracted content"
-        assert podcast_text == "Test podcast content"
-        assert terms_agreed is True
-        assert streaming_audio == "/test/final_audio.wav"  # Should use final audio
-        assert final_audio == "/test/final_audio.wav"
-        assert "音声生成完了" in progress_html
-        assert button_state["interactive"] is True
-
-    def test_connection_recovery_no_final_audio(self, app):
-        """Test connection recovery when no final audio exists."""
-        user_session = UserSession("test_session")
-        browser_state = {
-            "session_id": "test_session",
-            "podcast_text": "Test podcast content",
-            "terms_agreed": True,
-            "extracted_text": "Test extracted content",
-        }
-
-        # Set up audio generation state without final audio
-        user_session.update_audio_generation_state(
-            current_script="Test podcast content", final_audio_path=None, streaming_parts=["/test/part1.wav", "/test/part2.wav"], status="partial", is_generating=False
-        )
-
-        with patch("os.path.exists", return_value=True):
-            result = app.handle_connection_recovery_with_browser_state(user_session, browser_state)
-
-        (extracted_text, podcast_text, terms_agreed, streaming_audio, progress_html, final_audio, updated_browser_state, button_state) = result
-
-        assert streaming_audio == "/test/part2.wav"  # Should use last part
-        assert final_audio is None
-
     def test_extract_file_text_auto_with_browser_state(self, app):
         """Test file text extraction with browser state update."""
         user_session = UserSession("test_session")
@@ -204,22 +153,6 @@ class TestRecoveryFunctionality:
         assert button_update["variant"] == "primary"
         assert updated_browser_state["podcast_text"] == "Test podcast"
         assert updated_browser_state["terms_agreed"] is True
-
-    def test_recovery_with_none_user_session(self, app):
-        """Test recovery handling when user session is None."""
-        browser_state = {"session_id": "test"}
-
-        result = app.handle_connection_recovery_with_browser_state(None, browser_state)
-
-        (extracted_text, podcast_text, terms_agreed, streaming_audio, progress_html, final_audio, updated_browser_state, button_state) = result
-
-        assert extracted_text == ""
-        assert podcast_text == ""
-        assert terms_agreed is False
-        assert streaming_audio is None
-        assert progress_html == ""
-        assert final_audio is None
-        assert button_state["interactive"] is False
 
     def test_browser_state_extracted_text_update(self, app):
         """Test browser state update when extracted text changes."""

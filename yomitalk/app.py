@@ -1283,38 +1283,23 @@ class PaperPodcastApp:
             user_session = gr.State()
 
             app.load(
-                fn=self.create_user_session_with_browser_state,
+                fn=self.initialize_session_and_ui,
                 inputs=[browser_state],  # Pass browser_state as input for restoration
-                outputs=[user_session, browser_state],
-                queue=False,
-            ).then(
-                # ユーザーセッション作成後にUIコンポーネントの値を同期
-                fn=self.sync_ui_with_session,
-                inputs=[user_session],
                 outputs=[
+                    user_session,
+                    browser_state,
                     document_type_radio,
                     podcast_mode_radio,
                     character1_dropdown,
                     character2_dropdown,
                     openai_max_tokens_slider,
                     gemini_max_tokens_slider,
-                ],
-                queue=False,
-            ).then(
-                # Enable UI components after initialization is complete
-                fn=self.enable_ui_components_after_initialization,
-                inputs=[user_session],
-                outputs=[
                     file_input,
                     url_input,
                     url_extract_btn,
                     auto_separator_checkbox,
                     clear_text_btn,
                     extracted_text,
-                    document_type_radio,
-                    podcast_mode_radio,
-                    character1_dropdown,
-                    character2_dropdown,
                     gemini_api_key_input,
                     gemini_model_dropdown,
                     gemini_max_tokens_slider,
@@ -1324,24 +1309,11 @@ class PaperPodcastApp:
                     process_btn,
                     podcast_text,
                     terms_checkbox,
-                    generate_btn,
-                ],
-                queue=False,
-            ).then(
-                # Connection recovery on page load/reconnection (after UI initialization)
-                fn=self.handle_connection_recovery_with_browser_state,
-                inputs=[user_session, browser_state],
-                outputs=[
-                    extracted_text,
-                    podcast_text,
-                    terms_checkbox,
                     streaming_audio_output,
                     audio_progress,
                     audio_output,
-                    browser_state,
                     generate_btn,
                 ],
-                api_name="connection_recovery",
                 queue=False,
             )
 
@@ -1833,15 +1805,23 @@ class PaperPodcastApp:
 
         return streaming_clear, progress_clear, audio_clear, updated_browser_state
 
-    def enable_ui_components_after_initialization(
-        self, user_session: UserSession
+    def initialize_session_and_ui(
+        self, request: gr.Request, browser_state: Dict[str, Any]
     ) -> Tuple[
+        UserSession,  # user_session
+        Dict[str, Any],  # browser_state
+        str,
+        str,
+        str,
+        str,
+        int,
+        int,  # UI sync values (document_type, podcast_mode, character1, character2, openai_max_tokens, gemini_max_tokens)
         Dict[str, Any],  # file_input
         Dict[str, Any],  # url_input
         Dict[str, Any],  # url_extract_btn
         Dict[str, Any],  # auto_separator_checkbox
         Dict[str, Any],  # clear_text_btn
-        Dict[str, Any],  # extracted_text
+        str,  # extracted_text (value)
         Dict[str, Any],  # document_type_radio
         Dict[str, Any],  # podcast_mode_radio
         Dict[str, Any],  # character1_dropdown
@@ -1853,27 +1833,74 @@ class PaperPodcastApp:
         Dict[str, Any],  # openai_model_dropdown
         Dict[str, Any],  # openai_max_tokens_slider
         Dict[str, Any],  # process_btn
-        Dict[str, Any],  # podcast_text
-        Dict[str, Any],  # terms_checkbox
+        str,  # podcast_text (value)
+        bool,  # terms_checkbox (value)
+        Optional[str],  # streaming_audio_output
+        str,  # audio_progress
+        Optional[str],  # audio_output
         Dict[str, Any],  # generate_btn
     ]:
-        """Initialize UI components after session creation is complete.
+        """Initialize user session and all UI components in one unified function.
+
+        This replaces the complex .then() chain with a single function call.
+        Includes session creation, UI synchronization, component enabling, and connection recovery.
 
         Args:
-            user_session: User session
+            request: Gradio request object
+            browser_state: Browser state for session restoration
 
         Returns:
-            Tuple of gr.update() objects to enable all UI components
+            Tuple containing user_session, browser_state, UI sync values, component updates, and recovery data
         """
+        # Step 1: Create user session with browser state
+        user_session, updated_browser_state = self.create_user_session_with_browser_state(request, browser_state)
+
+        # Step 2: Get UI sync values from session
+        document_type, podcast_mode, character1, character2, openai_max_tokens, gemini_max_tokens = user_session.get_ui_sync_values()
+
+        # Step 3: Handle connection recovery and get UI restoration data
+        restored_extracted_text = updated_browser_state.get("extracted_text", "")
+        restored_podcast_text = updated_browser_state.get("podcast_text", "")
+        restored_terms_agreed = updated_browser_state.get("terms_agreed", False)
+
+        # Get recovery data for audio components
+        streaming_audio, progress_html, final_audio, button_state = self.handle_connection_recovery(user_session, restored_terms_agreed, restored_podcast_text)
+
+        # Update button state to include resume functionality
+        button_state = self.update_audio_button_state_with_resume_check(restored_terms_agreed, restored_podcast_text, user_session)
+
+        # For streaming audio UI, prioritize combined final audio over parts
+        audio_state = user_session.get_audio_generation_status()
+        final_audio_path = audio_state.get("final_audio_path")
+        streaming_parts = audio_state.get("streaming_parts", [])
+
+        # If we have final audio, use it for streaming component to show complete result
+        if final_audio_path and os.path.exists(final_audio_path):
+            streaming_audio = final_audio_path
+            logger.info(f"Recovery: Using final audio for streaming component: {final_audio_path}")
+        elif streaming_parts:
+            # If no final audio but we have streaming parts, use the last one
+            valid_parts = [part for part in streaming_parts if os.path.exists(part)]
+            if valid_parts:
+                streaming_audio = valid_parts[-1]
+                logger.warning(f"Recovery: Using last streaming part instead of combined audio: {streaming_audio}")
+
+        # Update BrowserState with current session status and UI content
+        updated_browser_state = self.update_browser_state_audio_status(user_session, updated_browser_state)
+        updated_browser_state = self.update_browser_state_ui_content(updated_browser_state, restored_podcast_text, restored_terms_agreed, restored_extracted_text)
+
+        # Step 4: Create UI component updates (enable all components)
         logger.info(f"Enabling UI components for session {user_session.session_id}")
+        logger.debug(f"UI sync values: document_type={document_type}, podcast_mode={podcast_mode}, character1={character1}, character2={character2}")
+        logger.debug(f"Token values: openai_max_tokens={openai_max_tokens}, gemini_max_tokens={gemini_max_tokens}")
 
         # Enable file input
         file_input_update = gr.update(interactive=True)
 
-        # Enable URL input
+        # Enable URL input - replace initialization placeholder
         url_input_update = gr.update(placeholder="https://example.com/page", interactive=True)
 
-        # Enable URL extract button
+        # Enable URL extract button - replace initialization text
         url_extract_btn_update = gr.update(value="URLからテキストを抽出", variant="primary", interactive=True)
 
         # Enable auto separator checkbox
@@ -1882,21 +1909,17 @@ class PaperPodcastApp:
         # Enable clear text button
         clear_text_btn_update = gr.update(value="テキストをクリア", interactive=True)
 
-        # Enable extracted text
-        extracted_text_update = gr.update(
-            placeholder="ファイルをアップロードするか、URLを入力するか、直接ここにテキストを入力してください...",
-            interactive=True,
-        )
+        # Note: extracted text value will be returned directly as restored_extracted_text
 
-        # Enable document type radio
-        document_type_radio_update = gr.update(interactive=True)
+        # Enable document type radio with session value
+        document_type_radio_update = gr.update(value=document_type, interactive=True)
 
-        # Enable podcast mode radio
-        podcast_mode_radio_update = gr.update(interactive=True)
+        # Enable podcast mode radio with session value
+        podcast_mode_radio_update = gr.update(value=podcast_mode, interactive=True)
 
-        # Enable character dropdowns
-        character1_dropdown_update = gr.update(interactive=True)
-        character2_dropdown_update = gr.update(interactive=True)
+        # Enable character dropdowns with session values
+        character1_dropdown_update = gr.update(value=character1, interactive=True)
+        character2_dropdown_update = gr.update(value=character2, interactive=True)
 
         # Enable API key inputs
         gemini_api_key_input_update = gr.update(placeholder="AIza...", interactive=True)
@@ -1906,32 +1929,33 @@ class PaperPodcastApp:
         gemini_model_dropdown_update = gr.update(interactive=True)
         openai_model_dropdown_update = gr.update(interactive=True)
 
-        # Enable token sliders
-        gemini_max_tokens_slider_update = gr.update(interactive=True)
-        openai_max_tokens_slider_update = gr.update(interactive=True)
+        # Enable token sliders with session values
+        gemini_max_tokens_slider_update = gr.update(value=gemini_max_tokens, interactive=True)
+        openai_max_tokens_slider_update = gr.update(value=openai_max_tokens, interactive=True)
 
-        # Enable process button (but check API key status)
+        # Enable process button - replace initialization text (but keep disabled until API key is set)
         process_btn_update = gr.update(interactive=False, variant="secondary", value="トーク原稿を生成")
 
-        # Enable podcast text
-        podcast_text_update = gr.update(
-            placeholder="テキストを処理してトーク原稿を生成してください...",
-            interactive=True,
-        )
+        # Note: podcast text, terms checkbox, and audio component values will be returned directly
 
-        # Enable terms checkbox
-        terms_checkbox_update = gr.update(interactive=True)
-
-        # Enable generate button (but check conditions)
-        generate_btn_update = self.update_audio_button_state(False, "")
+        # Enable generate button with proper state
+        generate_btn_update = gr.update(**button_state)
 
         return (
+            user_session,
+            updated_browser_state,
+            document_type,
+            podcast_mode,
+            character1,
+            character2,
+            openai_max_tokens,
+            gemini_max_tokens,
             file_input_update,
             url_input_update,
             url_extract_btn_update,
             auto_separator_checkbox_update,
             clear_text_btn_update,
-            extracted_text_update,
+            restored_extracted_text,
             document_type_radio_update,
             podcast_mode_radio_update,
             character1_dropdown_update,
@@ -1943,67 +1967,13 @@ class PaperPodcastApp:
             openai_model_dropdown_update,
             openai_max_tokens_slider_update,
             process_btn_update,
-            podcast_text_update,
-            terms_checkbox_update,
+            restored_podcast_text,
+            restored_terms_agreed,
+            streaming_audio,
+            progress_html,
+            final_audio,
             generate_btn_update,
         )
-
-    def sync_ui_with_session(self, user_session: UserSession) -> Tuple[str, str, str, str, int, int]:
-        """Sync UI components with user session values.
-
-        Args:
-            user_session (UserSession): User session
-
-        Returns:
-            Tuple[str, str, str, str, int, int]: (document_type, podcast_mode, character1, character2, openai_max_tokens, gemini_max_tokens)
-        """
-        return user_session.get_ui_sync_values()
-
-    def handle_connection_recovery_with_browser_state(
-        self, user_session: UserSession, browser_state: Dict[str, Any]
-    ) -> Tuple[str, str, bool, Optional[str], str, Optional[str], Dict[str, Any], Dict[str, Any]]:
-        """Handle connection recovery with BrowserState synchronization and UI restoration."""
-        # Handle case where user_session is None (during initialization)
-        if user_session is None:
-            logger.debug("User session is None during connection recovery - returning default state")
-            default_button_state = {"value": "音声を生成（VOICEVOX利用規約に同意が必要です）", "interactive": False, "variant": "secondary"}
-            return "", "", False, None, "", None, browser_state.copy(), default_button_state
-
-        # Restore UI content from browser state
-        restored_extracted_text = browser_state.get("extracted_text", "")
-        restored_podcast_text = browser_state.get("podcast_text", "")
-        restored_terms_agreed = browser_state.get("terms_agreed", False)
-
-        # Get recovery data from the original method
-        streaming_audio, progress_html, final_audio, button_state = self.handle_connection_recovery(user_session, restored_terms_agreed, restored_podcast_text)
-
-        # Update button state to include resume functionality
-        button_state = self.update_audio_button_state_with_resume_check(restored_terms_agreed, restored_podcast_text, user_session)
-
-        # For streaming audio UI, prioritize combined final audio over parts
-        # This ensures users see the complete audio on recovery instead of just the last part
-        audio_state = user_session.get_audio_generation_status()
-        final_audio_path = audio_state.get("final_audio_path")
-        streaming_parts = audio_state.get("streaming_parts", [])
-
-        # If we have final audio, use it for streaming component to show complete result
-        if final_audio_path and os.path.exists(final_audio_path):
-            streaming_audio = final_audio_path
-            logger.info(f"Recovery: Using final audio for streaming component: {final_audio_path}")
-        elif streaming_parts:
-            # If no final audio but we have streaming parts, use the last one
-            # But log that we should have combined audio
-            valid_parts = [part for part in streaming_parts if os.path.exists(part)]
-            if valid_parts:
-                streaming_audio = valid_parts[-1]
-                logger.warning(f"Recovery: Using last streaming part instead of combined audio: {streaming_audio}")
-
-        # Update BrowserState with current session status
-        updated_browser_state = self.update_browser_state_audio_status(user_session, browser_state)
-        # Also update with restored UI content
-        updated_browser_state = self.update_browser_state_ui_content(updated_browser_state, restored_podcast_text, restored_terms_agreed, restored_extracted_text)
-
-        return restored_extracted_text, restored_podcast_text, restored_terms_agreed, streaming_audio, progress_html, final_audio, updated_browser_state, button_state
 
     def handle_connection_recovery(self, user_session: UserSession, terms_agreed: bool, podcast_text: str) -> Tuple[Optional[str], str, Optional[str], Dict[str, Any]]:
         """

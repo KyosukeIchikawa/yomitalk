@@ -27,6 +27,44 @@ def user_enters_url(page: Page, url: str):
     logger.info(f"URL entered successfully: {url}")
 
 
+@when('the user enters "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md" into the URL input field')
+def user_enters_specific_github_url(page: Page):
+    """The user enters the specific GitHub README URL into the URL input field."""
+    url = "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"
+    logger.info(f"Entering specific GitHub README URL: {url}")
+
+    # Make sure the Web page extraction tab is active first
+    web_tab = page.get_by_role("tab", name="Webページ抽出")
+    if web_tab.is_visible():
+        web_tab.click()
+        time.sleep(0.5)
+
+    # URL入力フィールドを見つけて入力
+    url_input = page.locator('textarea[placeholder="https://example.com/page"]')
+    expect(url_input).to_be_visible()
+    url_input.fill(url)
+
+    logger.info(f"GitHub README URL entered successfully: {url}")
+
+
+@then('the extracted text area contains source information for "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"')
+def url_text_area_contains_github_source_info(page: Page):
+    """The extracted text area contains source information for the GitHub README URL."""
+    url = "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"
+    logger.info(f"Checking if text area contains source information for GitHub URL: {url}")
+
+    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    expect(text_area).to_be_visible()
+
+    text_content = text_area.input_value()
+    logger.info(f"Text area content: {text_content[:200]}...")
+
+    expected_source = f"**Source: {url}**"
+    assert expected_source in text_content, f"Expected source information '{expected_source}' not found in text content"
+
+    logger.info("Source information for GitHub URL found in text content")
+
+
 @when("the user enters a GitHub README URL into the URL input field")
 def user_enters_github_readme_url(page: Page):
     """The user enters a GitHub README URL into the URL input field."""

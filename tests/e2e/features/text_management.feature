@@ -31,10 +31,10 @@ Feature: Text Management Functionality
   Scenario: URL extraction tab requires extraction button
     Given the user has accessed the application page
     When the user clicks on the "Webページ抽出" tab
-    And the user enters "https://example.com" into the URL input field
+    And the user enters "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md" into the URL input field
     And the user clicks the "URLからテキストを抽出" button
     Then the extracted text area contains content from the URL
-    And the extracted text area contains source information for "https://example.com"
+    And the extracted text area contains source information for "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"
 
   Scenario: Manual text input preserved during extractions
     Given the user has accessed the application page
