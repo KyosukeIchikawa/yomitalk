@@ -1101,9 +1101,9 @@ class PaperPodcastApp:
                     # Extracted text display
                     extracted_text = gr.Textbox(
                         label="解説対象テキスト（トークの元ネタ）",
-                        placeholder="初期化中です。少しお待ちください...",
+                        placeholder="ファイルをアップロードするか、URLを入力するか、直接ここにテキストを貼り付けてください...",
                         lines=10,
-                        interactive=False,
+                        interactive=True,
                     )
 
                 with gr.Column(variant="panel"):
@@ -1300,6 +1300,10 @@ class PaperPodcastApp:
                     auto_separator_checkbox,
                     clear_text_btn,
                     extracted_text,
+                    document_type_radio,
+                    podcast_mode_radio,
+                    character1_dropdown,
+                    character2_dropdown,
                     gemini_api_key_input,
                     gemini_model_dropdown,
                     gemini_max_tokens_slider,
