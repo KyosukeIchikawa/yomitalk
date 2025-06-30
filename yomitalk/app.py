@@ -67,111 +67,62 @@ class PaperPodcastApp:
         return new_session
 
     def create_user_session_with_browser_state(self, request: gr.Request, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
-        """Create user session with browser state restoration support."""
-        current_session_hash = request.session_hash
-        stored_session_id = browser_state.get("session_id", "") if browser_state else ""
+        """Create user session with simplified BrowserState-based session management."""
 
-        logger.info(f"Creating session - current hash: {current_session_hash}, stored ID: {stored_session_id}")
+        # Check if we have an existing app session ID from browser state
+        stored_app_session_id = browser_state.get("app_session_id", "") if browser_state else ""
 
-        # Try to restore from browser state first (persistent session ID)
-        if stored_session_id and stored_session_id != current_session_hash:
-            logger.info(f"Attempting to restore session from browser state: {stored_session_id}")
-            existing_session = UserSession.load_from_file(stored_session_id)
-            if existing_session:
-                logger.info(f"Successfully restored session from browser state: {stored_session_id}")
-                # Create a new session with current session hash and copy data from old session
-                restored_session = UserSession(current_session_hash)
+        if stored_app_session_id:
+            # Use existing app session ID - no need to copy files since it's persistent
+            logger.info(f"Using existing app session ID: {stored_app_session_id}")
+            user_session = UserSession(stored_app_session_id)
 
-                # Copy the state from the old session
-                restored_session.text_processor = existing_session.text_processor
-                restored_session.audio_generation_state = existing_session.audio_generation_state.copy()
+            # Restore settings from browser state
+            user_session.update_settings_from_browser_state(browser_state)
 
-                # Update component paths to use new session ID
-                restored_session.audio_generator = existing_session.audio_generator
-                restored_session.audio_generator.output_dir = restored_session.get_output_dir()
-                restored_session.audio_generator.temp_dir = restored_session.get_talk_temp_dir()
+            # Return browser state as-is since it contains all needed state
+            return user_session, browser_state
+        else:
+            # Create new session with UUID-based ID
+            logger.info("Creating new app session with UUID")
+            user_session = UserSession()  # Will generate new UUID
 
-                # Copy session files to new session directory
-                restored_session.copy_session_data_from(stored_session_id)
+            # Initialize browser state with new session ID
+            browser_state["app_session_id"] = user_session.session_id
 
-                # Prepare for network recovery
-                restored_session.prepare_network_recovery()
+            # Sync current settings to browser state
+            browser_state = user_session.sync_settings_to_browser_state(browser_state)
 
-                # Update browser state with current session hash
-                recovery_info = restored_session.get_recovery_progress_info()
-                updated_browser_state = {
-                    "session_id": current_session_hash,
-                    "persistent_session_id": stored_session_id,  # Keep original for future reference
-                    "audio_generation_active": recovery_info["is_active"],
-                    "has_generated_audio": restored_session.has_generated_audio(),
-                    "audio_status": recovery_info["status"],
-                    "audio_progress": recovery_info["progress"],
-                }
-
-                # Save the restored session under the new session hash
-                restored_session.auto_save()
-                return restored_session, updated_browser_state
-
-        # Try to load session using current session hash
-        existing_session = UserSession.load_from_file(current_session_hash)
-        if existing_session:
-            logger.info(f"Restored existing session: {current_session_hash}")
-            existing_session.prepare_network_recovery()
-
-            recovery_info = existing_session.get_recovery_progress_info()
-            updated_browser_state = {
-                "session_id": current_session_hash,
-                "audio_generation_active": recovery_info["is_active"],
-                "has_generated_audio": existing_session.has_generated_audio(),
-                "audio_status": recovery_info["status"],
-                "audio_progress": recovery_info["progress"],
-            }
-
-            return existing_session, updated_browser_state
-
-        # Create new session if no saved state found
-        logger.info(f"Creating new session: {current_session_hash}")
-        new_session = UserSession(current_session_hash)
-        new_session.auto_save()
-
-        # Create initial browser state
-        initial_browser_state = {"session_id": current_session_hash, "audio_generation_active": False, "has_generated_audio": False, "audio_status": "idle", "audio_progress": 0.0}
-
-        return new_session, initial_browser_state
+            return user_session, browser_state
 
     def update_browser_state_audio_status(self, user_session: UserSession, browser_state: Dict[str, Any]) -> Dict[str, Any]:
         """Update BrowserState with current audio generation status."""
         if user_session is None:
-            # Return original browser_state if user_session is None
             return browser_state.copy()
 
-        recovery_info = user_session.get_recovery_progress_info()
+        audio_status = user_session.get_audio_generation_status(browser_state)
 
-        updated_state = browser_state.copy()
-        updated_state.update(
-            {
-                "session_id": user_session.session_id,
-                "audio_generation_active": recovery_info["is_active"],
-                "has_generated_audio": user_session.has_generated_audio(),
-                "audio_status": recovery_info["status"],
-                "audio_progress": recovery_info["progress"],
-                "streaming_parts_count": recovery_info["streaming_parts_count"],
-                "estimated_total_parts": recovery_info["estimated_total_parts"],
-            }
-        )
+        # Update browser state audio generation section
+        browser_state["audio_generation_state"].update(audio_status)
 
-        return updated_state
+        return browser_state
 
     def update_browser_state_ui_content(self, browser_state: Dict[str, Any], podcast_text: str, terms_agreed: bool, extracted_text: str = "") -> Dict[str, Any]:
         """Update BrowserState with UI content for recovery."""
         updated_state = browser_state.copy()
-        updated_state.update(
+
+        # Update ui_state section in the new BrowserState structure
+        if "ui_state" not in updated_state:
+            updated_state["ui_state"] = {}
+
+        updated_state["ui_state"].update(
             {
                 "podcast_text": podcast_text or "",
                 "terms_agreed": bool(terms_agreed),
                 "extracted_text": extracted_text or "",
             }
         )
+
         return updated_state
 
     def extract_url_text_with_debug(self, url: str, existing_text: str, add_separator: bool, user_session: UserSession) -> Tuple[str, UserSession]:
@@ -1277,8 +1228,35 @@ class PaperPodcastApp:
                     </div>"""
                 )
 
-            # Initialize BrowserState for network recovery - stores essential session data in localStorage
-            browser_state = gr.BrowserState({"session_id": "", "audio_generation_active": False, "has_generated_audio": False, "podcast_text": "", "terms_agreed": False, "extracted_text": ""})
+            # Initialize BrowserState for persistent session management - stores all session data in localStorage
+            browser_state = gr.BrowserState(
+                {
+                    "app_session_id": "",  # App-generated persistent session ID
+                    "audio_generation_state": {
+                        "is_generating": False,
+                        "progress": 0.0,
+                        "status": "idle",
+                        "current_script": "",
+                        "final_audio_path": None,
+                        "streaming_parts": [],
+                        "generation_id": None,
+                        "start_time": None,
+                        "estimated_total_parts": 1,
+                    },
+                    "user_settings": {
+                        "current_api_type": "gemini",
+                        "document_type": "research_paper",
+                        "podcast_mode": "academic",
+                        "character1": "Zundamon",
+                        "character2": "Shikoku Metan",
+                        "openai_max_tokens": 4000,
+                        "gemini_max_tokens": 8000,
+                        "openai_model": "gpt-4o-mini",
+                        "gemini_model": "gemini-1.5-flash",
+                    },
+                    "ui_state": {"podcast_text": "", "terms_agreed": False, "extracted_text": ""},
+                }
+            )
             # Initialize regular State for UserSession object (not serializable to localStorage)
             user_session = gr.State()
 
@@ -1862,10 +1840,11 @@ class PaperPodcastApp:
         # Step 2: Get UI sync values from session
         document_type, podcast_mode, character1, character2, openai_max_tokens, gemini_max_tokens = user_session.get_ui_sync_values()
 
-        # Step 3: Handle connection recovery and get UI restoration data
-        restored_extracted_text = updated_browser_state.get("extracted_text", "")
-        restored_podcast_text = updated_browser_state.get("podcast_text", "")
-        restored_terms_agreed = updated_browser_state.get("terms_agreed", False)
+        # Step 3: Handle connection recovery and get UI restoration data from BrowserState
+        ui_state = updated_browser_state.get("ui_state", {})
+        restored_extracted_text = ui_state.get("extracted_text", "")
+        restored_podcast_text = ui_state.get("podcast_text", "")
+        restored_terms_agreed = ui_state.get("terms_agreed", False)
 
         # Get recovery data for audio components
         streaming_audio, progress_html, final_audio, button_state = self.handle_connection_recovery(user_session, restored_terms_agreed, restored_podcast_text)
@@ -1913,7 +1892,10 @@ class PaperPodcastApp:
         # Enable clear text button
         clear_text_btn_update = gr.update(value="テキストをクリア", interactive=True)
 
-        # Note: extracted text value will be returned directly as restored_extracted_text
+        # Enable extracted text with restored value and interactive state
+        # Set appropriate placeholder based on whether we have restored content
+        extracted_placeholder = "" if restored_extracted_text and restored_extracted_text.strip() else "ファイルまたはURLから抽出されたテキストがここに表示されます。"
+        extracted_text_update = gr.update(value=restored_extracted_text, placeholder=extracted_placeholder, interactive=True)
 
         # Enable document type radio with session value
         document_type_radio_update = gr.update(value=document_type, interactive=True)
@@ -1940,7 +1922,13 @@ class PaperPodcastApp:
         # Enable process button - replace initialization text (but keep disabled until API key is set)
         process_btn_update = gr.update(interactive=False, variant="secondary", value="トーク原稿を生成")
 
-        # Note: podcast text, terms checkbox, and audio component values will be returned directly
+        # Enable podcast text with restored value and interactive state
+        # Set appropriate placeholder based on whether we have restored content
+        podcast_placeholder = "" if restored_podcast_text and restored_podcast_text.strip() else "「トーク原稿を生成」ボタンを押すと、ここにトーク原稿が生成されます。直接編集することも可能です。"
+        podcast_text_update = gr.update(value=restored_podcast_text, placeholder=podcast_placeholder, interactive=True)
+
+        # Enable terms checkbox with restored value and interactive state
+        terms_checkbox_update = gr.update(value=restored_terms_agreed, interactive=True)
 
         # Enable generate button with proper state
         generate_btn_update = gr.update(**button_state)
@@ -1959,7 +1947,7 @@ class PaperPodcastApp:
             url_extract_btn_update,
             auto_separator_checkbox_update,
             clear_text_btn_update,
-            restored_extracted_text,
+            extracted_text_update,
             document_type_radio_update,
             podcast_mode_radio_update,
             character1_dropdown_update,
@@ -1971,8 +1959,8 @@ class PaperPodcastApp:
             openai_model_dropdown_update,
             openai_max_tokens_slider_update,
             process_btn_update,
-            restored_podcast_text,
-            restored_terms_agreed,
+            podcast_text_update,
+            terms_checkbox_update,
             streaming_audio,
             progress_html,
             final_audio,

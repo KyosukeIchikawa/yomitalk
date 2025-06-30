@@ -15,7 +15,7 @@ def generate_session_content(page: Page):
         page: Playwright page object
     """
     # Enter some text content
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     test_content = """
     人工知能技術の発展により、自然言語処理の分野では
     大規模言語モデルが注目を集めています。
@@ -222,7 +222,7 @@ def previous_session_data_available(page: Page):
         page: Playwright page object
     """
     # Check if the text content we entered earlier is still there
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     current_content = text_area.input_value()
 
     # The content might not be restored if the session actually changed
@@ -341,7 +341,7 @@ def latest_browser_state_used(page: Page):
     # and using the most recent state
 
     # Verify basic functionality
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     assert text_area.is_visible(), "Text area should be functional"
 
     generate_button = page.get_by_role("button", name="音声を生成")
@@ -362,7 +362,7 @@ def session_data_migrated(page: Page):
     # This is verified by checking that the UI is fully functional
 
     # Test basic functionality
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     test_text = "Migration test content"
     text_area.fill(test_text)
 
@@ -389,7 +389,7 @@ def no_duplicate_session_directories(page: Page):
     assert page_title, "Page should have a title"
 
     # Verify that form elements work correctly (indicating single session state)
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
 
     # Make a change
     test_content = "Duplicate test content"

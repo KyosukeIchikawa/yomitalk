@@ -9,7 +9,7 @@ from tests.utils.logger import test_logger as logger
 @given("I have extracted some text content")
 def extract_text_content(page: Page):
     """Extract some text content for testing."""
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     test_content = """
     深層学習は機械学習の一分野であり、ニューラルネットワークを用いた学習手法です。
     特に画像認識、自然言語処理、音声認識などの分野で大きな成果を上げています。
@@ -29,7 +29,7 @@ def generate_podcast_script(page: Page):
     # Click the generate button if available
     try:
         # First check if we have text and API key
-        text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+        text_area = page.locator("textarea").nth(1)
         if not text_area.input_value().strip():
             extract_text_content(page)
 
@@ -206,7 +206,7 @@ def click_audio_generation_button(page: Page):
 @then("my extracted text should be restored")
 def extracted_text_restored(page: Page):
     """Verify that extracted text is restored."""
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     content = text_area.input_value()
 
     # Check for key content that should be restored
@@ -355,7 +355,7 @@ def voicevox_consistently_restored(page: Page):
 def session_works_after_reloads(page: Page):
     """Verify that session works correctly after multiple reloads."""
     # Basic functionality check
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     assert text_area.is_visible(), "Text area should be functional"
 
     generate_btn = page.get_by_role("button", name="音声")
@@ -368,7 +368,7 @@ def session_works_after_reloads(page: Page):
 def session_data_migrated(page: Page):
     """Verify that session data is migrated to new session."""
     # Check that basic functionality is preserved
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     assert text_area.is_visible(), "Session should be functional after migration"
     logger.info("Session data migration verified")
 
@@ -376,7 +376,7 @@ def session_data_migrated(page: Page):
 @then("the application should start with clean state")
 def application_clean_state(page: Page):
     """Verify that application starts with clean state."""
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     content = text_area.input_value()
 
     # Should be empty or have placeholder text
@@ -387,7 +387,7 @@ def application_clean_state(page: Page):
 @then("the UI should be functional for new content")
 def ui_functional_for_new_content(page: Page):
     """Verify that UI is functional for new content."""
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
 
     # Test basic functionality
     test_content = "Test new content"
@@ -409,7 +409,7 @@ def no_errors_displayed(page: Page):
             logger.warning(f"Found potential error elements: {selector}")
 
     # Main check: the page should be functional
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     assert text_area.is_visible(), "Main interface should be visible and functional"
 
     logger.info("No user-facing errors detected")

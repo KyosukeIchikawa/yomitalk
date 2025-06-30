@@ -53,7 +53,7 @@ def url_text_area_contains_github_source_info(page: Page):
     url = "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"
     logger.info(f"Checking if text area contains source information for GitHub URL: {url}")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -113,7 +113,7 @@ def user_clicks_url_extract_button(page: Page):
     extract_button.click()
 
     # Get the current content length before extraction
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    text_area = page.locator("textarea").nth(1)
     initial_content = text_area.input_value() or ""
     initial_length = len(initial_content.strip())
     logger.info(f"Initial content length: {initial_length}")
@@ -125,7 +125,7 @@ def user_clicks_url_extract_button(page: Page):
             # If there's existing content, wait for length to increase or separator to appear
             page.wait_for_function(
                 f"() => {{"
-                f"  const textarea = document.querySelector('textarea[placeholder*=\"ファイルをアップロードするか\"]');"
+                f"  const textarea = document.querySelector('textarea');"
                 f"  if (!textarea) return false;"
                 f"  const content = textarea.value || '';"
                 f"  return content.length > {initial_length} || content.includes('---') || content.includes('エラー');"
@@ -135,7 +135,7 @@ def user_clicks_url_extract_button(page: Page):
         else:
             # If textarea is empty, wait for any content to appear
             page.wait_for_function(
-                "() => {  const textarea = document.querySelector('textarea[placeholder*=\"ファイルをアップロードするか\"]');  return textarea && textarea.value && textarea.value.trim().length > 0;}",
+                "() => {  const textarea = document.querySelector('textarea');  return textarea && textarea.value && textarea.value.trim().length > 0;}",
                 timeout=15000,
             )
     except Exception:
@@ -151,7 +151,7 @@ def text_area_shows_content(page: Page):
     logger.info("Checking if extracted text area shows content")
 
     # 抽出されたテキストエリアを見つける
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     # テキストエリアにコンテンツが入力されていることを確認
@@ -202,7 +202,7 @@ def text_area_shows_github_content(page: Page):
     """The extracted text area shows GitHub README content."""
     logger.info("Checking if extracted text area shows GitHub README content")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -245,7 +245,7 @@ def text_area_shows_error_message(page: Page):
     """The extracted text area shows an error message."""
     logger.info("Checking if extracted text area shows error message")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -274,7 +274,7 @@ def text_area_replaced_with_file_content(page: Page):
     """The extracted text area content is replaced with file content."""
     logger.info("Checking if extracted text area content is replaced with file content")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -386,7 +386,7 @@ def text_should_contain_separator(page: Page):
     """The extracted text should contain a separator before the new content."""
     logger.info("Checking if extracted text contains separator")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -400,7 +400,7 @@ def text_should_not_contain_separator(page: Page):
     """The extracted text should not contain a separator."""
     logger.info("Checking if extracted text does not contain separator")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -415,7 +415,7 @@ def text_should_contain_both_contents(page: Page):
     """The extracted text should contain both the original and new content."""
     logger.info("Checking if extracted text contains both original and new content")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -431,7 +431,7 @@ def text_area_should_be_empty(page: Page):
     """The extracted text area should be empty."""
     logger.info("Checking if extracted text area is empty")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -445,7 +445,7 @@ def user_enters_initial_text(page: Page):
     """The user enters some initial text in the extracted text area."""
     logger.info("Entering initial text in extracted text area")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     initial_text = "This is some initial text that was already in the text area."
@@ -460,7 +460,7 @@ def existing_text_is_preserved(page: Page):
     """The existing text with separator is preserved."""
     logger.info("Checking if existing text with separator is preserved")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -483,7 +483,7 @@ def existing_text_no_separator_preserved(page: Page):
     """The existing text without separator is preserved."""
     logger.info("Checking if existing text without separator is preserved")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
@@ -528,7 +528,7 @@ def text_area_contains_specific_text_url(page: Page, text: str):
     """The extracted text area contains the specific text (URL context)."""
     logger.info(f"Checking if extracted text area contains: {text}")
 
-    text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか、URLを入力するか"]')
+    text_area = page.locator("textarea").nth(1)
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()

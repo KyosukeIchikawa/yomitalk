@@ -120,7 +120,7 @@ def user_has_accessed_application_page(page: Page, app_environment):
     expect(file_input).to_be_attached()
 
     # Verify extracted text area is visible
-    extracted_text_area = page.locator('textarea[placeholder*="ファイルをアップロードするか"]')
+    extracted_text_area = page.locator("textarea").nth(1)
     expect(extracted_text_area).to_be_visible()
 
     logger.info("All main UI elements are visible and accessible")
