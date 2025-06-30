@@ -125,8 +125,9 @@ def user_clicks_url_extract_button(page: Page):
             # If there's existing content, wait for length to increase or separator to appear
             page.wait_for_function(
                 f"() => {{"
-                f"  const textarea = document.querySelector('textarea');"
-                f"  if (!textarea) return false;"
+                f"  const textareas = document.querySelectorAll('textarea');"
+                f"  if (!textareas || textareas.length < 2) return false;"
+                f"  const textarea = textareas[1];"  # Second textarea (index 1)
                 f"  const content = textarea.value || '';"
                 f"  return content.length > {initial_length} || content.includes('---') || content.includes('エラー');"
                 f"}}",
@@ -135,7 +136,12 @@ def user_clicks_url_extract_button(page: Page):
         else:
             # If textarea is empty, wait for any content to appear
             page.wait_for_function(
-                "() => {  const textarea = document.querySelector('textarea');  return textarea && textarea.value && textarea.value.trim().length > 0;}",
+                "() => {"
+                "  const textareas = document.querySelectorAll('textarea');"
+                "  if (!textareas || textareas.length < 2) return false;"
+                "  const textarea = textareas[1];"
+                "  return textarea && textarea.value && textarea.value.trim().length > 0;"
+                "}",
                 timeout=15000,
             )
     except Exception:
@@ -157,7 +163,12 @@ def text_area_shows_content(page: Page):
     # テキストエリアにコンテンツが入力されていることを確認
     # 空でないことを確認
     text_content = text_area.input_value()
-    logger.info(f"Extracted text content: '{text_content}'")
+    logger.info(f"Extracted text content (input_value): '{text_content}'")
+
+    # Gradioのtextareaでは、input_value()が空の場合、evaluate()でtextarea.valueを直接取得
+    if not text_content:
+        text_content = text_area.evaluate("element => element.value")
+        logger.info(f"Extracted text content (evaluate): '{text_content}'")
 
     if not text_content or len(text_content.strip()) == 0:
         # デバッグのため、ページの状態を確認
@@ -174,16 +185,6 @@ def text_area_shows_content(page: Page):
             content = textarea.input_value()
             placeholder = textarea.get_attribute("placeholder")
             logger.info(f"Textarea {i}: placeholder='{placeholder}', content='{content[:50] if content else 'EMPTY'}'")
-
-    # In test environments, URL extraction may fail due to network restrictions
-    if len(text_content.strip()) == 0:
-        logger.warning("URL extraction returned empty content - this may be expected in test environments due to network restrictions")
-        # Check if we're in test mode and allow empty content
-        import os
-
-        if os.environ.get("E2E_TEST_MODE") == "true":
-            logger.info("Test mode detected - allowing empty URL extraction result")
-            return
 
     assert len(text_content.strip()) > 0, "Extracted text area should contain content, but found empty content"
 
@@ -216,15 +217,9 @@ def text_area_shows_github_content(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    # In test environments, URL extraction may fail due to network restrictions
-    if len(text_content.strip()) == 0:
-        logger.warning("GitHub URL extraction returned empty content - this may be expected in test environments")
-        import os
-
-        if os.environ.get("E2E_TEST_MODE") == "true":
-            logger.info("Test mode detected - allowing empty GitHub URL extraction result")
-            return
-
+    # Gradioのtextareaでは、input_value()が空の場合、evaluate()でtextarea.valueを直接取得
+    if not text_content:
+        text_content = text_area.evaluate("element => element.value")
     assert len(text_content.strip()) > 0, "Extracted text area should contain GitHub README content"
 
     # Check for actual error messages, not just the word "error" anywhere in content

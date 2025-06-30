@@ -259,15 +259,10 @@ def text_area_shows_content_with_separator(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
+    # Gradioのtextareaでは、input_value()が空の場合、evaluate()でtextarea.valueを直接取得
+    if not text_content:
+        text_content = text_area.evaluate("element => element.value")
     logger.info(f"Text area content: '{text_content}'")
-
-    # In test environments, URL extraction may fail, so check if we have only the existing content
-    import os
-
-    if os.environ.get("E2E_TEST_MODE") == "true" and text_content.strip() == "Existing content":
-        logger.info("Test mode detected and URL extraction failed - verifying existing content is preserved")
-        assert "Existing content" in text_content, "Original content should be preserved even if URL extraction fails"
-        return
 
     # セパレーター（---）が含まれていることを確認
     assert "---" in text_content, f"Expected separator in content, but found: '{text_content}'"
@@ -445,15 +440,6 @@ def text_area_contains_source_information(page: Page, filename: str):
     logger.info(f"Text area content: {text_content[:200]}...")
 
     expected_source = f"**Source: {filename}**"
-
-    # In test mode, URL extraction may fail, so check if this is expected
-    import os
-
-    if os.environ.get("E2E_TEST_MODE") == "true" and expected_source not in text_content:
-        logger.warning(f"Source information '{expected_source}' not found - this may be expected in test mode due to network restrictions")
-        if text_content.strip() == "Existing content":
-            logger.info("Test mode detected and URL extraction failed - skipping source information check")
-            return
 
     assert expected_source in text_content, f"Expected source information '{expected_source}' not found in text content"
 
@@ -688,15 +674,9 @@ def text_area_contains_url_content(page: Page):
     expect(text_area).to_be_visible()
 
     text_content = text_area.input_value()
-    # In test environments, URL extraction may fail due to network restrictions
-    if len(text_content.strip()) == 0:
-        logger.warning("URL extraction returned empty content - this may be expected in test environments")
-        import os
-
-        if os.environ.get("E2E_TEST_MODE") == "true":
-            logger.info("Test mode detected - allowing empty URL extraction result")
-            return
-
+    # Gradioのtextareaでは、input_value()が空の場合、evaluate()でtextarea.valueを直接取得
+    if not text_content:
+        text_content = text_area.evaluate("element => element.value")
     assert len(text_content.strip()) > 0, "Text area should contain URL content"
 
     logger.info("Text area contains URL content as expected")
