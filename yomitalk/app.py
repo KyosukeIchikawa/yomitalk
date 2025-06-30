@@ -102,10 +102,12 @@ class PaperPodcastApp:
 
         audio_status = user_session.get_audio_generation_status(browser_state)
 
-        # Update browser state audio generation section
-        browser_state["audio_generation_state"].update(audio_status)
+        # Create a copy of browser state and update audio generation section
+        updated_state = browser_state.copy()
+        updated_state["audio_generation_state"] = browser_state["audio_generation_state"].copy()
+        updated_state["audio_generation_state"].update(audio_status)
 
-        return browser_state
+        return updated_state
 
     def update_browser_state_ui_content(self, browser_state: Dict[str, Any], podcast_text: str, terms_agreed: bool, extracted_text: str = "") -> Dict[str, Any]:
         """Update BrowserState with UI content for recovery."""
