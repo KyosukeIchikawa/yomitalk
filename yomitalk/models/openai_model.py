@@ -49,7 +49,6 @@ class OpenAIModel:
             return False
 
         self.api_key = api_key.strip()
-        os.environ["OPENAI_API_KEY"] = self.api_key
         return True
 
     def has_api_key(self) -> bool:
