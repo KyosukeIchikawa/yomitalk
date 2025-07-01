@@ -126,6 +126,18 @@ def user_has_accessed_application_page(page: Page, app_environment):
     logger.info("All main UI elements are visible and accessible")
 
 
+@given("I have accessed the application page")
+def access_application_page(page: Page, app_environment):
+    """
+    Access the application page - same as the common step
+
+    Args:
+        page: Playwright page object
+        app_environment: Test environment fixture
+    """
+    user_has_accessed_application_page(page, app_environment)
+
+
 @then('the "トーク原稿を生成" button is enabled')
 def process_button_is_enabled(page: Page):
     """The script generation button is enabled."""

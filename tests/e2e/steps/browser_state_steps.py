@@ -415,14 +415,20 @@ def change_document_type(page: Page, document_type: str):
     """
     logger.info(f"Changing document type to: {document_type}")
 
-    # Look for the document type radio button with the specified text
-    document_type_radio = page.get_by_text(document_type)
+    # Map English document types to Japanese UI text
+    document_type_mapping = {"Blog Post": "ブログ記事", "Research Paper": "学術論文", "News Article": "ニュース記事", "Technical Document": "技術文書", "General": "一般"}
+
+    # Use mapping if available, otherwise use the provided value directly
+    ui_text = document_type_mapping.get(document_type, document_type)
+
+    # Look for the document type radio button with the UI text
+    document_type_radio = page.get_by_text(ui_text)
     document_type_radio.click()
 
     # Wait for the change to be processed
     page.wait_for_timeout(500)
 
-    logger.info(f"Document type changed to: {document_type}")
+    logger.info(f"Document type changed to: {document_type} (UI: {ui_text})")
 
 
 @when('I change the podcast mode to "{podcast_mode}"')
@@ -436,14 +442,20 @@ def change_podcast_mode(page: Page, podcast_mode: str):
     """
     logger.info(f"Changing podcast mode to: {podcast_mode}")
 
-    # Look for the podcast mode radio button with the specified text
-    podcast_mode_radio = page.get_by_text(podcast_mode)
+    # Map English podcast modes to Japanese UI text
+    podcast_mode_mapping = {"Conversational": "対話形式", "Academic": "学術的", "News Style": "ニュース形式", "Casual": "カジュアル", "Formal": "フォーマル"}
+
+    # Use mapping if available, otherwise use the provided value directly
+    ui_text = podcast_mode_mapping.get(podcast_mode, podcast_mode)
+
+    # Look for the podcast mode radio button with the UI text
+    podcast_mode_radio = page.get_by_text(ui_text)
     podcast_mode_radio.click()
 
     # Wait for the change to be processed
     page.wait_for_timeout(500)
 
-    logger.info(f"Podcast mode changed to: {podcast_mode}")
+    logger.info(f"Podcast mode changed to: {podcast_mode} (UI: {ui_text})")
 
 
 @when('I change the character settings to "{character1}" and "{character2}"')
@@ -514,16 +526,22 @@ def verify_document_type_restored(page: Page, expected_document_type: str):
     """
     logger.info(f"Verifying document type is restored to: {expected_document_type}")
 
+    # Map English document types to Japanese UI text
+    document_type_mapping = {"Blog Post": "ブログ記事", "Research Paper": "学術論文", "News Article": "ニュース記事", "Technical Document": "技術文書", "General": "一般"}
+
+    # Use mapping if available, otherwise use the provided value directly
+    ui_text = document_type_mapping.get(expected_document_type, expected_document_type)
+
     # Check if the expected document type radio is selected
-    document_type_radio = page.get_by_text(expected_document_type)
+    document_type_radio = page.get_by_text(ui_text)
 
     # Find the corresponding radio input element
     radio_input = document_type_radio.locator("..").locator("input[type='radio']")
 
     # Verify it's checked
-    assert radio_input.is_checked(), f"Document type should be restored to {expected_document_type}"
+    assert radio_input.is_checked(), f"Document type should be restored to {expected_document_type} (UI: {ui_text})"
 
-    logger.info(f"Document type successfully restored to: {expected_document_type}")
+    logger.info(f"Document type successfully restored to: {expected_document_type} (UI: {ui_text})")
 
 
 @then('the podcast mode should be restored to "{expected_podcast_mode}"')
@@ -537,16 +555,22 @@ def verify_podcast_mode_restored(page: Page, expected_podcast_mode: str):
     """
     logger.info(f"Verifying podcast mode is restored to: {expected_podcast_mode}")
 
+    # Map English podcast modes to Japanese UI text
+    podcast_mode_mapping = {"Conversational": "対話形式", "Academic": "学術的", "News Style": "ニュース形式", "Casual": "カジュアル", "Formal": "フォーマル"}
+
+    # Use mapping if available, otherwise use the provided value directly
+    ui_text = podcast_mode_mapping.get(expected_podcast_mode, expected_podcast_mode)
+
     # Check if the expected podcast mode radio is selected
-    podcast_mode_radio = page.get_by_text(expected_podcast_mode)
+    podcast_mode_radio = page.get_by_text(ui_text)
 
     # Find the corresponding radio input element
     radio_input = podcast_mode_radio.locator("..").locator("input[type='radio']")
 
     # Verify it's checked
-    assert radio_input.is_checked(), f"Podcast mode should be restored to {expected_podcast_mode}"
+    assert radio_input.is_checked(), f"Podcast mode should be restored to {expected_podcast_mode} (UI: {ui_text})"
 
-    logger.info(f"Podcast mode successfully restored to: {expected_podcast_mode}")
+    logger.info(f"Podcast mode successfully restored to: {expected_podcast_mode} (UI: {ui_text})")
 
 
 @then("the settings should be saved in browser state")
