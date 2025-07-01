@@ -193,3 +193,6 @@ def process_button_remains_disabled(page: Page):
     expect(process_button).to_be_disabled()
 
     logger.info("Process button remains disabled")
+
+
+# Browser state step definitions - removed to avoid conflicts with audio_generation_steps.py
