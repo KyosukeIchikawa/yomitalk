@@ -1528,15 +1528,15 @@ class PaperPodcastApp:
             # ドキュメントタイプ選択のイベントハンドラ
             document_type_radio.change(
                 fn=self.set_document_type,
-                inputs=[document_type_radio, user_session],
-                outputs=[user_session],
+                inputs=[document_type_radio, user_session, browser_state],
+                outputs=[user_session, browser_state],
             )
 
             # ポッドキャストモード選択のイベントハンドラ
             podcast_mode_radio.change(
                 fn=self.set_podcast_mode,
-                inputs=[podcast_mode_radio, user_session],
-                outputs=[user_session],
+                inputs=[podcast_mode_radio, user_session, browser_state],
+                outputs=[user_session, browser_state],
             )
 
             # podcast_textの変更時にも音声生成ボタンの状態を更新
@@ -1616,12 +1616,17 @@ class PaperPodcastApp:
         user_session.auto_save()  # Save session state after character mapping change
         return user_session
 
-    def set_podcast_mode(self, mode: str, user_session: UserSession) -> UserSession:
+    def set_podcast_mode(self, mode: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
         """
         ポッドキャスト生成モードを設定します。
 
         Args:
             mode (str): ポッドキャストモードのラベル名
+            user_session (UserSession): ユーザーセッション
+            browser_state (Dict[str, Any]): ブラウザ状態
+
+        Returns:
+            Tuple[UserSession, Dict[str, Any]]: 更新されたユーザーセッションとブラウザ状態
         """
         try:
             # ラベル名からPodcastModeを取得
@@ -1630,13 +1635,19 @@ class PaperPodcastApp:
             # TextProcessorを使ってPodcastModeのEnumを設定
             success = user_session.text_processor.set_podcast_mode(podcast_mode.value)
 
-            logger.debug(f"Podcast mode set to {mode}: {success}")
+            if success:
+                # browser_stateにポッドキャストモードを保存
+                browser_state["user_settings"]["podcast_mode"] = podcast_mode.value
+                logger.debug(f"Podcast mode set to {mode}: {success}, saved to browser_state")
+            else:
+                logger.warning(f"Failed to set podcast mode to {mode}")
+
             user_session.auto_save()  # Save session state after podcast mode change
 
         except ValueError as e:
             logger.error(f"Error setting podcast mode: {str(e)}")
 
-        return user_session
+        return user_session, browser_state
 
     def update_token_usage_display(self, user_session: UserSession) -> str:
         """
@@ -1740,12 +1751,17 @@ class PaperPodcastApp:
         """Update browser state with extracted text changes."""
         return self.update_browser_state_ui_content(browser_state, browser_state.get("podcast_text", ""), browser_state.get("terms_agreed", False), extracted_text)
 
-    def set_document_type(self, doc_type: str, user_session: UserSession) -> UserSession:
+    def set_document_type(self, doc_type: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
         """
         ドキュメントタイプを設定します。
 
         Args:
             doc_type (str): ドキュメントタイプのラベル名
+            user_session (UserSession): ユーザーセッション
+            browser_state (Dict[str, Any]): ブラウザ状態
+
+        Returns:
+            Tuple[UserSession, Dict[str, Any]]: 更新されたユーザーセッションとブラウザ状態
         """
         try:
             # ラベル名からDocumentTypeを取得
@@ -1754,13 +1770,19 @@ class PaperPodcastApp:
             # TextProcessorを使ってドキュメントタイプを設定
             success = user_session.text_processor.set_document_type(document_type)
 
-            logger.debug(f"Document type set to {doc_type}: {success}")
+            if success:
+                # browser_stateにドキュメントタイプを保存
+                browser_state["user_settings"]["document_type"] = document_type.value
+                logger.debug(f"Document type set to {doc_type}: {success}, saved to browser_state")
+            else:
+                logger.warning(f"Failed to set document type to {doc_type}")
+
             user_session.auto_save()  # Save session state after document type change
 
         except ValueError as e:
             logger.error(f"Error setting document type: {str(e)}")
 
-        return user_session
+        return user_session, browser_state
 
     def reset_audio_state_and_components(self, user_session: UserSession):
         """

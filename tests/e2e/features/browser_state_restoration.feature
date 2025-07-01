@@ -26,3 +26,32 @@ Feature: Browser State Restoration
     Then the latest browser state should always be used for restoration
     And session data should be properly migrated between session IDs
     And no duplicate session directories should be created
+
+  Scenario: Document type and podcast mode changes are persisted in browser state
+    Given I have accessed the application page
+    When I change the document type to "Blog Post"
+    And I change the podcast mode to "Conversational"
+    And I close and reopen the browser
+    Then the document type should be restored to "Blog Post"
+    And the podcast mode should be restored to "Conversational"
+    And the settings should be saved in browser state
+
+  Scenario: Multiple setting changes are persisted together
+    Given I have accessed the application page
+    When I change the document type to "Research Paper"
+    And I change the podcast mode to "Academic"
+    And I change the character settings to "Zundamon" and "Kyushu Sora"
+    And I simulate a page refresh
+    Then all my settings should be restored correctly
+    And the document type should be "Research Paper"
+    And the podcast mode should be "Academic"
+    And the characters should be "Zundamon" and "Kyushu Sora"
+
+  Scenario: Setting changes trigger browser state updates immediately
+    Given I have accessed the application page
+    When I change the document type to "News Article"
+    Then the browser state should be updated immediately
+    And the user_settings should contain the new document type
+    When I change the podcast mode to "News Style"
+    Then the browser state should be updated immediately
+    And the user_settings should contain the new podcast mode

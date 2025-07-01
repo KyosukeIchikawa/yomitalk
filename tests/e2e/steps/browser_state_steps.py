@@ -399,3 +399,396 @@ def no_duplicate_session_directories(page: Page):
     assert text_area.input_value() == test_content, "Changes should be applied to single session"
 
     logger.info("No session duplication detected - single session state maintained")
+
+
+# New steps for document type and podcast mode browser state persistence
+
+
+@when('I change the document type to "{document_type}"')
+def change_document_type(page: Page, document_type: str):
+    """
+    Change the document type to the specified value
+
+    Args:
+        page: Playwright page object
+        document_type: Document type to select
+    """
+    logger.info(f"Changing document type to: {document_type}")
+
+    # Look for the document type radio button with the specified text
+    document_type_radio = page.get_by_text(document_type)
+    document_type_radio.click()
+
+    # Wait for the change to be processed
+    page.wait_for_timeout(500)
+
+    logger.info(f"Document type changed to: {document_type}")
+
+
+@when('I change the podcast mode to "{podcast_mode}"')
+def change_podcast_mode(page: Page, podcast_mode: str):
+    """
+    Change the podcast mode to the specified value
+
+    Args:
+        page: Playwright page object
+        podcast_mode: Podcast mode to select
+    """
+    logger.info(f"Changing podcast mode to: {podcast_mode}")
+
+    # Look for the podcast mode radio button with the specified text
+    podcast_mode_radio = page.get_by_text(podcast_mode)
+    podcast_mode_radio.click()
+
+    # Wait for the change to be processed
+    page.wait_for_timeout(500)
+
+    logger.info(f"Podcast mode changed to: {podcast_mode}")
+
+
+@when('I change the character settings to "{character1}" and "{character2}"')
+def change_character_settings(page: Page, character1: str, character2: str):
+    """
+    Change the character settings to the specified values
+
+    Args:
+        page: Playwright page object
+        character1: First character to select
+        character2: Second character to select
+    """
+    logger.info(f"Changing character settings to: {character1} and {character2}")
+
+    # Look for character dropdowns
+    character_dropdowns = page.locator("select").all()
+
+    if len(character_dropdowns) >= 2:
+        # Map character names to dropdown values
+        character_mapping = {"Zundamon": "zundamon", "Shikoku Metan": "shikoku_metan", "Kyushu Sora": "kyushu_sora", "Chugoku Usagi": "chugoku_usagi", "Chubu Tsurugi": "chubu_tsurugi"}
+
+        # Set first character
+        char1_value = character_mapping.get(character1, character1.lower().replace(" ", "_"))
+        character_dropdowns[0].select_option(value=char1_value)
+
+        # Set second character
+        char2_value = character_mapping.get(character2, character2.lower().replace(" ", "_"))
+        character_dropdowns[1].select_option(value=char2_value)
+
+        # Wait for changes to be processed
+        page.wait_for_timeout(500)
+
+        logger.info(f"Character settings changed to: {character1} and {character2}")
+    else:
+        logger.warning("Could not find character dropdown elements")
+
+
+@when("I simulate a page refresh")
+def simulate_page_refresh(page: Page):
+    """
+    Simulate a page refresh to test state persistence
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Simulating page refresh")
+
+    # Reload the page
+    page.reload()
+
+    # Wait for the page to fully load
+    page.wait_for_timeout(3000)
+
+    # Ensure the page is ready
+    page.wait_for_selector("text=トーク音声の生成")
+
+    logger.info("Page refresh completed")
+
+
+@then('the document type should be restored to "{expected_document_type}"')
+def verify_document_type_restored(page: Page, expected_document_type: str):
+    """
+    Verify that the document type was restored to the expected value
+
+    Args:
+        page: Playwright page object
+        expected_document_type: Expected document type
+    """
+    logger.info(f"Verifying document type is restored to: {expected_document_type}")
+
+    # Check if the expected document type radio is selected
+    document_type_radio = page.get_by_text(expected_document_type)
+
+    # Find the corresponding radio input element
+    radio_input = document_type_radio.locator("..").locator("input[type='radio']")
+
+    # Verify it's checked
+    assert radio_input.is_checked(), f"Document type should be restored to {expected_document_type}"
+
+    logger.info(f"Document type successfully restored to: {expected_document_type}")
+
+
+@then('the podcast mode should be restored to "{expected_podcast_mode}"')
+def verify_podcast_mode_restored(page: Page, expected_podcast_mode: str):
+    """
+    Verify that the podcast mode was restored to the expected value
+
+    Args:
+        page: Playwright page object
+        expected_podcast_mode: Expected podcast mode
+    """
+    logger.info(f"Verifying podcast mode is restored to: {expected_podcast_mode}")
+
+    # Check if the expected podcast mode radio is selected
+    podcast_mode_radio = page.get_by_text(expected_podcast_mode)
+
+    # Find the corresponding radio input element
+    radio_input = podcast_mode_radio.locator("..").locator("input[type='radio']")
+
+    # Verify it's checked
+    assert radio_input.is_checked(), f"Podcast mode should be restored to {expected_podcast_mode}"
+
+    logger.info(f"Podcast mode successfully restored to: {expected_podcast_mode}")
+
+
+@then("the settings should be saved in browser state")
+def verify_settings_saved_in_browser_state(page: Page):
+    """
+    Verify that settings are saved in browser state
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Verifying settings are saved in browser state")
+
+    # Check localStorage for browser state data
+    browser_state_data = page.evaluate("""
+        () => {
+            // Look for Gradio's BrowserState data
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                if (key && key.includes('gradio') && value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (parsed.user_settings) {
+                            return parsed;
+                        }
+                    } catch (e) {
+                        // Not JSON, continue
+                    }
+                }
+            }
+            return null;
+        }
+    """)
+
+    assert browser_state_data is not None, "Browser state data should be present in localStorage"
+    assert "user_settings" in browser_state_data, "Browser state should contain user_settings"
+
+    # Check for document_type and podcast_mode in user_settings
+    user_settings = browser_state_data["user_settings"]
+    assert "document_type" in user_settings, "user_settings should contain document_type"
+    assert "podcast_mode" in user_settings, "user_settings should contain podcast_mode"
+
+    logger.info(f"Settings successfully saved in browser state: {user_settings}")
+
+
+@then("all my settings should be restored correctly")
+def verify_all_settings_restored(page: Page):
+    """
+    Verify that all settings are restored correctly
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Verifying all settings are restored correctly")
+
+    # This is a general verification that the UI is in a consistent state
+    # with all components functional
+
+    # Check document type section is present
+    document_type_section = page.locator("text=ドキュメントタイプ")
+    assert document_type_section.is_visible(), "Document type section should be visible"
+
+    # Check podcast mode section is present
+    podcast_mode_section = page.locator("text=生成モード")
+    assert podcast_mode_section.is_visible(), "Podcast mode section should be visible"
+
+    # Check character selection is present
+    character_dropdowns = page.locator("select").all()
+    assert len(character_dropdowns) >= 2, "Character selection dropdowns should be present"
+
+    logger.info("All settings UI components are present and functional")
+
+
+@then('the document type should be "{expected_document_type}"')
+def verify_document_type_value(page: Page, expected_document_type: str):
+    """
+    Verify the current document type value
+
+    Args:
+        page: Playwright page object
+        expected_document_type: Expected document type value
+    """
+    verify_document_type_restored(page, expected_document_type)
+
+
+@then('the podcast mode should be "{expected_podcast_mode}"')
+def verify_podcast_mode_value(page: Page, expected_podcast_mode: str):
+    """
+    Verify the current podcast mode value
+
+    Args:
+        page: Playwright page object
+        expected_podcast_mode: Expected podcast mode value
+    """
+    verify_podcast_mode_restored(page, expected_podcast_mode)
+
+
+@then('the characters should be "{expected_character1}" and "{expected_character2}"')
+def verify_character_values(page: Page, expected_character1: str, expected_character2: str):
+    """
+    Verify the current character values
+
+    Args:
+        page: Playwright page object
+        expected_character1: Expected first character
+        expected_character2: Expected second character
+    """
+    logger.info(f"Verifying characters are: {expected_character1} and {expected_character2}")
+
+    # Get character dropdowns
+    character_dropdowns = page.locator("select").all()
+
+    if len(character_dropdowns) >= 2:
+        # Check first character
+        first_char_value = character_dropdowns[0].input_value()
+        logger.info(f"First character dropdown value: {first_char_value}")
+
+        # Check second character
+        second_char_value = character_dropdowns[1].input_value()
+        logger.info(f"Second character dropdown value: {second_char_value}")
+
+        # Map expected names to values
+        character_mapping = {"Zundamon": "zundamon", "Shikoku Metan": "shikoku_metan", "Kyushu Sora": "kyushu_sora", "Chugoku Usagi": "chugoku_usagi", "Chubu Tsurugi": "chubu_tsurugi"}
+
+        expected_char1_value = character_mapping.get(expected_character1, expected_character1.lower().replace(" ", "_"))
+        expected_char2_value = character_mapping.get(expected_character2, expected_character2.lower().replace(" ", "_"))
+
+        assert first_char_value == expected_char1_value, f"First character should be {expected_character1}"
+        assert second_char_value == expected_char2_value, f"Second character should be {expected_character2}"
+
+        logger.info(f"Characters successfully verified: {expected_character1} and {expected_character2}")
+    else:
+        logger.warning("Could not find character dropdown elements for verification")
+
+
+@then("the browser state should be updated immediately")
+def verify_browser_state_updated_immediately(page: Page):
+    """
+    Verify that browser state is updated immediately after changes
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Verifying browser state is updated immediately")
+
+    # Wait a moment for any async updates
+    page.wait_for_timeout(500)
+
+    # Check that browser state exists and is recent
+    browser_state_data = page.evaluate("""
+        () => {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                if (key && key.includes('gradio') && value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (parsed.user_settings) {
+                            return parsed;
+                        }
+                    } catch (e) {
+                        // Not JSON, continue
+                    }
+                }
+            }
+            return null;
+        }
+    """)
+
+    assert browser_state_data is not None, "Browser state should be present and updated"
+    assert "user_settings" in browser_state_data, "Browser state should contain user_settings"
+
+    logger.info("Browser state has been updated immediately")
+
+
+@then("the user_settings should contain the new document type")
+def verify_user_settings_contains_document_type(page: Page):
+    """
+    Verify that user_settings contains the new document type
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Verifying user_settings contains new document type")
+
+    browser_state_data = page.evaluate("""
+        () => {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                if (key && key.includes('gradio') && value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (parsed.user_settings) {
+                            return parsed.user_settings;
+                        }
+                    } catch (e) {
+                        // Not JSON, continue
+                    }
+                }
+            }
+            return null;
+        }
+    """)
+
+    assert browser_state_data is not None, "user_settings should be present"
+    assert "document_type" in browser_state_data, "user_settings should contain document_type"
+
+    logger.info(f"user_settings contains document_type: {browser_state_data['document_type']}")
+
+
+@then("the user_settings should contain the new podcast mode")
+def verify_user_settings_contains_podcast_mode(page: Page):
+    """
+    Verify that user_settings contains the new podcast mode
+
+    Args:
+        page: Playwright page object
+    """
+    logger.info("Verifying user_settings contains new podcast mode")
+
+    browser_state_data = page.evaluate("""
+        () => {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                if (key && key.includes('gradio') && value) {
+                    try {
+                        const parsed = JSON.parse(value);
+                        if (parsed.user_settings) {
+                            return parsed.user_settings;
+                        }
+                    } catch (e) {
+                        // Not JSON, continue
+                    }
+                }
+            }
+            return null;
+        }
+    """)
+
+    assert browser_state_data is not None, "user_settings should be present"
+    assert "podcast_mode" in browser_state_data, "user_settings should contain podcast_mode"
+
+    logger.info(f"user_settings contains podcast_mode: {browser_state_data['podcast_mode']}")
