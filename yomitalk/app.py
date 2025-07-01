@@ -626,6 +626,7 @@ class PaperPodcastApp:
             # ストリーミング用の各パートのパスを保存
             parts_paths = []
             final_combined_path = None
+            current_part_count = 0  # ローカルカウンターを使用
 
             # 個別の音声パートを生成・ストリーミング
             for audio_path in user_session.audio_generator.generate_character_conversation(text):
@@ -637,33 +638,36 @@ class PaperPodcastApp:
                 # 'part_'を含むものは部分音声ファイル、'audio_'から始まるものは最終結合ファイル
                 if "part_" in filename:
                     parts_paths.append(audio_path)
-
-                    # 状態を更新
-                    current_parts = list(user_session.audio_generation_state["streaming_parts"])
-                    current_parts.append(audio_path)
-                    current_part_count = len(current_parts)
+                    current_part_count += 1  # ローカルカウンターをインクリメント
                     progress_ratio = min(0.95, current_part_count / estimated_total_parts)
 
-                    user_session.update_audio_generation_state(
-                        streaming_parts=current_parts,
-                        progress=progress_ratio,
-                    )
+                    # 進捗状況をログに記録
+                    logger.info(f"Audio part {current_part_count}/{estimated_total_parts} completed")
 
                     logger.debug(f"ストリーム音声パーツ ({current_part_count}/{estimated_total_parts}): {audio_path}")
 
                     # 進捗情報を生成してyield（新しい詳細進捗表示）
                     start_time = user_session.audio_generation_state.get("start_time")
+
+                    # パートが完了した場合の適切なメッセージ
+                    if current_part_count < estimated_total_parts:
+                        status_message = f"音声パート {current_part_count} が完了..."
+                        progress_desc = f"🎵 音声パート {current_part_count}/{estimated_total_parts} 完了..."
+                    else:
+                        status_message = f"音声パート {current_part_count} が完了、最終処理中..."
+                        progress_desc = f"🎵 音声パート {current_part_count}/{estimated_total_parts} 完了、最終処理中..."
+
                     progress_html = self._create_progress_html(
                         current_part_count,
                         estimated_total_parts,
-                        f"音声パート {current_part_count} を生成中...",
+                        status_message,
                         start_time=start_time,
                     )
 
                     # gr.Progressも更新
                     progress(
                         progress_ratio,
-                        desc=f"🎵 音声パート {current_part_count}/{estimated_total_parts} 生成中...",
+                        desc=progress_desc,
                     )
 
                     yield (
