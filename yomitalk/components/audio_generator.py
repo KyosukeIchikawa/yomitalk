@@ -510,12 +510,14 @@ class AudioGenerator:
 
         return "".join(result)
 
-    def generate_character_conversation(self, podcast_text: str) -> Generator[Optional[str], None, None]:
+    def generate_character_conversation(self, podcast_text: str, resume_from_part: int = 0, existing_parts: Optional[List[str]] = None) -> Generator[Optional[str], None, None]:
         """
-        Generate audio for a character conversation from podcast text with streaming support.
+        Generate audio for a character conversation from podcast text with streaming support and resume capability.
 
         Args:
             podcast_text (str): Podcast text with character dialogue lines
+            resume_from_part (int): Part number to resume from (0 = start from beginning)
+            existing_parts (List[str], optional): List of existing audio part file paths
 
         Yields:
             Optional[str]: Path to temporary audio files for streaming playback, or None if failed
@@ -523,7 +525,18 @@ class AudioGenerator:
         Returns:
             None: This generator has no return value
         """
-        self.reset_audio_generation_state()
+        logger.info("=" * 60)
+        logger.info("AUDIOGENERATOR: generate_character_conversation CALLED!")
+        logger.info(f"AUDIOGENERATOR: resume_from_part = {resume_from_part}")
+        logger.info(f"AUDIOGENERATOR: existing_parts = {len(existing_parts) if existing_parts else 0}")
+        if existing_parts:
+            logger.info(f"AUDIOGENERATOR: existing_parts files: {[os.path.basename(p) for p in existing_parts]}")
+
+        if resume_from_part == 0 and not existing_parts:
+            logger.info("AUDIOGENERATOR: Resetting audio generation state (new generation)")
+            self.reset_audio_generation_state()
+        else:
+            logger.info("AUDIOGENERATOR: NOT resetting state (resume mode)")
 
         # 前提条件チェック
         if not self.core_initialized:
@@ -544,17 +557,29 @@ class AudioGenerator:
             # 会話部分の抽出
             conversation_parts = self._extract_conversation_parts(podcast_text)
 
+            logger.info("ROOT CAUSE DEBUG: Extracted conversation parts:")
+            for i, (speaker, text) in enumerate(conversation_parts):
+                logger.info(f"ROOT CAUSE DEBUG: Part {i}: {speaker} - {text[:50]}...")
+
             if not conversation_parts:
                 logger.error("No valid conversation parts found")
                 yield None
                 return
 
-            # 一時ディレクトリの作成
-            temp_dir = self.temp_dir / f"stream_{uuid.uuid4().hex[:8]}"
-            temp_dir.mkdir(parents=True, exist_ok=True)
+            # 一時ディレクトリの作成（再開時は既存ディレクトリを利用）
+            if resume_from_part > 0 and existing_parts:
+                # 再開時：既存ファイルのディレクトリを使用
+                existing_dir = Path(existing_parts[0]).parent
+                temp_dir = existing_dir
+                logger.info(f"ROOT CAUSE FIX: Reusing existing directory for resume: {temp_dir}")
+            else:
+                # 新規生成：新しいディレクトリを作成
+                temp_dir = self.temp_dir / f"stream_{uuid.uuid4().hex[:8]}"
+                temp_dir.mkdir(parents=True, exist_ok=True)
+                logger.info(f"ROOT CAUSE FIX: Created new directory for fresh generation: {temp_dir}")
 
-            # 音声生成と結合処理
-            yield from self._generate_and_combine_audio(conversation_parts, temp_dir)
+            # 音声生成と結合処理（部分再開対応）
+            yield from self._generate_and_combine_audio_with_resume(conversation_parts, temp_dir, resume_from_part, existing_parts or [])
 
         except Exception as e:
             logger.error(f"Character conversation audio generation error: {e}")
@@ -629,6 +654,118 @@ class AudioGenerator:
 
         logger.info(f"Extracted {len(conversation_parts)} conversation parts")
         return conversation_parts
+
+    def _generate_and_combine_audio_with_resume(
+        self, conversation_parts: List[Tuple[str, str]], temp_dir: Path, resume_from_part: int = 0, existing_parts: Optional[List[str]] = None
+    ) -> Generator[str, None, None]:
+        """
+        会話部分から音声生成と結合を行う（部分再開対応）
+
+        Args:
+            conversation_parts: (話者, セリフ)のリスト
+            temp_dir: 一時ファイル保存ディレクトリ
+            resume_from_part: 再開する部分のインデックス
+            existing_parts: 既存の音声パートファイルのリスト
+
+        Yields:
+            str: 生成された音声ファイルパス
+        """
+        logger.info("=" * 60)
+        logger.info("AUDIOGENERATOR: _generate_and_combine_audio_with_resume CALLED!")
+        logger.info(f"AUDIOGENERATOR: conversation_parts count = {len(conversation_parts)}")
+        logger.info(f"AUDIOGENERATOR: resume_from_part = {resume_from_part}")
+        logger.info(f"AUDIOGENERATOR: existing_parts count = {len(existing_parts or [])}")
+
+        wav_data_list = []  # メモリ上に直接音声データを保持するリスト
+        temp_files = []  # 一時ファイルのパスを保持するリスト
+        total_parts = len(conversation_parts)
+
+        logger.info(f"Starting audio generation: total_parts={total_parts}, resume_from_part={resume_from_part}, existing_parts={len(existing_parts or [])}")
+
+        # 既存のパートがある場合、それらをまず yield し、wav_data_list に追加
+        if existing_parts and resume_from_part > 0:
+            logger.info(f"PROCESSING {len(existing_parts)} existing parts...")
+            for i, existing_part_path in enumerate(existing_parts):
+                if existing_part_path and os.path.exists(existing_part_path):
+                    logger.info(f"ROOT CAUSE FIX: Restoring existing part {i}: {os.path.basename(existing_part_path)}")
+                    # 既存パートの音声データを読み込んで wav_data_list に追加
+                    try:
+                        with open(existing_part_path, "rb") as f:
+                            existing_wav_data = f.read()
+                        wav_data_list.append(existing_wav_data)
+                        temp_files.append(existing_part_path)
+
+                        # 既存パートを yield（ストリーミング再生用）
+                        logger.info(f"ROOT CAUSE FIX: Yielding existing part {i} for streaming")
+                        yield existing_part_path
+                    except Exception as e:
+                        logger.error(f"Failed to load existing part {existing_part_path}: {e}")
+                else:
+                    logger.warning(f"ROOT CAUSE FIX: Existing part {i} does not exist: {existing_part_path}")
+
+        # resume_from_part から新しい音声生成を開始
+        logger.info(f"ROOT CAUSE FIX: Starting NEW generation from part {resume_from_part} to {total_parts - 1}")
+        for i in range(resume_from_part, total_parts):
+            speaker, text = conversation_parts[i]
+
+            # 進捗状況の更新
+            self.audio_generation_progress = (i + 1) / total_parts * 0.8
+
+            if not text.strip():
+                logger.info(f"ROOT CAUSE FIX: Skipping empty text for part {i}")
+                continue
+
+            logger.info(f"ROOT CAUSE FIX: Generating NEW part {i}: {speaker} - {text[:50]}...")
+
+            # 音声生成
+            style_id = STYLE_ID_BY_NAME[speaker]
+            part_wav_data = self._text_to_speech(text, style_id)
+
+            if part_wav_data:
+                wav_data_list.append(part_wav_data)
+
+                # 一時ファイルに書き込み、ストリーミング再生用に提供
+                temp_file_path = temp_dir / f"part_{i:03d}_{speaker}.wav"
+                with open(temp_file_path, "wb") as f:
+                    f.write(part_wav_data)
+
+                temp_files.append(str(temp_file_path))
+
+                # ストリーミング再生用に現在のパートをyield
+                logger.info(f"ROOT CAUSE FIX: Generated and yielding NEW part {i}: {temp_file_path.name}")
+                yield str(temp_file_path)
+            else:
+                logger.error(f"ROOT CAUSE FIX: Failed to generate audio for part {i}")
+
+        # メモリ上で音声データを結合して最終的な音声ファイルを作成
+        if wav_data_list:
+            logger.info(f"Combining {len(wav_data_list)} audio parts into final file")
+            combined_wav_data = self._combine_wav_data_in_memory(wav_data_list)
+
+            if combined_wav_data:
+                # 日付付きの最終的な出力ファイル名を生成
+                now = datetime.datetime.now()
+                date_str = now.strftime("%Y%m%d_%H%M%S")
+                file_id = uuid.uuid4().hex[:8]
+
+                self.output_dir.mkdir(parents=True, exist_ok=True)
+                output_file = str(self.output_dir / f"audio_{date_str}_{file_id}.wav")
+
+                try:
+                    with open(output_file, "wb") as f:
+                        f.write(combined_wav_data)
+
+                    # クラス変数に最終的なファイルパスを保存
+                    self.final_audio_path = output_file
+                    self.audio_generation_progress = 1.0
+
+                    logger.info(f"Final combined audio created: {output_file}")
+                    yield output_file
+
+                except Exception as e:
+                    logger.error(f"音声ファイルの書き込みエラー: {str(e)}")
+            else:
+                logger.error("音声データの結合に失敗しました")
 
     def _generate_and_combine_audio(
         self,

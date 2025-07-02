@@ -10,7 +10,7 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gradio as gr
 
@@ -157,15 +157,600 @@ class PaperPodcastApp:
 
     def generate_podcast_audio_streaming_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any], progress=None):
         """Generate streaming audio with BrowserState synchronization for network recovery."""
-        # Use the existing streaming generator but wrap it to update BrowserState
-        for result in self.generate_podcast_audio_streaming(text, user_session, progress):
-            streaming_audio, updated_user_session, progress_html, final_audio = result
+        if not text:
+            logger.warning("Streaming audio generation: Text is empty")
+            browser_state["audio_generation_state"]["status"] = "failed"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            error_html = self._create_error_html("テキストが空のため音声生成できません")
+            yield None, user_session, error_html, None, browser_state
+            return
 
-            # Update BrowserState with current audio generation status
-            updated_browser_state = self.update_browser_state_audio_status(updated_user_session, browser_state)
+        # Check if VOICEVOX Core is available
+        if not user_session.audio_generator.core_initialized:
+            logger.error("Streaming audio generation: VOICEVOX Core is not available")
+            browser_state["audio_generation_state"]["status"] = "failed"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            error_html = self._create_error_html("VOICEVOX Coreが利用できません")
+            yield None, user_session, error_html, None, browser_state
+            return
 
-            # Yield with updated BrowserState
-            yield streaming_audio, updated_user_session, progress_html, final_audio, updated_browser_state
+        try:
+            # Initialize progress if not provided
+            if progress is None:
+                progress = gr.Progress()
+
+            # スクリプトからパーツ数を推定
+            estimated_total_parts = self._estimate_audio_parts_count(text)
+            logger.info(f"Estimated total audio parts: {estimated_total_parts}")
+
+            # 音声生成状態をブラウザ状態に初期化
+            generation_id = str(uuid.uuid4())
+            browser_state["audio_generation_state"].update(
+                {
+                    "is_generating": True,
+                    "status": "generating",
+                    "current_script": text,
+                    "generation_id": generation_id,
+                    "start_time": time.time(),
+                    "progress": 0.0,
+                    "generated_parts": [],
+                    "streaming_parts": [],
+                    "final_audio_path": None,
+                    "estimated_total_parts": estimated_total_parts,
+                }
+            )
+
+            # 初回のyieldを行って、Gradioのストリーミングモードを確実に有効化
+            logger.debug(f"Initializing streaming audio generation (ID: {generation_id})")
+            start_html = self._create_progress_html(
+                0,
+                estimated_total_parts,
+                "音声生成を開始しています...",
+                start_time=time.time(),
+            )
+            yield None, user_session, start_html, None, browser_state
+
+            # gr.Progressも使用（Gradio標準の進捗バー）
+            progress(0, desc="🎤 音声生成を開始しています...")
+
+            # ストリーミング用の各パートのパスを保存
+            parts_paths = []
+            final_combined_path = None
+            current_part_count = 0  # ローカルカウンターを使用
+
+            # 個別の音声パートを生成・ストリーミング
+            for audio_path in user_session.audio_generator.generate_character_conversation(text, 0, []):
+                if not audio_path:
+                    continue
+
+                filename = os.path.basename(audio_path)
+
+                # 'part_'を含むものは部分音声ファイル、'audio_'から始まるものは最終結合ファイル
+                if "part_" in filename:
+                    parts_paths.append(audio_path)
+                    current_part_count += 1  # ローカルカウンターをインクリメント
+                    progress_ratio = min(0.95, current_part_count / estimated_total_parts)
+
+                    # 進捗状況をログに記録
+                    logger.info(f"Audio part {current_part_count}/{estimated_total_parts} completed")
+
+                    logger.debug(f"ストリーム音声パーツ ({current_part_count}/{estimated_total_parts}): {audio_path}")
+
+                    # ブラウザ状態にストリーミングパーツを追加
+                    browser_state["audio_generation_state"]["streaming_parts"].append(audio_path)
+                    browser_state["audio_generation_state"]["progress"] = progress_ratio
+
+                    # 進捗情報を生成してyield（新しい詳細進捗表示）
+                    start_time = browser_state["audio_generation_state"]["start_time"]
+
+                    # パートが完了した場合の適切なメッセージ
+                    if current_part_count < estimated_total_parts:
+                        status_message = f"音声パート {current_part_count} が完了..."
+                        progress_desc = f"🎵 音声パート {current_part_count}/{estimated_total_parts} 完了..."
+                    else:
+                        status_message = f"音声パート {current_part_count} が完了、最終処理中..."
+                        progress_desc = f"🎵 音声パート {current_part_count}/{estimated_total_parts} 完了、最終処理中..."
+
+                    progress_html = self._create_progress_html(
+                        current_part_count,
+                        estimated_total_parts,
+                        status_message,
+                        start_time=start_time,
+                    )
+
+                    # gr.Progressも更新
+                    progress(
+                        progress_ratio,
+                        desc=progress_desc,
+                    )
+
+                    yield (
+                        audio_path,
+                        user_session,
+                        progress_html,
+                        None,
+                        browser_state,
+                    )  # ストリーミング再生用にyield
+                    time.sleep(0.05)  # 連続再生のタイミング調整
+                elif filename.startswith("audio_"):
+                    # 最終結合ファイルの場合
+                    final_combined_path = audio_path
+                    browser_state["audio_generation_state"]["final_audio_path"] = audio_path
+                    browser_state["audio_generation_state"]["progress"] = 1.0
+                    logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
+
+                    # 最終音声完成の進捗を表示
+                    start_time = browser_state["audio_generation_state"]["start_time"]
+                    complete_html = self._create_progress_html(
+                        estimated_total_parts,
+                        estimated_total_parts,
+                        "音声生成完了！",
+                        is_completed=True,
+                        start_time=start_time,
+                    )
+
+                    # gr.Progressも完了状態に
+                    progress(1.0, desc="✅ 音声生成完了！")
+
+                    yield None, user_session, complete_html, final_combined_path, browser_state
+
+            # 音声生成の完了処理
+            self._finalize_audio_generation_with_browser_state(final_combined_path, parts_paths, user_session, browser_state)
+
+        except Exception as e:
+            logger.error(f"Streaming audio generation exception: {str(e)}")
+            browser_state["audio_generation_state"]["status"] = "failed"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            browser_state["audio_generation_state"]["progress"] = 0.0
+            error_html = self._create_error_html(f"音声生成でエラーが発生しました: {str(e)}")
+            progress(0, desc="❌ 音声生成エラー")
+            yield None, user_session, error_html, None, browser_state
+
+    def generate_podcast_audio_streaming_with_browser_state_and_resume(
+        self, text: str, user_session: UserSession, browser_state: Dict[str, Any], resume_from_part: int = 0, existing_parts: Optional[List[str]] = None, progress=None
+    ):
+        """Generate streaming audio with BrowserState synchronization and true resume capability."""
+        if not text:
+            logger.warning("Streaming audio generation: Text is empty")
+            browser_state["audio_generation_state"]["status"] = "failed"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            error_html = self._create_error_html("テキストが空のため音声生成できません")
+            yield None, user_session, error_html, None, browser_state
+            return
+
+        # Check if VOICEVOX Core is available
+        if not user_session.audio_generator.core_initialized:
+            logger.error("Streaming audio generation: VOICEVOX Core is not available")
+            browser_state["audio_generation_state"]["status"] = "failed"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            error_html = self._create_error_html("VOICEVOX Coreが利用できません")
+            yield None, user_session, error_html, None, browser_state
+            return
+
+        try:
+            # Initialize progress if not provided
+            if progress is None:
+                progress = gr.Progress()
+
+            # スクリプトからパーツ数を推定
+            estimated_total_parts = self._estimate_audio_parts_count(text)
+            logger.info(f"Estimated total audio parts: {estimated_total_parts}")
+
+            # 音声生成状態をブラウザ状態に初期化（再開の場合は一部保持）
+            generation_id = str(uuid.uuid4())
+            if resume_from_part == 0:
+                # 新規生成の場合
+                browser_state["audio_generation_state"].update(
+                    {
+                        "is_generating": True,
+                        "status": "generating",
+                        "current_script": text,
+                        "generation_id": generation_id,
+                        "start_time": time.time(),
+                        "progress": 0.0,
+                        "generated_parts": [],
+                        "streaming_parts": [],
+                        "final_audio_path": None,
+                        "estimated_total_parts": estimated_total_parts,
+                    }
+                )
+            else:
+                # 再開の場合、必要な状態のみ更新
+                browser_state["audio_generation_state"].update(
+                    {
+                        "is_generating": True,
+                        "status": "generating",
+                        "generation_id": generation_id,
+                    }
+                )
+
+            # 初回のyieldを行って、Gradioのストリーミングモードを確実に有効化
+            logger.debug(f"Initializing streaming audio generation (ID: {generation_id}, resume_from_part: {resume_from_part})")
+            if resume_from_part == 0:
+                start_html = self._create_progress_html(
+                    0,
+                    estimated_total_parts,
+                    "音声生成を開始しています...",
+                    start_time=time.time(),
+                )
+                yield None, user_session, start_html, None, browser_state
+            else:
+                resume_html = self._create_progress_html(
+                    resume_from_part,
+                    estimated_total_parts,
+                    f"音声生成を再開しています... (パート{resume_from_part + 1}から)",
+                    start_time=browser_state["audio_generation_state"].get("start_time", time.time()),
+                )
+                yield None, user_session, resume_html, None, browser_state
+
+            # gr.Progressも使用（Gradio標準の進捗バー）
+            if resume_from_part == 0:
+                progress(0, desc="🎤 音声生成を開始しています...")
+            else:
+                progress(resume_from_part / estimated_total_parts, desc=f"🔄 音声生成を再開中... (パート{resume_from_part + 1}から)")
+
+            # ストリーミング用の各パートのパスを保存
+            parts_paths = existing_parts.copy() if existing_parts else []
+            final_combined_path = None
+            current_part_count = 0  # 常に0から開始
+
+            # 真の部分再開対応の音声生成
+            for audio_path in user_session.audio_generator.generate_character_conversation(text, resume_from_part, existing_parts):
+                if not audio_path:
+                    continue
+
+                filename = os.path.basename(audio_path)
+
+                # 'part_'を含むものは部分音声ファイル、'audio_'から始まるものは最終結合ファイル
+                if "part_" in filename:
+                    # 既存パートかどうかをチェック
+                    is_existing_part = audio_path in (existing_parts or [])
+
+                    # パートカウンターを常にインクリメント
+                    current_part_count += 1
+
+                    if not is_existing_part:
+                        # 新しく生成されたパート
+                        parts_paths.append(audio_path)
+
+                        # ブラウザ状態にストリーミングパーツを追加
+                        browser_state["audio_generation_state"]["streaming_parts"].append(audio_path)
+
+                        logger.info(f"New audio part {current_part_count}/{estimated_total_parts} completed")
+                    else:
+                        # 既存パートの復元（既にparts_pathsにある）
+                        logger.info(f"Restored existing audio part {current_part_count}: {audio_path}")
+
+                    progress_ratio = min(0.95, current_part_count / estimated_total_parts)
+                    browser_state["audio_generation_state"]["progress"] = progress_ratio
+
+                    # 進捗情報を生成してyield
+                    start_time = browser_state["audio_generation_state"]["start_time"]
+
+                    if is_existing_part:
+                        status_message = f"音声パート {current_part_count} を復元..."
+                        progress_desc = f"🔄 音声パート {current_part_count}/{estimated_total_parts} 復元..."
+                    elif current_part_count < estimated_total_parts:
+                        status_message = f"音声パート {current_part_count} が完了..."
+                        progress_desc = f"🎵 音声パート {current_part_count}/{estimated_total_parts} 完了..."
+                    else:
+                        status_message = f"音声パート {current_part_count} が完了、最終処理中..."
+                        progress_desc = f"🎵 音声パート {current_part_count}/{estimated_total_parts} 完了、最終処理中..."
+
+                    progress_html = self._create_progress_html(
+                        current_part_count,
+                        estimated_total_parts,
+                        status_message,
+                        start_time=start_time,
+                    )
+
+                    # gr.Progressも更新
+                    progress(
+                        progress_ratio,
+                        desc=progress_desc,
+                    )
+
+                    yield (
+                        audio_path,
+                        user_session,
+                        progress_html,
+                        None,
+                        browser_state,
+                    )
+                    time.sleep(0.05)
+                elif filename.startswith("audio_"):
+                    # 最終結合ファイルの場合
+                    final_combined_path = audio_path
+                    browser_state["audio_generation_state"]["final_audio_path"] = audio_path
+                    browser_state["audio_generation_state"]["progress"] = 1.0
+                    logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
+
+                    # 最終音声完成の進捗を表示
+                    start_time = browser_state["audio_generation_state"]["start_time"]
+                    complete_html = self._create_progress_html(
+                        estimated_total_parts,
+                        estimated_total_parts,
+                        "音声生成完了！",
+                        is_completed=True,
+                        start_time=start_time,
+                    )
+
+                    # gr.Progressも完了状態に
+                    progress(1.0, desc="✅ 音声生成完了！")
+
+                    yield None, user_session, complete_html, final_combined_path, browser_state
+
+            # 音声生成の完了処理
+            self._finalize_audio_generation_with_browser_state(final_combined_path, parts_paths, user_session, browser_state)
+
+        except Exception as e:
+            logger.error(f"Streaming audio generation exception: {str(e)}")
+            browser_state["audio_generation_state"]["status"] = "failed"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            browser_state["audio_generation_state"]["progress"] = 0.0
+            error_html = self._create_error_html(f"音声生成でエラーが発生しました: {str(e)}")
+            progress(0, desc="❌ 音声生成エラー")
+            yield None, user_session, error_html, None, browser_state
+
+    def _finalize_audio_generation_with_browser_state(self, final_combined_path, parts_paths, user_session: UserSession, browser_state: Dict[str, Any]):
+        """
+        音声生成の最終処理をブラウザ状態と同期して行う
+
+        Args:
+            final_combined_path (str): 結合された最終音声ファイルのパス
+            parts_paths (List[str]): 部分音声ファイルのパスのリスト
+            user_session (UserSession): ユーザーセッションインスタンス
+            browser_state (Dict[str, Any]): ブラウザ状態
+
+        Returns:
+            str: 最終的な音声ファイルの情報、またはNone
+        """
+        # 最終結合ファイルのパスが取得できた場合
+        if final_combined_path and os.path.exists(final_combined_path):
+            # 進捗を更新
+            browser_state["audio_generation_state"]["progress"] = 0.9
+            logger.info(f"最終結合音声ファイル: {final_combined_path}")
+
+            # 最終的な音声ファイルのパスを保存
+            user_session.audio_generator.final_audio_path = final_combined_path
+
+            # ファイルの書き込みを確実にするため少し待機
+            time.sleep(0.2)
+
+            if os.path.exists(final_combined_path):
+                filesize = os.path.getsize(final_combined_path)
+                # 進捗を完了状態に更新
+                browser_state["audio_generation_state"]["progress"] = 1.0
+                browser_state["audio_generation_state"]["status"] = "completed"
+                browser_state["audio_generation_state"]["is_generating"] = False
+                browser_state["audio_generation_state"]["final_audio_path"] = final_combined_path
+                logger.info(f"音声生成完了: {final_combined_path} (ファイルサイズ: {filesize} bytes)")
+                return final_combined_path  # 最終的な音声ファイルパスを返す
+            else:
+                logger.error(f"ファイルが存在しなくなりました: {final_combined_path}")
+                return self._use_fallback_audio_with_browser_state(parts_paths, user_session, browser_state)
+
+        # 最終結合ファイルがない場合はフォールバック処理
+        else:
+            return self._use_fallback_audio_with_browser_state(parts_paths, user_session, browser_state)
+
+    def _use_fallback_audio_with_browser_state(self, parts_paths, user_session: UserSession, browser_state: Dict[str, Any]):
+        """
+        結合ファイルが取得できない場合のフォールバック処理（ブラウザ状態対応）
+
+        Args:
+            parts_paths (List[str]): 部分音声ファイルのパスのリスト
+            user_session (UserSession): ユーザーセッションインスタンス
+            browser_state (Dict[str, Any]): ブラウザ状態
+
+        Returns:
+            str: フォールバックで使用する音声ファイルパス、またはNone
+        """
+        # 部分音声ファイルがある場合は最後のパートを使用
+        if parts_paths:
+            logger.warning("結合音声ファイルを取得できなかったため、最後のパートを使用します")
+            user_session.audio_generator.final_audio_path = parts_paths[-1]
+            user_session.audio_generator.audio_generation_progress = 1.0
+            browser_state["audio_generation_state"]["status"] = "completed"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            browser_state["audio_generation_state"]["progress"] = 1.0
+            browser_state["audio_generation_state"]["final_audio_path"] = parts_paths[-1]
+
+            if os.path.exists(parts_paths[-1]):
+                filesize = os.path.getsize(parts_paths[-1])
+                logger.info(f"部分音声ファイル使用: {parts_paths[-1]} (ファイルサイズ: {filesize} bytes)")
+                return parts_paths[-1]  # フォールバック音声ファイルパスを返す
+            else:
+                logger.error(f"フォールバックファイルも存在しません: {parts_paths[-1]}")
+                browser_state["audio_generation_state"]["status"] = "failed"
+                browser_state["audio_generation_state"]["is_generating"] = False
+                browser_state["audio_generation_state"]["progress"] = 0.0
+        else:
+            logger.warning("音声ファイルが生成されませんでした")
+            browser_state["audio_generation_state"]["status"] = "failed"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            browser_state["audio_generation_state"]["progress"] = 0.0
+        return None  # エラー時はNoneを返す
+
+    def restore_streaming_audio_from_browser_state(self, browser_state: Dict[str, Any]) -> Tuple[Optional[str], str]:
+        """Restore streaming audio playback from browser state after page reload."""
+        audio_state = browser_state.get("audio_generation_state", {})
+        streaming_parts = audio_state.get("streaming_parts", [])
+        final_audio_path = audio_state.get("final_audio_path")
+
+        # If there's a final audio file, return that for immediate playback
+        if final_audio_path and os.path.exists(final_audio_path):
+            progress_html = self._create_progress_html(
+                len(streaming_parts), audio_state.get("estimated_total_parts", len(streaming_parts)), "音声生成完了！ (復元済み)", is_completed=True, start_time=audio_state.get("start_time")
+            )
+            logger.info(f"Restored final audio from browser state: {final_audio_path}")
+            return final_audio_path, progress_html
+
+        # If there are streaming parts but no final audio, show the latest part
+        if streaming_parts:
+            # Find the most recent valid audio file
+            latest_audio = None
+            for audio_path in reversed(streaming_parts):
+                if audio_path and os.path.exists(audio_path):
+                    latest_audio = audio_path
+                    break
+
+            if latest_audio:
+                progress_html = self._create_progress_html(
+                    len(streaming_parts),
+                    audio_state.get("estimated_total_parts", len(streaming_parts)),
+                    f"音声生成途中 ({len(streaming_parts)}パート復元済み)",
+                    start_time=audio_state.get("start_time"),
+                )
+                logger.info(f"Restored streaming audio from browser state: {latest_audio} ({len(streaming_parts)} parts)")
+                return latest_audio, progress_html
+
+        # No audio to restore
+        return None, ""
+
+    def resume_or_generate_podcast_audio_streaming_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any], progress=None):
+        """Resume or start new audio generation with browser state synchronization."""
+        logger.info("=" * 60)
+        logger.info("RESUME FUNCTION CALLED!")
+        logger.info(f"Text length: {len(text) if text else 0}")
+        logger.info(f"Session ID: {user_session.session_id}")
+
+        audio_state = browser_state.get("audio_generation_state", {})
+        current_script = audio_state.get("current_script", "")
+        has_streaming_parts = len(audio_state.get("streaming_parts", [])) > 0
+        has_final_audio = audio_state.get("final_audio_path") is not None
+
+        logger.info(f"Current script length: {len(current_script)}")
+        logger.info(f"Has streaming parts: {has_streaming_parts}")
+        logger.info(f"Has final audio: {has_final_audio}")
+
+        # Check for existing audio parts on disk FIRST (browser_state might not have them due to reload)
+        temp_dir = user_session.get_talk_temp_dir()
+        existing_part_files_on_disk = []
+
+        logger.info(f"ROOT CAUSE DEBUG: Checking temp directory: {temp_dir}")
+        logger.info(f"ROOT CAUSE DEBUG: Temp dir exists: {temp_dir.exists()}")
+
+        if temp_dir.exists():
+            stream_dirs = list(temp_dir.glob("stream_*"))
+            logger.info(f"ROOT CAUSE DEBUG: Found {len(stream_dirs)} stream directories: {[d.name for d in stream_dirs]}")
+
+            # Find all part_*.wav files in temp directories
+            for temp_subdir in stream_dirs:
+                if temp_subdir.is_dir():
+                    part_files = list(temp_subdir.glob("part_*.wav"))
+                    logger.info(f"ROOT CAUSE DEBUG: In {temp_subdir.name}, found {len(part_files)} part files: {[f.name for f in part_files]}")
+                    for part_file in sorted(part_files):
+                        if part_file.exists():
+                            existing_part_files_on_disk.append(str(part_file))
+                            logger.info(f"ROOT CAUSE DEBUG: Valid part file: {part_file}")
+        else:
+            logger.info("ROOT CAUSE DEBUG: Temp directory does not exist!")
+
+        has_existing_parts_on_disk = len(existing_part_files_on_disk) > 0
+        logger.info(f"ROOT CAUSE DEBUG: Has existing parts on disk: {has_existing_parts_on_disk} ({len(existing_part_files_on_disk)} files)")
+
+        # Check if script was changed (flag set in prepare phase)
+        script_changed = audio_state.get("script_changed", False)
+        if script_changed:
+            logger.info("Script changed detected (from prepare phase) - will start from part 1")
+
+            # CRITICAL: Clear existing part files on disk when script changes
+            if temp_dir.exists():
+                logger.info(f"Script changed - cleaning up existing part files in {temp_dir}")
+                for temp_subdir in temp_dir.glob("stream_*"):
+                    if temp_subdir.is_dir():
+                        for part_file in temp_subdir.glob("part_*.wav"):
+                            try:
+                                part_file.unlink()
+                                logger.info(f"Deleted old part file: {part_file.name}")
+                            except Exception as e:
+                                logger.warning(f"Failed to delete {part_file}: {e}")
+                # Re-scan after cleanup
+                existing_part_files_on_disk = []
+                has_existing_parts_on_disk = False
+                logger.info("Cleared all existing part files due to script change")
+
+        # Check if we can resume (script unchanged and has previous audio in browser_state OR on disk)
+        can_resume = not script_changed and (has_streaming_parts or has_final_audio or has_existing_parts_on_disk)
+        logger.info(f"Can resume: {can_resume} (script_unchanged={not script_changed}, browser_parts={has_streaming_parts}, final_audio={has_final_audio}, disk_parts={has_existing_parts_on_disk})")
+
+        if can_resume and has_final_audio:
+            # Audio generation already completed, just restore the final result
+            final_audio_path = audio_state.get("final_audio_path")
+            if final_audio_path and os.path.exists(final_audio_path):
+                progress_html = self._create_progress_html(
+                    audio_state.get("estimated_total_parts", 1), audio_state.get("estimated_total_parts", 1), "音声生成完了！ (復元済み)", is_completed=True, start_time=audio_state.get("start_time")
+                )
+                # Update browser state to ensure consistency
+                browser_state["audio_generation_state"]["status"] = "completed"
+                browser_state["audio_generation_state"]["is_generating"] = False
+                browser_state["audio_generation_state"]["progress"] = 1.0
+
+                yield None, user_session, progress_html, final_audio_path, browser_state
+                return
+
+        # If resuming is possible but not completed, check for final audio first
+        if can_resume and (has_streaming_parts or has_existing_parts_on_disk):
+            logger.info(f"Resuming audio generation with {len(audio_state.get('streaming_parts', []))} browser parts + {len(existing_part_files_on_disk)} disk parts")
+
+            # Check if final audio exists (generation might have completed)
+            output_dir = user_session.get_output_dir()
+            final_audio_found = None
+            for audio_file in output_dir.glob("audio_*.wav"):
+                if audio_file.exists():
+                    final_audio_found = str(audio_file)
+                    break
+
+            if final_audio_found:
+                # Generation was actually complete
+                browser_state["audio_generation_state"]["final_audio_path"] = final_audio_found
+                browser_state["audio_generation_state"]["status"] = "completed"
+                browser_state["audio_generation_state"]["progress"] = 1.0
+
+                estimated_parts = audio_state.get("estimated_total_parts", len(existing_part_files_on_disk))
+                complete_html = self._create_progress_html(estimated_parts, estimated_parts, "音声生成完了！ (復元済み)", is_completed=True, start_time=audio_state.get("start_time"))
+                logger.info(f"Resume: Found completed final audio: {final_audio_found}")
+                yield None, user_session, complete_html, final_audio_found, browser_state
+                return
+
+            # Combine streaming_parts from browser_state with discovered files on disk
+            streaming_parts = audio_state.get("streaming_parts", [])
+            all_potential_parts = streaming_parts + existing_part_files_on_disk
+
+            # Remove duplicates and filter valid existing parts
+            valid_existing_parts = []
+            seen_parts = set()
+            for part_path in all_potential_parts:
+                if part_path and os.path.exists(part_path) and part_path not in seen_parts:
+                    valid_existing_parts.append(part_path)
+                    seen_parts.add(part_path)
+
+            # Sort by part number to ensure correct order
+            def extract_part_number(path):
+                import re
+
+                match = re.search(r"part_(\d+)", os.path.basename(path))
+                return int(match.group(1)) if match else 0
+
+            valid_existing_parts.sort(key=extract_part_number)
+
+            if valid_existing_parts:
+                resume_from_part = len(valid_existing_parts)
+                estimated_parts = audio_state.get("estimated_total_parts", resume_from_part + 1)
+
+                logger.info(f"Resume: Found {len(valid_existing_parts)} existing parts total")
+                logger.info(f"Resume: Implementing true resume from part {resume_from_part}")
+                logger.info(f"Resume: Existing parts: {[os.path.basename(p) for p in valid_existing_parts]}")
+
+                # Use true resume functionality
+                yield from self.generate_podcast_audio_streaming_with_browser_state_and_resume(text, user_session, browser_state, resume_from_part, valid_existing_parts, progress)
+                return
+
+            logger.info("Resume: No valid existing parts found, starting from beginning")
+
+        # Start new generation from beginning
+        yield from self.generate_podcast_audio_streaming_with_browser_state_and_resume(text, user_session, browser_state, 0, [], progress)
 
     def set_openai_api_key(self, api_key: str, user_session: UserSession):
         """Set the OpenAI API key for the specific user session."""
@@ -629,7 +1214,7 @@ class PaperPodcastApp:
             current_part_count = 0  # ローカルカウンターを使用
 
             # 個別の音声パートを生成・ストリーミング
-            for audio_path in user_session.audio_generator.generate_character_conversation(text):
+            for audio_path in user_session.audio_generator.generate_character_conversation(text, 0, []):
                 if not audio_path:
                     continue
 
@@ -1440,8 +2025,8 @@ class PaperPodcastApp:
 
             # VOICEVOX Terms checkbox - 音声生成ボタンに対してイベントハンドラを更新
             terms_checkbox.change(
-                fn=self.update_audio_button_state_with_browser_state,
-                inputs=[terms_checkbox, podcast_text, browser_state],
+                fn=self.update_audio_button_state_with_resume_check_and_browser_state,
+                inputs=[terms_checkbox, podcast_text, user_session, browser_state],
                 outputs=[generate_btn, browser_state],
             )
 
@@ -1492,19 +2077,19 @@ class PaperPodcastApp:
                 api_name="disable_generate_button",
             )
 
-            # 0. 音声生成状態をリセットしてストリーミング再生コンポーネントをクリア
+            # 0. 音声生成準備: current_scriptをbrowser_stateに保存してからUIコンポーネントをクリア
             audio_events = disable_btn_event.then(
-                fn=self.reset_audio_state_and_components_with_browser_state,
-                inputs=[user_session, browser_state],
+                fn=self.prepare_audio_generation_with_browser_state,
+                inputs=[podcast_text, user_session, browser_state],
                 outputs=[streaming_audio_output, audio_progress, audio_output, browser_state],
-                concurrency_id="audio_reset",
+                concurrency_id="audio_prepare",
                 concurrency_limit=1,  # 同時実行数を1に制限
-                api_name="reset_audio_state",
+                api_name="prepare_audio_generation",
             )
 
-            # 1. ストリーミング再生開始 (音声パーツ生成とストリーミング再生)
+            # 1. ストリーミング再生開始 (音声パーツ生成とストリーミング再生、または再開)
             streaming_event = audio_events.then(
-                fn=self.generate_podcast_audio_streaming_with_browser_state,
+                fn=self.resume_or_generate_podcast_audio_streaming_with_browser_state,
                 inputs=[podcast_text, user_session, browser_state],
                 outputs=[
                     streaming_audio_output,
@@ -1543,10 +2128,10 @@ class PaperPodcastApp:
                 outputs=[user_session, browser_state],
             )
 
-            # podcast_textの変更時にも音声生成ボタンの状態を更新
+            # podcast_textの変更時にも音声生成ボタンの状態を更新（再開機能を含む）
             podcast_text.change(
-                fn=self.update_audio_button_state_with_browser_state,
-                inputs=[terms_checkbox, podcast_text, browser_state],
+                fn=self.update_audio_button_state_with_resume_check_and_browser_state,
+                inputs=[terms_checkbox, podcast_text, user_session, browser_state],
                 outputs=[generate_btn, browser_state],
             )
 
@@ -1723,7 +2308,7 @@ class PaperPodcastApp:
 
         return button_update, updated_browser_state
 
-    def update_audio_button_state_with_resume_check(self, checked: bool, podcast_text: Optional[str], user_session: UserSession) -> Dict[str, Any]:
+    def update_audio_button_state_with_resume_check(self, checked: bool, podcast_text: Optional[str], user_session: UserSession, browser_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Update audio button state with resume functionality check."""
         has_text = bool(podcast_text and podcast_text.strip() != "")
         is_enabled = bool(checked and has_text)
@@ -1736,13 +2321,32 @@ class PaperPodcastApp:
         elif not has_text:
             message = "（トーク原稿が必要です）"
         elif has_text and checked and user_session:
-            # Check if we can resume (script unchanged and has previous audio)
-            audio_state = user_session.get_audio_generation_status()
-            current_script = audio_state.get("current_script", "")
+            # Check if we can resume (script unchanged)
+            if browser_state:
+                # Use browser_state for more reliable state management
+                audio_state = browser_state.get("audio_generation_state", {})
+                current_script = audio_state.get("current_script", "")
+                has_streaming_parts = len(audio_state.get("streaming_parts", [])) > 0
+                has_final_audio = audio_state.get("final_audio_path") is not None
+                is_preparing = audio_state.get("status") == "preparing"
 
-            # If script is unchanged and we have generated audio, show resume option
-            if current_script == podcast_text and user_session.has_generated_audio():
-                button_text = "音声生成を再開"
+                # If script is unchanged, show resume option (regardless of whether audio exists)
+                # This handles cases where generation was interrupted during streaming
+                if current_script == podcast_text and current_script != "":
+                    if has_final_audio:
+                        button_text = "音声再生可能 (再生成)"
+                    elif has_streaming_parts or is_preparing:
+                        button_text = "音声生成を再開"
+                    else:
+                        button_text = "音声生成を再開"
+            else:
+                # Fallback to legacy UserSession methods if browser_state not available
+                audio_state = user_session.get_audio_generation_status()
+                current_script = audio_state.get("current_script", "")
+
+                # If script is unchanged and we have generated audio, show resume option
+                if current_script == podcast_text and user_session.has_generated_audio():
+                    button_text = "音声生成を再開"
 
         result: Dict[str, Any] = gr.update(
             value=f"{button_text}{message}",
@@ -1750,6 +2354,17 @@ class PaperPodcastApp:
             variant="primary" if is_enabled else "secondary",
         )
         return result
+
+    def update_audio_button_state_with_resume_check_and_browser_state(
+        self, checked: bool, podcast_text: Optional[str], user_session: UserSession, browser_state: Dict[str, Any]
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Update audio button state with resume functionality check and browser state."""
+        button_update = self.update_audio_button_state_with_resume_check(checked, podcast_text, user_session, browser_state)
+
+        # Update browser state with terms agreement and podcast text
+        updated_browser_state = self.update_browser_state_ui_content(browser_state, podcast_text or "", checked)
+
+        return button_update, updated_browser_state
 
     def update_browser_state_extracted_text(self, extracted_text: str, browser_state: Dict[str, Any]) -> Dict[str, Any]:
         """Update browser state with extracted text changes."""
@@ -1807,13 +2422,65 @@ class PaperPodcastApp:
 
     def reset_audio_state_and_components_with_browser_state(self, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[None, str, None, Dict[str, Any]]:
         """Reset audio state and components with BrowserState synchronization."""
-        # Reset audio state using original method
-        streaming_clear, progress_clear, audio_clear = self.reset_audio_state_and_components(user_session)
+        # Preserve current_script for resume functionality
+        current_script = browser_state["audio_generation_state"].get("current_script", "")
 
-        # Update BrowserState to reflect the reset state
-        updated_browser_state = self.update_browser_state_audio_status(user_session, browser_state)
+        # Reset audio state directly in browser state but preserve current_script
+        browser_state["audio_generation_state"] = {
+            "is_generating": False,
+            "progress": 0.0,
+            "status": "idle",
+            "current_script": current_script,  # Preserve for resume detection
+            "generated_parts": [],
+            "final_audio_path": None,
+            "streaming_parts": [],
+            "generation_id": None,
+            "start_time": None,
+            "last_update": None,
+            "estimated_total_parts": 1,
+        }
 
-        return streaming_clear, progress_clear, audio_clear, updated_browser_state
+        # Reset local user session state as well
+        user_session.audio_generator.reset_audio_generation_state()
+
+        logger.debug(f"Audio generation state reset in browser state and user session, preserved current_script: {current_script}")
+
+        # Return clear values for UI components
+        return None, "", None, browser_state
+
+    def prepare_audio_generation_with_browser_state(self, podcast_text: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[None, str, None, Dict[str, Any]]:
+        """Prepare for audio generation by saving current script to browser state."""
+        # Check if script has changed
+        audio_state = browser_state.get("audio_generation_state", {})
+        current_script = audio_state.get("current_script", "")
+        script_changed = current_script != podcast_text
+
+        if script_changed:
+            logger.info(f"Script changed detected in prepare phase - will start from part 1 (old_length={len(current_script)}, new_length={len(podcast_text)})")
+            # Clear ALL audio generation state when script changes
+            browser_state["audio_generation_state"]["streaming_parts"] = []
+            browser_state["audio_generation_state"]["final_audio_path"] = None
+            browser_state["audio_generation_state"]["generated_parts"] = []
+            browser_state["audio_generation_state"]["estimated_total_parts"] = None
+            # Set flag to indicate script changed (for use in resume function)
+            browser_state["audio_generation_state"]["script_changed"] = True
+        else:
+            logger.info("Script unchanged - preserving existing state for potential resume")
+            browser_state["audio_generation_state"]["script_changed"] = False
+
+        # Save current script to browser state BEFORE starting generation
+        # This ensures it's persisted to localStorage before streaming begins
+        browser_state["audio_generation_state"]["current_script"] = podcast_text
+        browser_state["audio_generation_state"]["status"] = "preparing"
+        browser_state["audio_generation_state"]["is_generating"] = False
+        browser_state["audio_generation_state"]["progress"] = 0.0
+        browser_state["audio_generation_state"]["generation_id"] = None
+        browser_state["audio_generation_state"]["start_time"] = None
+
+        logger.debug(f"Audio generation prepared with script: {podcast_text[:50]}...")
+
+        # Return clear values for UI components
+        return None, "", None, browser_state
 
     def initialize_session_and_ui(
         self, request: gr.Request, browser_state: Dict[str, Any]
@@ -1874,27 +2541,20 @@ class PaperPodcastApp:
         restored_podcast_text = ui_state.get("podcast_text", "")
         restored_terms_agreed = ui_state.get("terms_agreed", False)
 
-        # Get recovery data for audio components
-        streaming_audio, progress_html, final_audio, button_state = self.handle_connection_recovery(user_session, restored_terms_agreed, restored_podcast_text)
+        # Restore streaming audio from browser state after page reload
+        streaming_audio, progress_html = self.restore_streaming_audio_from_browser_state(updated_browser_state)
 
-        # Update button state to include resume functionality
-        button_state = self.update_audio_button_state_with_resume_check(restored_terms_agreed, restored_podcast_text, user_session)
+        # Update button state to include resume functionality with browser_state
+        button_state = self.update_audio_button_state_with_resume_check(restored_terms_agreed, restored_podcast_text, user_session, updated_browser_state)
 
-        # For streaming audio UI, prioritize combined final audio over parts
-        audio_state = user_session.get_audio_generation_status()
-        final_audio_path = audio_state.get("final_audio_path")
-        streaming_parts = audio_state.get("streaming_parts", [])
+        # For final audio output, check browser state for the final audio path
+        audio_state = updated_browser_state.get("audio_generation_state", {})
+        final_audio = audio_state.get("final_audio_path")
 
-        # If we have final audio, use it for streaming component to show complete result
-        if final_audio_path and os.path.exists(final_audio_path):
-            streaming_audio = final_audio_path
-            logger.info(f"Recovery: Using final audio for streaming component: {final_audio_path}")
-        elif streaming_parts:
-            # If no final audio but we have streaming parts, use the last one
-            valid_parts = [part for part in streaming_parts if os.path.exists(part)]
-            if valid_parts:
-                streaming_audio = valid_parts[-1]
-                logger.warning(f"Recovery: Using last streaming part instead of combined audio: {streaming_audio}")
+        # Validate final audio file exists
+        if final_audio and not os.path.exists(final_audio):
+            logger.warning(f"Final audio file not found: {final_audio}")
+            final_audio = None
 
         # Update BrowserState with current session status and UI content
         updated_browser_state = self.update_browser_state_audio_status(user_session, updated_browser_state)
