@@ -380,6 +380,7 @@ class PaperPodcastApp:
                     estimated_total_parts,
                     f"音声生成を再開しています... (パート{resume_from_part + 1}から)",
                     start_time=browser_state["audio_generation_state"].get("start_time", time.time()),
+                    resume_from_part=resume_from_part,
                 )
                 yield None, user_session, resume_html, None, browser_state
 
@@ -442,6 +443,7 @@ class PaperPodcastApp:
                         estimated_total_parts,
                         status_message,
                         start_time=start_time,
+                        resume_from_part=resume_from_part if resume_from_part > 0 else None,
                     )
 
                     # gr.Progressも更新
@@ -578,34 +580,76 @@ class PaperPodcastApp:
         streaming_parts = audio_state.get("streaming_parts", [])
         final_audio_path = audio_state.get("final_audio_path")
 
+        # Check if we have a session ID to look for existing part files on disk
+        session_id = browser_state.get("app_session_id")
+        existing_parts_on_disk = []
+        if session_id:
+            from yomitalk.user_session import UserSession
+
+            temp_session = UserSession(session_id)
+            temp_dir = temp_session.get_temp_dir()
+            talks_dir = temp_dir / "talks"
+            if talks_dir.exists():
+                for stream_dir in talks_dir.iterdir():
+                    if stream_dir.is_dir() and stream_dir.name.startswith("stream_"):
+                        for part_file in stream_dir.glob("part_*.wav"):
+                            if part_file.exists():
+                                existing_parts_on_disk.append(str(part_file))
+
         # If there's a final audio file, return that for immediate playback
         if final_audio_path and os.path.exists(final_audio_path):
-            progress_html = self._create_progress_html(
-                len(streaming_parts), audio_state.get("estimated_total_parts", len(streaming_parts)), "音声生成完了！ (復元済み)", is_completed=True, start_time=audio_state.get("start_time")
-            )
+            estimated_total_parts = audio_state.get("estimated_total_parts", len(streaming_parts))
+            progress_html = self._create_progress_html(estimated_total_parts, estimated_total_parts, "音声生成完了！ (復元済み)", is_completed=True, start_time=audio_state.get("start_time"))
             logger.info(f"Restored final audio from browser state: {final_audio_path}")
             return final_audio_path, progress_html
 
         # If there are streaming parts but no final audio, show the latest part
-        if streaming_parts:
+        all_parts = streaming_parts + existing_parts_on_disk
+        if all_parts:
             # Find the most recent valid audio file
             latest_audio = None
-            for audio_path in reversed(streaming_parts):
+            for audio_path in reversed(all_parts):
                 if audio_path and os.path.exists(audio_path):
                     latest_audio = audio_path
                     break
 
             if latest_audio:
+                # Calculate resumable part information
+                # Use the total count of unique existing parts
+                unique_parts = list(set(all_parts))
+                current_parts = len([p for p in unique_parts if p and os.path.exists(p)])
+                estimated_total_parts = audio_state.get("estimated_total_parts", current_parts)
+                resume_from_part = current_parts  # Next part to generate
+
+                # Determine status message based on source
+                status_msg = f"音声生成途中 ({current_parts}パート復元済み - リロード後)" if existing_parts_on_disk and not streaming_parts else f"音声生成途中 ({current_parts}パート復元済み)"
+
                 progress_html = self._create_progress_html(
-                    len(streaming_parts),
-                    audio_state.get("estimated_total_parts", len(streaming_parts)),
-                    f"音声生成途中 ({len(streaming_parts)}パート復元済み)",
+                    current_parts,
+                    estimated_total_parts,
+                    status_msg,
                     start_time=audio_state.get("start_time"),
+                    resume_from_part=resume_from_part,
                 )
-                logger.info(f"Restored streaming audio from browser state: {latest_audio} ({len(streaming_parts)} parts)")
+                logger.info(f"Restored streaming audio from browser state: {latest_audio} ({current_parts} parts, {len(existing_parts_on_disk)} from disk)")
                 return latest_audio, progress_html
 
-        # No audio to restore
+        # No audio to restore - check if we should show a "ready to generate" state
+        audio_state = browser_state.get("audio_generation_state", {})
+        status = audio_state.get("status", "")
+
+        # If there's any indication of previous audio generation activity, show appropriate state
+        if status in ["preparing", "generating", "failed"] or audio_state.get("current_script"):
+            estimated_total_parts = audio_state.get("estimated_total_parts", 1)
+            if status == "failed":
+                progress_html = self._create_progress_html(0, estimated_total_parts, "音声生成が中断されました", is_completed=False)
+            elif status == "preparing":
+                progress_html = self._create_progress_html(0, estimated_total_parts, "音声生成準備中...", is_completed=False)
+            else:
+                progress_html = self._create_progress_html(0, estimated_total_parts, "音声生成待機中", is_completed=False)
+            return None, progress_html
+
+        # Completely no audio state
         return None, ""
 
     def resume_or_generate_podcast_audio_streaming_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any], progress=None):
@@ -1002,6 +1046,7 @@ class PaperPodcastApp:
         status_message: str,
         is_completed: bool = False,
         start_time: Optional[float] = None,
+        resume_from_part: Optional[int] = None,
     ) -> str:
         """
         Create comprehensive progress display with progress bar, elapsed time, and estimated remaining time.
@@ -1012,6 +1057,7 @@ class PaperPodcastApp:
             status_message (str): Status message to display
             is_completed (bool): Whether the generation is completed
             start_time (float): Start time timestamp for calculating elapsed time
+            resume_from_part (int): Part number to resume from (for resumable generation)
 
         Returns:
             str: HTML string for progress display
@@ -1071,6 +1117,7 @@ class PaperPodcastApp:
                 <span style="font-weight: 500; flex-grow: 1;">{status_message}</span>
                 <span style="color: var(--body-text-color-subdued, #6b7280); font-size: 13px;">
                     パート {current_part}/{total_parts} ({progress_percent:.1f}%){time_info}
+                    {" | パート" + str(resume_from_part + 1) + "から再開可能" if resume_from_part is not None and resume_from_part > 0 else ""}
                 </span>
             </div>
             {progress_bar_html}
