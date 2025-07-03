@@ -77,7 +77,7 @@ def configure_api_and_preferences(page: Page):
         logger.warning(f"Could not set character preferences: {e}")
 
     # Wait a moment for settings to be saved
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(500)
 
 
 @when("I simulate a connection change that generates a new session hash")
@@ -109,7 +109,7 @@ def simulate_connection_change(page: Page):
     page.reload()
 
     # Wait for the page to fully load
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(1500)
 
     # Verify localStorage persisted
     new_local_storage = page.evaluate("""
@@ -144,7 +144,7 @@ def close_and_reopen_browser(page: Page):
 
     # Navigate away and back to simulate browser close/reopen
     page.goto("about:blank")
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(500)
 
     # Navigate back to the application
     page.goto(current_url)
@@ -507,7 +507,7 @@ def simulate_page_refresh(page: Page):
     page.reload()
 
     # Wait for the page to fully load
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(1500)
 
     # Ensure the page is ready
     page.wait_for_selector("text=トーク音声の生成")

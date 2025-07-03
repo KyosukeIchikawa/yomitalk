@@ -77,7 +77,7 @@ def page(browser: Browser) -> Generator[Page, None, None]:
     page = browser.new_page(viewport={"width": 1280, "height": 720})
 
     # Set timeout
-    page.set_default_timeout(10000)  # 10 seconds
+    page.set_default_timeout(8000)  # 8 seconds
 
     yield page
 

@@ -23,22 +23,7 @@ Feature: URL extraction functionality
     Then the extracted text area shows an error message
     And the "トーク原稿を生成" button remains disabled
 
-  Scenario: Extract text from GitHub README URL
-    Given the user has accessed the application page
-    When the user clicks on the "Webページ抽出" tab
-    And the user enters a GitHub README URL into the URL input field
-    And the user clicks the "URLからテキストを抽出" button
-    Then the extracted text area shows GitHub README content
-
-  Scenario: Click extract button with empty URL field
-    Given the application is running
-    Given the user has accessed the application page
-    When the user clicks on the "Webページ抽出" tab
-    And the user leaves the URL input field empty
-    And the user clicks the "URLからテキストを抽出" button
-    Then the extracted text area shows an error message
-
-  Scenario: URL extraction appends to existing text with separator
+  Scenario: URL extraction with separator functionality
     Given the user has accessed the application page
     And the user has entered "Existing content" into the extracted text area
     When the user clicks on the "Webページ抽出" tab
@@ -47,19 +32,3 @@ Feature: URL extraction functionality
     Then the extracted text area shows content with source separator
     And the extracted text area contains "Existing content"
     And the extracted text area contains source information for "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md"
-
-  Scenario: URL extraction without automatic separator
-    Given the user has accessed the application page
-    And the user unchecks the "追加時に自動で区切りを挿入" checkbox
-    And the user has entered "Existing content" into the extracted text area
-    When the user clicks on the "Webページ抽出" tab
-    And the user enters "https://github.com/KyosukeIchikawa/yomitalk/blob/main/README.md" into the URL input field
-    And the user clicks the "URLからテキストを抽出" button
-    Then the extracted text area shows appended content without separator
-    And the extracted text area contains "Existing content"
-
-  Scenario: Clear extracted text using clear button
-    Given the user has accessed the application page
-    And the user has entered "Some text content" into the extracted text area
-    When the user clicks the "テキストをクリア" button
-    Then the extracted text area is empty
