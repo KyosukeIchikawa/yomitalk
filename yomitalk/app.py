@@ -2603,6 +2603,20 @@ class PaperPodcastApp:
             logger.warning(f"Final audio file not found: {final_audio}")
             final_audio = None
 
+        # If no final audio in browser state, search for completed audio files on disk
+        if not final_audio:
+            output_dir = user_session.get_output_dir()
+            if output_dir.exists():
+                # Look for audio_*.wav files (completed audio files)
+                audio_files = list(output_dir.glob("audio_*.wav"))
+                if audio_files:
+                    # Get the most recent audio file
+                    final_audio = str(max(audio_files, key=lambda p: p.stat().st_mtime))
+                    logger.info(f"Found completed audio file on disk: {final_audio}")
+                    # Update browser state with the found final audio
+                    updated_browser_state["audio_generation_state"]["final_audio_path"] = final_audio
+                    updated_browser_state["audio_generation_state"]["status"] = "completed"
+
         # Update BrowserState with current session status and UI content
         updated_browser_state = self.update_browser_state_audio_status(user_session, updated_browser_state)
         updated_browser_state = self.update_browser_state_ui_content(updated_browser_state, restored_podcast_text, restored_terms_agreed, restored_extracted_text)
