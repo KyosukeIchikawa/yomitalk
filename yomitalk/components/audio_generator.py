@@ -525,18 +525,17 @@ class AudioGenerator:
         Returns:
             None: This generator has no return value
         """
-        logger.info("=" * 60)
-        logger.info("AUDIOGENERATOR: generate_character_conversation CALLED!")
-        logger.info(f"AUDIOGENERATOR: resume_from_part = {resume_from_part}")
-        logger.info(f"AUDIOGENERATOR: existing_parts = {len(existing_parts) if existing_parts else 0}")
+        logger.info("Audio generation started")
+        logger.debug(f"Resume from part: {resume_from_part}")
+        logger.debug(f"Existing parts: {len(existing_parts) if existing_parts else 0}")
         if existing_parts:
-            logger.info(f"AUDIOGENERATOR: existing_parts files: {[os.path.basename(p) for p in existing_parts]}")
+            logger.debug(f"Existing part files: {[os.path.basename(p) for p in existing_parts]}")
 
         if resume_from_part == 0 and not existing_parts:
-            logger.info("AUDIOGENERATOR: Resetting audio generation state (new generation)")
+            logger.debug("Resetting audio generation state (new generation)")
             self.reset_audio_generation_state()
         else:
-            logger.info("AUDIOGENERATOR: NOT resetting state (resume mode)")
+            logger.debug("NOT resetting state (resume mode)")
 
         # 前提条件チェック
         if not self.core_initialized:
@@ -557,9 +556,9 @@ class AudioGenerator:
             # 会話部分の抽出
             conversation_parts = self._extract_conversation_parts(podcast_text)
 
-            logger.info("ROOT CAUSE DEBUG: Extracted conversation parts:")
+            logger.debug(f"Extracted {len(conversation_parts)} conversation parts")
             for i, (speaker, text) in enumerate(conversation_parts):
-                logger.info(f"ROOT CAUSE DEBUG: Part {i}: {speaker} - {text[:50]}...")
+                logger.debug(f"Part {i}: {speaker} - {len(text)} chars")
 
             if not conversation_parts:
                 logger.error("No valid conversation parts found")
@@ -571,12 +570,12 @@ class AudioGenerator:
                 # 再開時：既存ファイルのディレクトリを使用
                 existing_dir = Path(existing_parts[0]).parent
                 temp_dir = existing_dir
-                logger.info(f"ROOT CAUSE FIX: Reusing existing directory for resume: {temp_dir}")
+                logger.debug(f"Reusing existing directory for resume: {temp_dir.name}")
             else:
                 # 新規生成：新しいディレクトリを作成
                 temp_dir = self.temp_dir / f"stream_{uuid.uuid4().hex[:8]}"
                 temp_dir.mkdir(parents=True, exist_ok=True)
-                logger.info(f"ROOT CAUSE FIX: Created new directory for fresh generation: {temp_dir}")
+                logger.debug(f"Created new directory for fresh generation: {temp_dir.name}")
 
             # 音声生成と結合処理（部分再開対応）
             yield from self._generate_and_combine_audio_with_resume(conversation_parts, temp_dir, resume_from_part, existing_parts or [])
@@ -670,11 +669,10 @@ class AudioGenerator:
         Yields:
             str: 生成された音声ファイルパス
         """
-        logger.info("=" * 60)
-        logger.info("AUDIOGENERATOR: _generate_and_combine_audio_with_resume CALLED!")
-        logger.info(f"AUDIOGENERATOR: conversation_parts count = {len(conversation_parts)}")
-        logger.info(f"AUDIOGENERATOR: resume_from_part = {resume_from_part}")
-        logger.info(f"AUDIOGENERATOR: existing_parts count = {len(existing_parts or [])}")
+        logger.info("Starting audio generation and combination")
+        logger.debug(f"Conversation parts count: {len(conversation_parts)}")
+        logger.debug(f"Resume from part: {resume_from_part}")
+        logger.debug(f"Existing parts count: {len(existing_parts or [])}")
 
         wav_data_list = []  # メモリ上に直接音声データを保持するリスト
         temp_files = []  # 一時ファイルのパスを保持するリスト
@@ -687,7 +685,7 @@ class AudioGenerator:
             logger.info(f"PROCESSING {len(existing_parts)} existing parts...")
             for i, existing_part_path in enumerate(existing_parts):
                 if existing_part_path and os.path.exists(existing_part_path):
-                    logger.info(f"ROOT CAUSE FIX: Restoring existing part {i}: {os.path.basename(existing_part_path)}")
+                    logger.debug(f"Restoring existing part {i}: {os.path.basename(existing_part_path)}")
                     # 既存パートの音声データを読み込んで wav_data_list に追加
                     try:
                         with open(existing_part_path, "rb") as f:
@@ -696,15 +694,15 @@ class AudioGenerator:
                         temp_files.append(existing_part_path)
 
                         # 既存パートを yield（ストリーミング再生用）
-                        logger.info(f"ROOT CAUSE FIX: Yielding existing part {i} for streaming")
+                        logger.debug(f"Yielding existing part {i} for streaming")
                         yield existing_part_path
                     except Exception as e:
                         logger.error(f"Failed to load existing part {existing_part_path}: {e}")
                 else:
-                    logger.warning(f"ROOT CAUSE FIX: Existing part {i} does not exist: {existing_part_path}")
+                    logger.warning(f"Existing part {i} does not exist: {os.path.basename(existing_part_path) if existing_part_path else 'None'}")
 
         # resume_from_part から新しい音声生成を開始
-        logger.info(f"ROOT CAUSE FIX: Starting NEW generation from part {resume_from_part} to {total_parts - 1}")
+        logger.info(f"Starting NEW generation from part {resume_from_part} to {total_parts - 1}")
         for i in range(resume_from_part, total_parts):
             speaker, text = conversation_parts[i]
 
@@ -712,10 +710,10 @@ class AudioGenerator:
             self.audio_generation_progress = (i + 1) / total_parts * 0.8
 
             if not text.strip():
-                logger.info(f"ROOT CAUSE FIX: Skipping empty text for part {i}")
+                logger.debug(f"Skipping empty text for part {i}")
                 continue
 
-            logger.info(f"ROOT CAUSE FIX: Generating NEW part {i}: {speaker} - {text[:50]}...")
+            logger.debug(f"Generating NEW part {i}: {speaker} - {len(text)} chars")
 
             # 音声生成
             style_id = STYLE_ID_BY_NAME[speaker]
@@ -732,10 +730,10 @@ class AudioGenerator:
                 temp_files.append(str(temp_file_path))
 
                 # ストリーミング再生用に現在のパートをyield
-                logger.info(f"ROOT CAUSE FIX: Generated and yielding NEW part {i}: {temp_file_path.name}")
+                logger.debug(f"Generated and yielding NEW part {i}: {temp_file_path.name}")
                 yield str(temp_file_path)
             else:
-                logger.error(f"ROOT CAUSE FIX: Failed to generate audio for part {i}")
+                logger.error(f"Failed to generate audio for part {i}")
 
         # メモリ上で音声データを結合して最終的な音声ファイルを作成
         if wav_data_list:

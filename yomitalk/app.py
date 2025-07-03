@@ -654,17 +654,16 @@ class PaperPodcastApp:
 
     def resume_or_generate_podcast_audio_streaming_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any], progress=None):
         """Resume or start new audio generation with browser state synchronization."""
-        logger.info("=" * 60)
-        logger.info("RESUME FUNCTION CALLED!")
-        logger.info(f"Text length: {len(text) if text else 0}")
-        logger.info(f"Session ID: {user_session.session_id}")
+        logger.info("Resume or generate audio function called")
+        logger.debug(f"Text length: {len(text) if text else 0}")
+        logger.debug(f"Session ID: {user_session.session_id}")
 
         audio_state = browser_state.get("audio_generation_state", {})
         current_script = audio_state.get("current_script", "")
         has_streaming_parts = len(audio_state.get("streaming_parts", [])) > 0
         has_final_audio = audio_state.get("final_audio_path") is not None
 
-        logger.info(f"Current script length: {len(current_script)}")
+        logger.debug(f"Current script length: {len(current_script)}")
         logger.info(f"Has streaming parts: {has_streaming_parts}")
         logger.info(f"Has final audio: {has_final_audio}")
 
@@ -672,27 +671,27 @@ class PaperPodcastApp:
         temp_dir = user_session.get_talk_temp_dir()
         existing_part_files_on_disk = []
 
-        logger.info(f"ROOT CAUSE DEBUG: Checking temp directory: {temp_dir}")
-        logger.info(f"ROOT CAUSE DEBUG: Temp dir exists: {temp_dir.exists()}")
+        logger.debug(f"Checking temp directory: {temp_dir.name}")
+        logger.debug(f"Temp dir exists: {temp_dir.exists()}")
 
         if temp_dir.exists():
             stream_dirs = list(temp_dir.glob("stream_*"))
-            logger.info(f"ROOT CAUSE DEBUG: Found {len(stream_dirs)} stream directories: {[d.name for d in stream_dirs]}")
+            logger.debug(f"Found {len(stream_dirs)} stream directories")
 
             # Find all part_*.wav files in temp directories
             for temp_subdir in stream_dirs:
                 if temp_subdir.is_dir():
                     part_files = list(temp_subdir.glob("part_*.wav"))
-                    logger.info(f"ROOT CAUSE DEBUG: In {temp_subdir.name}, found {len(part_files)} part files: {[f.name for f in part_files]}")
+                    logger.debug(f"In {temp_subdir.name}, found {len(part_files)} part files")
                     for part_file in sorted(part_files):
                         if part_file.exists():
                             existing_part_files_on_disk.append(str(part_file))
-                            logger.info(f"ROOT CAUSE DEBUG: Valid part file: {part_file}")
+                            logger.debug(f"Valid part file: {part_file.name}")
         else:
-            logger.info("ROOT CAUSE DEBUG: Temp directory does not exist!")
+            logger.debug("Temp directory does not exist")
 
         has_existing_parts_on_disk = len(existing_part_files_on_disk) > 0
-        logger.info(f"ROOT CAUSE DEBUG: Has existing parts on disk: {has_existing_parts_on_disk} ({len(existing_part_files_on_disk)} files)")
+        logger.debug(f"Has existing parts on disk: {has_existing_parts_on_disk} ({len(existing_part_files_on_disk)} files)")
 
         # Check if script was changed (flag set in prepare phase)
         script_changed = audio_state.get("script_changed", False)
@@ -2503,7 +2502,7 @@ class PaperPodcastApp:
         script_changed = current_script != podcast_text
 
         if script_changed:
-            logger.info(f"Script changed detected in prepare phase - will start from part 1 (old_length={len(current_script)}, new_length={len(podcast_text)})")
+            logger.info("Script changed detected in prepare phase - will start from part 1")
             # Clear ALL audio generation state when script changes
             browser_state["audio_generation_state"]["streaming_parts"] = []
             browser_state["audio_generation_state"]["final_audio_path"] = None
