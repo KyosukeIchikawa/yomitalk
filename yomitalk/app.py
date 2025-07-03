@@ -631,8 +631,9 @@ class PaperPodcastApp:
                     start_time=audio_state.get("start_time"),
                     resume_from_part=resume_from_part,
                 )
-                logger.info(f"Restored streaming audio from browser state: {latest_audio} ({current_parts} parts, {len(existing_parts_on_disk)} from disk)")
-                return latest_audio, progress_html
+                logger.info(f"Found partial audio generation ({current_parts} parts, {len(existing_parts_on_disk)} from disk) - not showing preview until resume")
+                # Return None for audio to avoid showing partial audio in preview
+                return None, progress_html
 
         # No audio to restore - check if we should show a "ready to generate" state
         audio_state = browser_state.get("audio_generation_state", {})
