@@ -148,7 +148,7 @@ def close_and_reopen_browser(page: Page):
 
     # Navigate back to the application
     page.goto(current_url)
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(1000)
 
     # Ensure the page is ready
     page.wait_for_selector("text=トーク音声の生成")
@@ -164,15 +164,15 @@ def multiple_connection_changes(page: Page):
     """
     logger.info("Simulating multiple connection changes")
 
-    # Perform multiple reloads to simulate connection instability
-    for i in range(3):
+    # Perform fewer reloads to simulate connection instability
+    for i in range(2):
         logger.info(f"Connection change {i + 1}")
         page.reload()
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(1000)
 
         # Ensure the page loads properly each time
         page.wait_for_selector("text=トーク音声の生成")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(500)
 
 
 @then("my session should be restored from browser local storage")

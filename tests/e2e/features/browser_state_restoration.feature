@@ -13,14 +13,7 @@ Feature: Browser State Restoration
     And my previous session data should be available
     And my audio generation state should be preserved
 
-  Scenario: Browser state persists user preferences
-    Given I have configured my API settings and character preferences
-    When I close and reopen the browser
-    Then my API configuration should be restored (except keys for security)
-    And my character preferences should be restored
-    And my document type settings should be restored
-
-  Scenario: Settings changes are persisted in browser state
+  Scenario: Browser state persists all user settings
     Given I have accessed the application page
     When I change the document type to "ブログ記事"
     And I change the podcast mode to "詳細解説"

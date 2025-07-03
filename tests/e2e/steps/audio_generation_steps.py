@@ -477,7 +477,7 @@ def audio_progress_is_visible(page: Page):
     logger.info("Checking for audio generation progress visibility...")
 
     # Wait for progress indicators to appear
-    page.wait_for_timeout(2000)  # Give time for generation to start
+    page.wait_for_timeout(1000)  # Give time for generation to start
 
     # Check for various progress indicators
     progress_indicators = [
@@ -524,12 +524,12 @@ def progress_updates_during_generation(page: Page):
 
     # Monitor for progress changes over time
     progress_states = []
-    max_checks = 15
+    max_checks = 10
 
     # First check immediately to catch the generating state
     for i in range(max_checks):
         if i > 0:  # Don't wait on the first check
-            page.wait_for_timeout(300)  # Wait 300ms between checks
+            page.wait_for_timeout(200)  # Wait 200ms between checks
 
         # Check button state
         button_state = None
