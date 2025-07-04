@@ -2154,9 +2154,9 @@ class PaperPodcastApp:
             # 2. 処理完了後にボタンを再度有効化（再開機能付き）
             # Note: audio_outputはgenerate_podcast_audio_streamingで直接更新される
             streaming_event.then(
-                fn=self.update_audio_button_state_with_resume_check,
-                inputs=[terms_checkbox, podcast_text, user_session],
-                outputs=[generate_btn],
+                fn=self.update_audio_button_state_with_resume_check_and_browser_state,
+                inputs=[terms_checkbox, podcast_text, user_session, browser_state],
+                outputs=[generate_btn, browser_state],
                 queue=False,  # 即時実行
                 api_name="enable_generate_button",
             )
