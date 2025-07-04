@@ -622,7 +622,7 @@ class PaperPodcastApp:
                 resume_from_part = current_parts  # Next part to generate
 
                 # Determine status message based on source
-                status_msg = f"音声生成途中 ({current_parts}パート復元済み - リロード後)" if existing_parts_on_disk and not streaming_parts else f"音声生成途中 ({current_parts}パート復元済み)"
+                status_msg = f"音声生成途中 ({current_parts}パート復元済み)" if existing_parts_on_disk and not streaming_parts else f"音声生成途中 ({current_parts}パート復元済み)"
 
                 progress_html = self._create_progress_html(
                     current_parts,
