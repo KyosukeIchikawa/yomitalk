@@ -2377,11 +2377,12 @@ class PaperPodcastApp:
                 has_final_audio = audio_state.get("final_audio_path") is not None
                 is_preparing = audio_state.get("status") == "preparing"
 
-                # If script is unchanged, show resume option (regardless of whether audio exists)
-                # This handles cases where generation was interrupted during streaming
+                # If script is unchanged, show appropriate state
                 if current_script == podcast_text and current_script != "":
                     if has_final_audio:
-                        button_text = "音声再生可能 (再生成)"
+                        # Audio generation is already completed - disable button
+                        button_text = "音声生成完了済み"
+                        is_enabled = False
                     elif has_streaming_parts or is_preparing:
                         button_text = "音声生成を再開"
                     else:
@@ -2391,9 +2392,15 @@ class PaperPodcastApp:
                 audio_state = user_session.get_audio_generation_status()
                 current_script = audio_state.get("current_script", "")
 
-                # If script is unchanged and we have generated audio, show resume option
+                # If script is unchanged and we have generated audio, show appropriate state
                 if current_script == podcast_text and user_session.has_generated_audio():
-                    button_text = "音声生成を再開"
+                    # Check if audio generation is completed
+                    if user_session.audio_generator.final_audio_path and os.path.exists(user_session.audio_generator.final_audio_path):
+                        # Audio generation is already completed - disable button
+                        button_text = "音声生成完了済み"
+                        is_enabled = False
+                    else:
+                        button_text = "音声生成を再開"
 
         result: Dict[str, Any] = gr.update(
             value=f"{button_text}{message}",
