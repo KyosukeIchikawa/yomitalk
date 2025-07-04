@@ -574,7 +574,7 @@ class PaperPodcastApp:
             browser_state["audio_generation_state"]["progress"] = 0.0
         return None  # エラー時はNoneを返す
 
-    def restore_streaming_audio_from_browser_state(self, browser_state: Dict[str, Any]) -> Tuple[Optional[str], str]:
+    def restore_streaming_audio_from_browser_state(self, browser_state: Dict[str, Any], current_podcast_text: str = "") -> Tuple[Optional[str], str]:
         """Restore streaming audio playback from browser state after page reload."""
         audio_state = browser_state.get("audio_generation_state", {})
         streaming_parts = audio_state.get("streaming_parts", [])
@@ -595,6 +595,29 @@ class PaperPodcastApp:
                         for part_file in stream_dir.glob("part_*.wav"):
                             if part_file.exists():
                                 existing_parts_on_disk.append(str(part_file))
+
+        # Check for completed audio files on disk if not found in browser state
+        # Only do this if script hasn't changed and current script matches saved script
+        saved_script = audio_state.get("current_script", "")
+        script_matches = saved_script == current_podcast_text and saved_script != ""
+
+        if not final_audio_path and session_id and not audio_state.get("script_changed", False) and script_matches:
+            from yomitalk.user_session import UserSession
+
+            temp_session = UserSession(session_id)
+            output_dir = temp_session.get_output_dir()
+            for audio_file in output_dir.glob("audio_*.wav"):
+                if audio_file.exists():
+                    final_audio_path = str(audio_file)
+                    # Update browser state with the discovered final audio path
+                    browser_state["audio_generation_state"]["final_audio_path"] = final_audio_path
+                    browser_state["audio_generation_state"]["status"] = "completed"
+                    browser_state["audio_generation_state"]["is_generating"] = False
+                    browser_state["audio_generation_state"]["progress"] = 1.0
+                    logger.info(f"Found completed audio on disk matching current script: {final_audio_path}")
+                    break
+        elif not script_matches and saved_script != "":
+            logger.info(f"Script mismatch detected - not restoring old audio (saved: {len(saved_script)} chars, current: {len(current_podcast_text)} chars)")
 
         # If there's a final audio file, return that for immediate playback
         if final_audio_path and os.path.exists(final_audio_path):
@@ -714,6 +737,30 @@ class PaperPodcastApp:
                 existing_part_files_on_disk = []
                 has_existing_parts_on_disk = False
                 logger.info("Cleared all existing part files due to script change")
+
+            # CRITICAL: Also clear old final audio files when script changes
+            output_dir = user_session.get_output_dir()
+            if output_dir.exists():
+                logger.info(f"Script changed - cleaning up existing final audio files in {output_dir}")
+                for audio_file in output_dir.glob("audio_*.wav"):
+                    try:
+                        audio_file.unlink()
+                        logger.info(f"Deleted old final audio file: {audio_file.name}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete {audio_file}: {e}")
+                logger.info("Cleared all existing final audio files due to script change")
+
+            # CRITICAL: Clear final audio path and completion status from browser state
+            browser_state["audio_generation_state"]["final_audio_path"] = None
+            browser_state["audio_generation_state"]["streaming_parts"] = []
+            browser_state["audio_generation_state"]["status"] = "idle"
+            browser_state["audio_generation_state"]["is_generating"] = False
+            browser_state["audio_generation_state"]["progress"] = 0.0
+            logger.info("Cleared final audio path and completion status from browser state due to script change")
+
+            # Update local variables after clearing browser state
+            has_streaming_parts = False
+            has_final_audio = False
 
         # Check if we can resume (script unchanged and has previous audio in browser_state OR on disk)
         can_resume = not script_changed and (has_streaming_parts or has_final_audio or has_existing_parts_on_disk)
@@ -2134,9 +2181,24 @@ class PaperPodcastApp:
 
                 # If script is unchanged, show appropriate state
                 if current_script == podcast_text and current_script != "":
+                    # Check for completed audio on disk if not found in browser state
+                    # Only do this if script hasn't changed and scripts match
+                    script_matches = current_script == podcast_text and current_script != ""
+                    if not has_final_audio and user_session and not audio_state.get("script_changed", False) and script_matches:
+                        output_dir = user_session.get_output_dir()
+                        for audio_file in output_dir.glob("audio_*.wav"):
+                            if audio_file.exists():
+                                has_final_audio = True
+                                # Update browser state with the discovered final audio path
+                                browser_state["audio_generation_state"]["final_audio_path"] = str(audio_file)
+                                browser_state["audio_generation_state"]["status"] = "completed"
+                                browser_state["audio_generation_state"]["is_generating"] = False
+                                browser_state["audio_generation_state"]["progress"] = 1.0
+                                break
+
                     if has_final_audio:
-                        # Audio generation is already completed - disable button
-                        button_text = "音声生成完了済み"
+                        # Audio generation is already completed - disable button until script changes
+                        button_text = "音声生成済み"
                         is_enabled = False
                     elif has_streaming_parts or is_preparing:
                         button_text = "音声生成を再開"
@@ -2151,8 +2213,8 @@ class PaperPodcastApp:
                 if current_script == podcast_text and user_session.has_generated_audio():
                     # Check if audio generation is completed
                     if user_session.audio_generator.final_audio_path and os.path.exists(user_session.audio_generator.final_audio_path):
-                        # Audio generation is already completed - disable button
-                        button_text = "音声生成完了済み"
+                        # Audio generation is already completed - disable button until script changes
+                        button_text = "音声生成済み"
                         is_enabled = False
                     else:
                         button_text = "音声生成を再開"
@@ -2168,10 +2230,15 @@ class PaperPodcastApp:
         self, checked: bool, podcast_text: Optional[str], user_session: UserSession, browser_state: Dict[str, Any]
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Update audio button state with resume functionality check and browser state."""
-        button_update = self.update_audio_button_state_with_resume_check(checked, podcast_text, user_session, browser_state)
+        # Make a copy of browser_state to ensure we capture any audio state updates
+        browser_state_copy = browser_state.copy()
+        if "audio_generation_state" in browser_state:
+            browser_state_copy["audio_generation_state"] = browser_state["audio_generation_state"].copy()
+
+        button_update = self.update_audio_button_state_with_resume_check(checked, podcast_text, user_session, browser_state_copy)
 
         # Update browser state with terms agreement and podcast text
-        updated_browser_state = self.update_browser_state_ui_content(browser_state, podcast_text or "", checked)
+        updated_browser_state = self.update_browser_state_ui_content(browser_state_copy, podcast_text or "", checked)
 
         return button_update, updated_browser_state
 
@@ -2334,7 +2401,7 @@ class PaperPodcastApp:
         restored_terms_agreed = ui_state.get("terms_agreed", False)
 
         # Restore streaming audio from browser state after page reload
-        streaming_audio, progress_html = self.restore_streaming_audio_from_browser_state(updated_browser_state)
+        streaming_audio, progress_html = self.restore_streaming_audio_from_browser_state(updated_browser_state, restored_podcast_text)
 
         # Update button state to include resume functionality with browser_state
         button_state = self.update_audio_button_state_with_resume_check(restored_terms_agreed, restored_podcast_text, user_session, updated_browser_state)
