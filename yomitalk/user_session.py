@@ -37,8 +37,6 @@ class UserSession:
         # Default API type is Gemini
         self.text_processor.set_api_type(APIType.GEMINI)
 
-        logger.info(f"User session initialized: {self.session_id}")
-
     def cleanup_old_sessions(self, max_age_days: float = 1.0) -> int:
         """
         Clean up sessions older than specified days.

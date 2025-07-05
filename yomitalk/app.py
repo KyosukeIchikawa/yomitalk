@@ -74,7 +74,7 @@ class PaperPodcastApp:
 
         if stored_app_session_id:
             # Use existing app session ID - no need to copy files since it's persistent
-            logger.info(f"Using existing app session ID: {stored_app_session_id}")
+            logger.info(f"User session restored: {stored_app_session_id}")
             user_session = UserSession(stored_app_session_id)
 
             # Restore settings from browser state
@@ -84,8 +84,8 @@ class PaperPodcastApp:
             return user_session, browser_state
         else:
             # Create new session with UUID-based ID
-            logger.info("Creating new app session with UUID")
             user_session = UserSession()  # Will generate new UUID
+            logger.info(f"User session initialized: {user_session.session_id}")
 
             # Initialize browser state with new session ID
             browser_state["app_session_id"] = user_session.session_id
@@ -380,7 +380,6 @@ class PaperPodcastApp:
                     estimated_total_parts,
                     f"音声生成を再開しています... (パート{resume_from_part + 1}から)",
                     start_time=browser_state["audio_generation_state"].get("start_time", time.time()),
-                    resume_from_part=resume_from_part,
                 )
                 yield None, user_session, resume_html, None, browser_state
 
@@ -443,7 +442,6 @@ class PaperPodcastApp:
                         estimated_total_parts,
                         status_message,
                         start_time=start_time,
-                        resume_from_part=resume_from_part if resume_from_part > 0 else None,
                     )
 
                     # gr.Progressも更新
@@ -642,7 +640,6 @@ class PaperPodcastApp:
                 unique_parts = list(set(all_parts))
                 current_parts = len([p for p in unique_parts if p and os.path.exists(p)])
                 estimated_total_parts = audio_state.get("estimated_total_parts", current_parts)
-                resume_from_part = current_parts  # Next part to generate
 
                 # Determine status message based on source
                 status_msg = f"音声生成途中 ({current_parts}パート復元済み)" if existing_parts_on_disk and not streaming_parts else f"音声生成途中 ({current_parts}パート復元済み)"
@@ -652,7 +649,6 @@ class PaperPodcastApp:
                     estimated_total_parts,
                     status_msg,
                     start_time=audio_state.get("start_time"),
-                    resume_from_part=resume_from_part,
                 )
                 logger.info(f"Found partial audio generation ({current_parts} parts, {len(existing_parts_on_disk)} from disk) - not showing preview until resume")
                 # Return progress HTML only
@@ -1093,7 +1089,6 @@ class PaperPodcastApp:
         status_message: str,
         is_completed: bool = False,
         start_time: Optional[float] = None,
-        resume_from_part: Optional[int] = None,
     ) -> str:
         """
         Create comprehensive progress display with progress bar, elapsed time, and estimated remaining time.
@@ -1104,7 +1099,6 @@ class PaperPodcastApp:
             status_message (str): Status message to display
             is_completed (bool): Whether the generation is completed
             start_time (float): Start time timestamp for calculating elapsed time
-            resume_from_part (int): Part number to resume from (for resumable generation)
 
         Returns:
             str: HTML string for progress display
@@ -1937,7 +1931,7 @@ class PaperPodcastApp:
             # 0. 音声生成準備: current_scriptをbrowser_stateに保存してからUIコンポーネントをクリア
             audio_events = disable_btn_event.then(
                 fn=self.prepare_audio_generation_with_browser_state,
-                inputs=[podcast_text, user_session, browser_state],
+                inputs=[podcast_text, browser_state],
                 outputs=[streaming_audio_output, audio_progress, audio_output, browser_state],
                 concurrency_id="audio_prepare",
                 concurrency_limit=1,  # 同時実行数を1に制限
@@ -2321,7 +2315,7 @@ class PaperPodcastApp:
         # Return clear values for UI components
         return None, "", None, browser_state
 
-    def prepare_audio_generation_with_browser_state(self, podcast_text: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[None, str, None, Dict[str, Any]]:
+    def prepare_audio_generation_with_browser_state(self, podcast_text: str, browser_state: Dict[str, Any]) -> Tuple[None, str, None, Dict[str, Any]]:
         """Prepare for audio generation by saving current script to browser state."""
         # Check if script has changed
         audio_state = browser_state.get("audio_generation_state", {})
