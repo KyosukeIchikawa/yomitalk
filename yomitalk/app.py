@@ -574,7 +574,7 @@ class PaperPodcastApp:
             browser_state["audio_generation_state"]["progress"] = 0.0
         return None  # エラー時はNoneを返す
 
-    def restore_streaming_audio_from_browser_state(self, browser_state: Dict[str, Any], current_podcast_text: str = "") -> Tuple[Optional[str], str]:
+    def restore_streaming_audio_from_browser_state(self, browser_state: Dict[str, Any], current_podcast_text: str = "") -> str:
         """Restore streaming audio playback from browser state after page reload."""
         audio_state = browser_state.get("audio_generation_state", {})
         streaming_parts = audio_state.get("streaming_parts", [])
@@ -619,12 +619,12 @@ class PaperPodcastApp:
         elif not script_matches and saved_script != "":
             logger.info(f"Script mismatch detected - not restoring old audio (saved: {len(saved_script)} chars, current: {len(current_podcast_text)} chars)")
 
-        # If there's a final audio file, return that for immediate playback
+        # If there's a final audio file, return progress HTML only
         if final_audio_path and os.path.exists(final_audio_path):
             estimated_total_parts = audio_state.get("estimated_total_parts", len(streaming_parts))
             progress_html = self._create_progress_html(estimated_total_parts, estimated_total_parts, "音声生成完了！ (復元済み)", is_completed=True, start_time=audio_state.get("start_time"))
             logger.info(f"Restored final audio from browser state: {final_audio_path}")
-            return final_audio_path, progress_html
+            return progress_html
 
         # If there are streaming parts but no final audio, show the latest part
         all_parts = streaming_parts + existing_parts_on_disk
@@ -655,8 +655,8 @@ class PaperPodcastApp:
                     resume_from_part=resume_from_part,
                 )
                 logger.info(f"Found partial audio generation ({current_parts} parts, {len(existing_parts_on_disk)} from disk) - not showing preview until resume")
-                # Return None for audio to avoid showing partial audio in preview
-                return None, progress_html
+                # Return progress HTML only
+                return progress_html
 
         # No audio to restore - check if we should show a "ready to generate" state
         audio_state = browser_state.get("audio_generation_state", {})
@@ -671,10 +671,10 @@ class PaperPodcastApp:
                 progress_html = self._create_progress_html(0, estimated_total_parts, "音声生成準備中...", is_completed=False)
             else:
                 progress_html = self._create_progress_html(0, estimated_total_parts, "音声生成待機中", is_completed=False)
-            return None, progress_html
+            return progress_html
 
         # Completely no audio state
-        return None, ""
+        return ""
 
     def resume_or_generate_podcast_audio_streaming_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any], progress=None):
         """Resume or start new audio generation with browser state synchronization."""
@@ -2415,8 +2415,10 @@ class PaperPodcastApp:
         restored_podcast_text = ui_state.get("podcast_text", "")
         restored_terms_agreed = ui_state.get("terms_agreed", False)
 
-        # Restore streaming audio from browser state after page reload
-        streaming_audio, progress_html = self.restore_streaming_audio_from_browser_state(updated_browser_state, restored_podcast_text)
+        # Restore streaming audio progress from browser state after page reload
+        # streaming_audio is always None initially
+        streaming_audio = None
+        progress_html = self.restore_streaming_audio_from_browser_state(updated_browser_state, restored_podcast_text)
 
         # Update button state to include resume functionality with browser_state
         button_state = self.update_audio_button_state_with_resume_check(restored_terms_agreed, restored_podcast_text, user_session, updated_browser_state)
