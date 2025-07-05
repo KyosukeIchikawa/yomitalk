@@ -2157,6 +2157,61 @@ class PaperPodcastApp:
         )
         return result
 
+    def _check_disk_for_final_audio(self, user_session: UserSession, browser_state: Dict[str, Any]) -> bool:
+        """Check disk for final audio files and update browser state if found."""
+        output_dir = user_session.get_output_dir()
+        for audio_file in output_dir.glob("audio_*.wav"):
+            if audio_file.exists():
+                # Update browser state with the discovered final audio path
+                browser_state["audio_generation_state"]["final_audio_path"] = str(audio_file)
+                browser_state["audio_generation_state"]["status"] = "completed"
+                browser_state["audio_generation_state"]["is_generating"] = False
+                browser_state["audio_generation_state"]["progress"] = 1.0
+                return True
+        return False
+
+    def _get_audio_button_state_from_browser_state(self, podcast_text: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[str, bool]:
+        """Get button text and enabled state from browser state."""
+        audio_state = browser_state.get("audio_generation_state", {})
+        current_script = audio_state.get("current_script", "")
+        has_streaming_parts = len(audio_state.get("streaming_parts", [])) > 0
+        has_final_audio = audio_state.get("final_audio_path") is not None
+        is_preparing = audio_state.get("status") == "preparing"
+
+        # If script is unchanged, show appropriate state
+        if current_script == podcast_text and current_script != "":
+            # Check for completed audio on disk if not found in browser state
+            script_matches = current_script == podcast_text and current_script != ""
+            should_check_disk = not has_final_audio and user_session and not audio_state.get("script_changed", False) and script_matches
+
+            if should_check_disk:
+                has_final_audio = self._check_disk_for_final_audio(user_session, browser_state)
+
+            if has_final_audio:
+                return "音声生成済み", False
+            elif has_streaming_parts or is_preparing:
+                return "音声生成を再開", True
+            else:
+                return "音声生成を再開", True
+
+        return "音声を生成", True
+
+    def _get_audio_button_state_from_session(self, podcast_text: str, user_session: UserSession) -> Tuple[str, bool]:
+        """Get button text and enabled state from UserSession (legacy fallback)."""
+        audio_state = user_session.get_audio_generation_status()
+        current_script = audio_state.get("current_script", "")
+
+        # If script is unchanged and we have generated audio, show appropriate state
+        if current_script == podcast_text and user_session.has_generated_audio():
+            # Check if audio generation is completed
+            final_audio_path = user_session.audio_generator.final_audio_path
+            if final_audio_path and os.path.exists(final_audio_path):
+                return "音声生成済み", False
+            else:
+                return "音声生成を再開", True
+
+        return "音声を生成", True
+
     def update_audio_button_state_with_resume_check(self, checked: bool, podcast_text: Optional[str], user_session: UserSession, browser_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Update audio button state with resume functionality check."""
         has_text = bool(podcast_text and podcast_text.strip() != "")
@@ -2171,53 +2226,13 @@ class PaperPodcastApp:
             message = "（トーク原稿が必要です）"
         elif has_text and checked and user_session:
             # Check if we can resume (script unchanged)
+            # At this point, has_text is True, so podcast_text is not None or empty
+            text_content = podcast_text or ""
             if browser_state:
-                # Use browser_state for more reliable state management
-                audio_state = browser_state.get("audio_generation_state", {})
-                current_script = audio_state.get("current_script", "")
-                has_streaming_parts = len(audio_state.get("streaming_parts", [])) > 0
-                has_final_audio = audio_state.get("final_audio_path") is not None
-                is_preparing = audio_state.get("status") == "preparing"
-
-                # If script is unchanged, show appropriate state
-                if current_script == podcast_text and current_script != "":
-                    # Check for completed audio on disk if not found in browser state
-                    # Only do this if script hasn't changed and scripts match
-                    script_matches = current_script == podcast_text and current_script != ""
-                    if not has_final_audio and user_session and not audio_state.get("script_changed", False) and script_matches:
-                        output_dir = user_session.get_output_dir()
-                        for audio_file in output_dir.glob("audio_*.wav"):
-                            if audio_file.exists():
-                                has_final_audio = True
-                                # Update browser state with the discovered final audio path
-                                browser_state["audio_generation_state"]["final_audio_path"] = str(audio_file)
-                                browser_state["audio_generation_state"]["status"] = "completed"
-                                browser_state["audio_generation_state"]["is_generating"] = False
-                                browser_state["audio_generation_state"]["progress"] = 1.0
-                                break
-
-                    if has_final_audio:
-                        # Audio generation is already completed - disable button until script changes
-                        button_text = "音声生成済み"
-                        is_enabled = False
-                    elif has_streaming_parts or is_preparing:
-                        button_text = "音声生成を再開"
-                    else:
-                        button_text = "音声生成を再開"
+                button_text, is_enabled = self._get_audio_button_state_from_browser_state(text_content, user_session, browser_state)
             else:
                 # Fallback to legacy UserSession methods if browser_state not available
-                audio_state = user_session.get_audio_generation_status()
-                current_script = audio_state.get("current_script", "")
-
-                # If script is unchanged and we have generated audio, show appropriate state
-                if current_script == podcast_text and user_session.has_generated_audio():
-                    # Check if audio generation is completed
-                    if user_session.audio_generator.final_audio_path and os.path.exists(user_session.audio_generator.final_audio_path):
-                        # Audio generation is already completed - disable button until script changes
-                        button_text = "音声生成済み"
-                        is_enabled = False
-                    else:
-                        button_text = "音声生成を再開"
+                button_text, is_enabled = self._get_audio_button_state_from_session(text_content, user_session)
 
         result: Dict[str, Any] = gr.update(
             value=f"{button_text}{message}",
