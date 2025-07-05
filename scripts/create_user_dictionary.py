@@ -45,6 +45,10 @@ def create_user_dictionary():
             ("NVIDIA", "エヌビディア", 4, "PROPER_NOUN", 8),
             ("GITHUB", "ギットハブ", 3, "PROPER_NOUN", 8),
             ("GAFA", "ガーファ", 2, "PROPER_NOUN", 8),
+            ("速度場", "ソクドバ", 3, "COMMON_NOUN", 7),
+            ("DAPO", "ディーエーピーオー", 7, "PROPER_NOUN", 8),
+            ("LiDAR", "ライダー", 3, "PROPER_NOUN", 8),
+            ("方", "カタ", 1, "COMMON_NOUN", 7),
         ]
 
         # Add words to dictionary
