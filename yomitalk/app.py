@@ -1164,7 +1164,6 @@ class PaperPodcastApp:
                 <span style="font-weight: 500; flex-grow: 1;">{status_message}</span>
                 <span style="color: var(--body-text-color-subdued, #6b7280); font-size: 13px;">
                     パート {current_part}/{total_parts} ({progress_percent:.1f}%){time_info}
-                    {" | パート" + str(resume_from_part + 1) + "から再開可能" if resume_from_part is not None and resume_from_part > 0 else ""}
                 </span>
             </div>
             {progress_bar_html}
