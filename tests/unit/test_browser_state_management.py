@@ -158,13 +158,14 @@ class TestBrowserStateUIContent:
         """Test updating UI content in the new BrowserState structure."""
         browser_state = {"app_session_id": "test-uuid", "audio_generation_state": {}, "user_settings": {}, "ui_state": {}}
 
-        updated_state = self.app.update_browser_state_ui_content(browser_state, podcast_text="Generated podcast script", terms_agreed=True, extracted_text="Extracted document content")
+        updated_state = self.app.update_browser_state_ui_content(browser_state, podcast_text="Generated podcast script", terms_agreed=True)
 
         # Verify ui_state section is properly updated
         ui_state = updated_state["ui_state"]
         assert ui_state["podcast_text"] == "Generated podcast script"
         assert ui_state["terms_agreed"] is True
-        assert ui_state["extracted_text"] == "Extracted document content"
+        # extracted_text is not saved to browser_state anymore
+        assert "extracted_text" not in ui_state
 
     def test_update_browser_state_creates_ui_state_if_missing(self):
         """Test that ui_state section is created if missing."""
@@ -175,21 +176,23 @@ class TestBrowserStateUIContent:
             # ui_state is missing
         }
 
-        updated_state = self.app.update_browser_state_ui_content(browser_state, podcast_text="Test content", terms_agreed=False, extracted_text="")
+        updated_state = self.app.update_browser_state_ui_content(browser_state, podcast_text="Test content", terms_agreed=False)
 
         # Should create ui_state section
         assert "ui_state" in updated_state
         assert updated_state["ui_state"]["podcast_text"] == "Test content"
         assert updated_state["ui_state"]["terms_agreed"] is False
-        assert updated_state["ui_state"]["extracted_text"] == ""
+        # extracted_text is not saved to browser_state anymore
+        assert "extracted_text" not in updated_state["ui_state"]
 
     def test_update_browser_state_handles_empty_values(self):
         """Test handling of empty/None values in UI content update."""
         browser_state = {"app_session_id": "test-uuid", "audio_generation_state": {}, "user_settings": {}, "ui_state": {}}
 
-        updated_state = self.app.update_browser_state_ui_content(browser_state, podcast_text="", terms_agreed=False, extracted_text="")
+        updated_state = self.app.update_browser_state_ui_content(browser_state, podcast_text="", terms_agreed=False)
 
         ui_state = updated_state["ui_state"]
         assert ui_state["podcast_text"] == ""  # Empty string should remain empty
         assert ui_state["terms_agreed"] is False
-        assert ui_state["extracted_text"] == ""
+        # extracted_text is not saved to browser_state anymore
+        assert "extracted_text" not in ui_state

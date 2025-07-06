@@ -40,7 +40,7 @@ class TestUIInitialization:
                 "openai_model": "gpt-4o-mini",
                 "gemini_model": "gemini-1.5-flash",
             },
-            "ui_state": {"podcast_text": "", "terms_agreed": False, "extracted_text": ""},
+            "ui_state": {"podcast_text": "", "terms_agreed": False},
         }
 
         result = self.app.initialize_session_and_ui(self.mock_request, empty_browser_state)
@@ -94,7 +94,7 @@ class TestUIInitialization:
                 "openai_model": "gpt-4",
                 "gemini_model": "gemini-1.5-pro",
             },
-            "ui_state": {"podcast_text": "これは既存のポッドキャストスクリプトです。", "terms_agreed": True, "extracted_text": "これは抽出済みのテキストです。"},
+            "ui_state": {"podcast_text": "これは既存のポッドキャストスクリプトです。", "terms_agreed": True},
         }
 
         result = self.app.initialize_session_and_ui(self.mock_request, browser_state_with_content)
@@ -140,7 +140,7 @@ class TestUIInitialization:
                 "openai_model": "gpt-4-turbo",
                 "gemini_model": "gemini-1.5-flash",
             },
-            "ui_state": {"podcast_text": "", "terms_agreed": False, "extracted_text": ""},
+            "ui_state": {"podcast_text": "", "terms_agreed": False},
         }
 
         result = self.app.initialize_session_and_ui(self.mock_request, browser_state)

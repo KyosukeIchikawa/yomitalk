@@ -121,7 +121,7 @@ class PaperPodcastApp:
             {
                 "podcast_text": podcast_text or "",
                 "terms_agreed": bool(terms_agreed),
-                "extracted_text": extracted_text or "",
+                # extracted_text is not saved to browser_state - always starts empty
             }
         )
 
@@ -151,7 +151,7 @@ class PaperPodcastApp:
         result_text, result_session = self.extract_url_text_with_debug(url, existing_text, add_separator, user_session)
 
         # Update browser state with extracted text
-        updated_browser_state = self.update_browser_state_ui_content(browser_state, "", False, result_text)
+        updated_browser_state = self.update_browser_state_ui_content(browser_state, "", False)
 
         return result_text, result_session, updated_browser_state
 
@@ -1012,7 +1012,7 @@ class PaperPodcastApp:
         podcast_text, updated_user_session = self.generate_podcast_text(text, user_session)
 
         # Update browser state with generated podcast text
-        updated_browser_state = self.update_browser_state_ui_content(browser_state, podcast_text, browser_state.get("terms_agreed", False), text)
+        updated_browser_state = self.update_browser_state_ui_content(browser_state, podcast_text, browser_state.get("terms_agreed", False))
 
         return podcast_text, updated_user_session, updated_browser_state
 
@@ -1059,7 +1059,7 @@ class PaperPodcastApp:
         combined_text, updated_user_session = self.extract_file_text_auto(file_obj, existing_text, add_separator, user_session)
 
         # Update browser state with extracted text
-        updated_browser_state = self.update_browser_state_ui_content(browser_state, "", False, combined_text)
+        updated_browser_state = self.update_browser_state_ui_content(browser_state, "", False)
 
         return combined_text, updated_user_session, updated_browser_state
 
@@ -1696,7 +1696,7 @@ class PaperPodcastApp:
                         "openai_model": "gpt-4o-mini",
                         "gemini_model": "gemini-1.5-flash",
                     },
-                    "ui_state": {"podcast_text": "", "terms_agreed": False, "extracted_text": ""},
+                    "ui_state": {"podcast_text": "", "terms_agreed": False},
                 }
             )
             # Initialize regular State for UserSession object (not serializable to localStorage)
@@ -1744,7 +1744,7 @@ class PaperPodcastApp:
             # Set up event handlers
             # Clear text button
             clear_text_btn.click(
-                fn=lambda browser_state: ("", self.update_browser_state_ui_content(browser_state, "", False, "")),
+                fn=lambda browser_state: ("", self.update_browser_state_ui_content(browser_state, "", False)),
                 inputs=[browser_state],
                 outputs=[extracted_text, browser_state],
                 queue=False,
@@ -2252,7 +2252,7 @@ class PaperPodcastApp:
 
     def update_browser_state_extracted_text(self, extracted_text: str, browser_state: Dict[str, Any]) -> Dict[str, Any]:
         """Update browser state with extracted text changes."""
-        return self.update_browser_state_ui_content(browser_state, browser_state.get("podcast_text", ""), browser_state.get("terms_agreed", False), extracted_text)
+        return self.update_browser_state_ui_content(browser_state, browser_state.get("podcast_text", ""), browser_state.get("terms_agreed", False))
 
     def set_document_type(self, doc_type: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
         """
@@ -2404,7 +2404,6 @@ class PaperPodcastApp:
 
         # Step 3: Handle connection recovery and get UI restoration data from BrowserState
         ui_state = updated_browser_state.get("ui_state", {})
-        restored_extracted_text = ui_state.get("extracted_text", "")
         restored_podcast_text = ui_state.get("podcast_text", "")
         restored_terms_agreed = ui_state.get("terms_agreed", False)
 
@@ -2441,7 +2440,7 @@ class PaperPodcastApp:
 
         # Update BrowserState with current session status and UI content
         updated_browser_state = self.update_browser_state_audio_status(user_session, updated_browser_state)
-        updated_browser_state = self.update_browser_state_ui_content(updated_browser_state, restored_podcast_text, restored_terms_agreed, restored_extracted_text)
+        updated_browser_state = self.update_browser_state_ui_content(updated_browser_state, restored_podcast_text, restored_terms_agreed)
 
         # Step 4: Create UI component updates (enable all components)
         logger.info(f"Enabling UI components for session {user_session.session_id}")
@@ -2463,10 +2462,8 @@ class PaperPodcastApp:
         # Enable clear text button
         clear_text_btn_update = gr.update(value="テキストをクリア", interactive=True)
 
-        # Enable extracted text with restored value and interactive state
-        # Set appropriate placeholder based on whether we have restored content
-        extracted_placeholder = "" if restored_extracted_text and restored_extracted_text.strip() else "ファイルまたはURLから抽出されたテキストがここに表示されます。"
-        extracted_text_update = gr.update(value=restored_extracted_text, placeholder=extracted_placeholder, interactive=True)
+        # Enable extracted text area
+        extracted_text_update = gr.update(value="", placeholder="ファイルまたはURLから抽出されたテキストがここに表示されます。", interactive=True)
 
         # Enable document type radio with session value
         document_type_radio_update = gr.update(value=document_type, interactive=True)
