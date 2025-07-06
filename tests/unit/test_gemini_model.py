@@ -49,14 +49,14 @@ class TestGeminiModel:
         """Test setting the model name."""
         model = GeminiModel()
         # Valid model name
-        assert model.set_model_name("gemini-2.5-flash-preview-05-20") is True
-        assert model.model_name == "gemini-2.5-flash-preview-05-20"
+        assert model.set_model_name("gemini-2.5-flash") is True
+        assert model.model_name == "gemini-2.5-flash"
         # Non-existent model
         assert model.set_model_name("nonexistent-model") is False
-        assert model.model_name == "gemini-2.5-flash-preview-05-20"  # Should not change
+        assert model.model_name == "gemini-2.5-flash"  # Should not change
         # Empty model name
         assert model.set_model_name("") is False
-        assert model.model_name == "gemini-2.5-flash-preview-05-20"  # Should not change
+        assert model.model_name == "gemini-2.5-flash"  # Should not change
 
     @patch("google.genai.Client")
     def test_generate_text_success(self, mock_client):

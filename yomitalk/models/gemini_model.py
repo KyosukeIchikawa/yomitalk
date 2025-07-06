@@ -17,10 +17,10 @@ class GeminiModel:
 
     # Class-level constants for model configuration
     AVAILABLE_MODELS = [
-        "gemini-2.5-flash-preview-05-20",
-        "gemini-2.5-pro-preview-05-06",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
     ]
-    DEFAULT_MODEL = "gemini-2.5-flash-preview-05-20"
+    DEFAULT_MODEL = "gemini-2.5-flash"
     DEFAULT_MAX_TOKENS = 65536
 
     def __init__(self) -> None:
