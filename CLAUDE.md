@@ -143,7 +143,8 @@ Located in `tests/e2e/features/`, written in Gherkin syntax:
 
 ### Development Workflow
 - **TDD Approach**: Write tests before implementation (per project rules)
-- **Trunk-Based Development**: Direct commits to main branch
+- **Feature Branch Development**: Create branches with `feature/` or `bugfix/` prefixes
+- **Pull Request Process**: All changes must go through PR review before merging to main
 - **No --no-verify**: Pre-commit hooks must always run
 - **English Comments**: Code comments and logs in English
 - **Small Commits**: Frequent, small commits preferred
