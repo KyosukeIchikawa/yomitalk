@@ -95,6 +95,9 @@ download_voicevox_core() {
   chmod +x "$downloader_path"
 
   # Run the downloader
+  # Note: --c-api-version parameter is required to download the specified version.
+  # Without this parameter, the downloader will always download the latest version
+  # regardless of the specified version due to official downloader behavior.
   echo "Downloading VOICEVOX Core components..."
   cd "$voicevox_dir" || { echo "Error: Failed to change directory to $voicevox_dir"; return 1; }
 
@@ -144,12 +147,12 @@ download_voicevox_core() {
 
   if [ "$accept_agreement" = true ]; then
     echo "Auto-accepting license agreement"
-    if ! run_download_with_retry "env $github_env echo y | ./download --devices cpu"; then
+    if ! run_download_with_retry "env $github_env echo y | ./download --devices cpu --c-api-version=${version}"; then
       echo "Error: Failed to download VOICEVOX Core components"
       return 1
     fi
   else
-    if ! run_download_with_retry "env $github_env ./download --devices cpu"; then
+    if ! run_download_with_retry "env $github_env ./download --devices cpu --c-api-version=${version}"; then
       echo "Error: Failed to download VOICEVOX Core components"
       return 1
     fi
