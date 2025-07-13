@@ -1084,8 +1084,8 @@ class PaperPodcastApp:
 
     def _create_progress_html(
         self,
-        current_part: int,
-        total_parts: int,
+        current_part: Optional[int],
+        total_parts: Optional[int],
         status_message: str,
         is_completed: bool = False,
         start_time: Optional[float] = None,
@@ -1094,11 +1094,11 @@ class PaperPodcastApp:
         Create comprehensive progress display with progress bar, elapsed time, and estimated remaining time.
 
         Args:
-            current_part (int): Current part number
-            total_parts (int): Total number of parts
+            current_part (Optional[int]): Current part number (None treated as 0)
+            total_parts (Optional[int]): Total number of parts (None treated as 0)
             status_message (str): Status message to display
             is_completed (bool): Whether the generation is completed
-            start_time (float): Start time timestamp for calculating elapsed time
+            start_time (Optional[float]): Start time timestamp for calculating elapsed time
 
         Returns:
             str: HTML string for progress display
@@ -1109,7 +1109,10 @@ class PaperPodcastApp:
             progress_percent = 100
             emoji = "✅"
         else:
-            progress_percent = int(min(95, (current_part / total_parts) * 100) if total_parts > 0 else 0)
+            # Handle None values gracefully by treating them as 0
+            safe_current_part = current_part if current_part is not None else 0
+            safe_total_parts = total_parts if total_parts is not None else 0
+            progress_percent = int(min(95, (safe_current_part / safe_total_parts) * 100) if safe_total_parts > 0 else 0)
             emoji = "🎵"
 
         # 経過時間と推定残り時間を計算
@@ -1121,10 +1124,10 @@ class PaperPodcastApp:
 
             if is_completed:
                 time_info = f" | 完了時間: {elapsed_minutes:02d}:{elapsed_seconds:02d}"
-            elif current_part > 0 and not is_completed:
+            elif safe_current_part > 0 and not is_completed:
                 # 推定残り時間を計算（現在のペースに基づく）
-                avg_time_per_part = elapsed_time / current_part
-                remaining_parts = total_parts - current_part
+                avg_time_per_part = elapsed_time / safe_current_part
+                remaining_parts = safe_total_parts - safe_current_part
                 estimated_remaining = avg_time_per_part * remaining_parts
                 remaining_minutes = int(estimated_remaining // 60)
                 remaining_seconds = int(estimated_remaining % 60)
