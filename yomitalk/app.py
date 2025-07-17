@@ -1673,36 +1673,7 @@ class PaperPodcastApp:
                     </div>"""
                 )
 
-            # Initialize BrowserState for persistent session management - stores all session data in localStorage
-            browser_state = gr.BrowserState(
-                {
-                    "app_session_id": "",  # App-generated persistent session ID
-                    "audio_generation_state": {
-                        "is_generating": False,
-                        "progress": 0.0,
-                        "status": "idle",
-                        "current_script": "",
-                        "final_audio_path": None,
-                        "streaming_parts": [],
-                        "generation_id": None,
-                        "start_time": None,
-                        "estimated_total_parts": 1,
-                    },
-                    "user_settings": {
-                        "current_api_type": "gemini",
-                        "document_type": "research_paper",
-                        "podcast_mode": "academic",
-                        "character1": "Zundamon",
-                        "character2": "Shikoku Metan",
-                        "openai_max_tokens": 4000,
-                        "gemini_max_tokens": 8000,
-                        "openai_model": "gpt-4o-mini",
-                        "gemini_model": "gemini-1.5-flash",
-                    },
-                    "ui_state": {"podcast_text": "", "terms_agreed": False},
-                }
-            )
-            # Initialize regular State for UserSession object (not serializable to localStorage)
+            browser_state = gr.BrowserState()
             user_session = gr.State()
 
             app.load(
