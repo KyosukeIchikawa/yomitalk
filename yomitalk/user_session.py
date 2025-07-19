@@ -299,7 +299,3 @@ class UserSession:
             "last_update": None,
             "estimated_total_parts": 1,
         }
-
-    def auto_save(self) -> None:
-        """Temporary compatibility method for tests."""
-        pass

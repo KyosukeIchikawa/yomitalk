@@ -157,7 +157,6 @@ Located in `tests/e2e/features/`, written in Gherkin syntax:
 3. **Use Components**: Leverage existing TextProcessor, AudioGenerator, ContentExtractor
 4. **Follow Templates**: Use PromptManager for any LLM interactions
 5. **Handle Both APIs**: Ensure new features work with both OpenAI and Gemini
-6. **Add Auto-Save**: If your feature modifies session state, add `user_session.auto_save()` calls
 
 ### When Debugging
 1. **Check Session State**: User issues often relate to session-specific state
