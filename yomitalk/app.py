@@ -680,7 +680,6 @@ class PaperPodcastApp:
 
         success = user_session.text_processor.set_openai_api_key(api_key)
         logger.debug(f"OpenAI API key set for session {user_session.session_id}: {success}")
-        user_session.auto_save()  # Save session state after API key change
         return user_session
 
     def set_gemini_api_key(self, api_key: str, user_session: UserSession):
@@ -691,7 +690,6 @@ class PaperPodcastApp:
 
         success = user_session.text_processor.set_gemini_api_key(api_key)
         logger.debug(f"Gemini API key set for session {user_session.session_id}: {success}")
-        user_session.auto_save()  # Save session state after API key change
         return user_session
 
     def switch_llm_type(self, api_type: APIType, user_session: UserSession) -> UserSession:
@@ -701,7 +699,6 @@ class PaperPodcastApp:
             logger.debug(f"LLM type switched to {api_type.display_name} for session {user_session.session_id}")
         else:
             logger.debug(f"{api_type.display_name} API key not set for session {user_session.session_id}")
-        user_session.auto_save()  # Save session state after API type change
         return user_session
 
     def extract_url_text(
@@ -1758,7 +1755,6 @@ class PaperPodcastApp:
         """
         success = user_session.text_processor.openai_model.set_model_name(model_name)
         logger.debug(f"OpenAI model set to {model_name}: {success}")
-        user_session.auto_save()  # Save session state after model name change
         return user_session
 
     def set_gemini_model_name(self, model_name: str, user_session: UserSession) -> UserSession:
@@ -1770,7 +1766,6 @@ class PaperPodcastApp:
         """
         success = user_session.text_processor.gemini_model.set_model_name(model_name)
         logger.debug(f"Gemini model set to {model_name}: {success}")
-        user_session.auto_save()  # Save session state after model name change
         return user_session
 
     def set_openai_max_tokens(self, max_tokens: int, user_session: UserSession) -> UserSession:
@@ -1782,7 +1777,6 @@ class PaperPodcastApp:
         """
         success = user_session.text_processor.openai_model.set_max_tokens(max_tokens)
         logger.debug(f"OpenAI max tokens set to {max_tokens}: {success}")
-        user_session.auto_save()  # Save session state after max tokens change
         return user_session
 
     def set_gemini_max_tokens(self, max_tokens: int, user_session: UserSession) -> UserSession:
@@ -1794,7 +1788,6 @@ class PaperPodcastApp:
         """
         success = user_session.text_processor.gemini_model.set_max_tokens(max_tokens)
         logger.debug(f"Gemini max tokens set to {max_tokens}: {success}")
-        user_session.auto_save()  # Save session state after max tokens change
         return user_session
 
     def set_character_mapping(self, character1: str, character2: str, user_session: UserSession) -> UserSession:
@@ -1806,7 +1799,6 @@ class PaperPodcastApp:
         """
         success = user_session.text_processor.set_character_mapping(character1, character2)
         logger.debug(f"Character mapping set: {character1}, {character2}: {success}")
-        user_session.auto_save()  # Save session state after character mapping change
         return user_session
 
     def set_podcast_mode(self, mode: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
@@ -1834,8 +1826,6 @@ class PaperPodcastApp:
                 logger.debug(f"Podcast mode set to {mode}: {success}, saved to browser_state")
             else:
                 logger.warning(f"Failed to set podcast mode to {mode}")
-
-            user_session.auto_save()  # Save session state after podcast mode change
 
         except ValueError as e:
             logger.error(f"Error setting podcast mode: {str(e)}")
@@ -2001,8 +1991,6 @@ class PaperPodcastApp:
                 logger.debug(f"Document type set to {doc_type}: {success}, saved to browser_state")
             else:
                 logger.warning(f"Failed to set document type to {doc_type}")
-
-            user_session.auto_save()  # Save session state after document type change
 
         except ValueError as e:
             logger.error(f"Error setting document type: {str(e)}")

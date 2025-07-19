@@ -21,12 +21,6 @@ from yomitalk.common import APIType
 from yomitalk.components.audio_generator import initialize_global_voicevox_manager
 ```
 
-### Session Management Pattern
-```python
-# Always work within UserSession context
-user_session = UserSession(session_id)
-user_session.auto_save()  # After state changes
-```
 
 ## Code Quality Standards
 
