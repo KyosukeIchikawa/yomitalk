@@ -98,7 +98,7 @@ class TestTextProcessor:
         assert result is True
 
         # 設定されたドキュメントタイプを確認
-        assert self.text_processor.get_document_type() == DocumentType.PAPER
+        assert self.text_processor.prompt_manager.current_document_type is DocumentType.PAPER
 
     def test_generate_conversation(self):
         """Test generate podcast conversation."""

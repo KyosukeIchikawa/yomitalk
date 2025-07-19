@@ -13,7 +13,7 @@ def upload_file(page: Page, file_type, file_name):
 
     Args:
         page: Playwright page object
-        file_type: File type (PDF/text)
+        file_type: File type (PDF/text) - 未使用
         file_name: Name of the file to upload
     """
     # Set the file path
@@ -36,7 +36,7 @@ def user_uploads_file(page: Page, file_type, file_name):
 
     Args:
         page: Playwright page object
-        file_type: File type (PDF/text)
+        file_type: File type (PDF/text) - 未使用
         file_name: Name of the file to upload
     """
     # Set the file path
