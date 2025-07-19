@@ -176,15 +176,6 @@ class TextProcessor:
         success: bool = self.prompt_manager.set_document_type(doc_type)
         return success
 
-    def get_document_type(self) -> DocumentType:
-        """
-        現在のドキュメントタイプを取得します。
-
-        Returns:
-            DocumentType: 現在のドキュメントタイプ
-        """
-        return self.prompt_manager.current_document_type
-
     def get_document_type_name(self) -> str:
         """
         現在のドキュメントタイプの日本語名を取得します。
@@ -340,20 +331,6 @@ class TextProcessor:
             return self.gemini_model.set_model_name(model_name)
         else:
             return False
-
-    def get_current_model(self) -> str:
-        """
-        現在選択されているAPIタイプのモデル名を取得します。
-
-        Returns:
-            str: 現在のモデル名
-        """
-        if self.current_api_type == APIType.OPENAI:
-            return self.openai_model.model_name
-        elif self.current_api_type == APIType.GEMINI:
-            return self.gemini_model.model_name
-        else:
-            return ""
 
     def set_max_tokens(self, max_tokens: int) -> bool:
         """

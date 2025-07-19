@@ -50,22 +50,6 @@ class PaperPodcastApp:
         dummy_session = UserSession("dummy")
         dummy_session.cleanup_old_sessions()
 
-    def create_user_session(self, request: gr.Request) -> UserSession:
-        """Create a new user session with unique session ID or restore from saved state."""
-        session_id = request.session_hash
-
-        # Try to load existing session state first
-        existing_session = UserSession.load_from_file(session_id)
-        if existing_session:
-            logger.info(f"Restored existing session: {session_id}")
-            return existing_session
-
-        # Create new session if no saved state found
-        logger.info(f"Created new session: {session_id}")
-        new_session = UserSession(session_id)
-        new_session.auto_save()  # Save initial state
-        return new_session
-
     def create_user_session_with_browser_state(self, request: gr.Request, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
         """Create user session with simplified BrowserState-based session management."""
 
@@ -154,157 +138,6 @@ class PaperPodcastApp:
         updated_browser_state = self.update_browser_state_ui_content(browser_state, "", False)
 
         return result_text, result_session, updated_browser_state
-
-    def generate_podcast_audio_streaming_with_browser_state(self, text: str, user_session: UserSession, browser_state: Dict[str, Any], progress=None):
-        """Generate streaming audio with BrowserState synchronization for network recovery."""
-        if not text:
-            logger.warning("Streaming audio generation: Text is empty")
-            browser_state["audio_generation_state"]["status"] = "failed"
-            browser_state["audio_generation_state"]["is_generating"] = False
-            error_html = self._create_error_html("テキストが空のため音声生成できません")
-            yield None, user_session, error_html, None, browser_state
-            return
-
-        # Check if VOICEVOX Core is available
-        if not user_session.audio_generator.core_initialized:
-            logger.error("Streaming audio generation: VOICEVOX Core is not available")
-            browser_state["audio_generation_state"]["status"] = "failed"
-            browser_state["audio_generation_state"]["is_generating"] = False
-            error_html = self._create_error_html("VOICEVOX Coreが利用できません")
-            yield None, user_session, error_html, None, browser_state
-            return
-
-        try:
-            # Initialize progress if not provided
-            if progress is None:
-                progress = gr.Progress()
-
-            # スクリプトからパーツ数を推定
-            estimated_total_parts = self._estimate_audio_parts_count(text)
-            logger.info(f"Estimated total audio parts: {estimated_total_parts}")
-
-            # 音声生成状態をブラウザ状態に初期化
-            generation_id = str(uuid.uuid4())
-            browser_state["audio_generation_state"].update(
-                {
-                    "is_generating": True,
-                    "status": "generating",
-                    "current_script": text,
-                    "generation_id": generation_id,
-                    "start_time": time.time(),
-                    "progress": 0.0,
-                    "generated_parts": [],
-                    "streaming_parts": [],
-                    "final_audio_path": None,
-                    "estimated_total_parts": estimated_total_parts,
-                }
-            )
-
-            # 初回のyieldを行って、Gradioのストリーミングモードを確実に有効化
-            logger.debug(f"Initializing streaming audio generation (ID: {generation_id})")
-            start_html = self._create_progress_html(
-                0,
-                estimated_total_parts,
-                "音声生成を開始しています...",
-                start_time=time.time(),
-            )
-            yield None, user_session, start_html, None, browser_state
-
-            # gr.Progressも使用（Gradio標準の進捗バー）
-            progress(0, desc="🎤 音声生成を開始しています...")
-
-            # ストリーミング用の各パートのパスを保存
-            parts_paths = []
-            final_combined_path = None
-            current_part_count = 0  # ローカルカウンターを使用
-
-            # 個別の音声パートを生成・ストリーミング
-            for audio_path in user_session.audio_generator.generate_character_conversation(text, 0, []):
-                if not audio_path:
-                    continue
-
-                filename = os.path.basename(audio_path)
-
-                # 'part_'を含むものは部分音声ファイル、'audio_'から始まるものは最終結合ファイル
-                if "part_" in filename:
-                    parts_paths.append(audio_path)
-                    current_part_count += 1  # ローカルカウンターをインクリメント
-                    progress_ratio = min(0.95, current_part_count / estimated_total_parts)
-
-                    # 進捗状況をログに記録
-                    logger.info(f"Audio part {current_part_count}/{estimated_total_parts} completed")
-
-                    logger.debug(f"ストリーム音声パーツ ({current_part_count}/{estimated_total_parts}): {audio_path}")
-
-                    # ブラウザ状態にストリーミングパーツを追加
-                    browser_state["audio_generation_state"]["streaming_parts"].append(audio_path)
-                    browser_state["audio_generation_state"]["progress"] = progress_ratio
-
-                    # 進捗情報を生成してyield（新しい詳細進捗表示）
-                    start_time = browser_state["audio_generation_state"]["start_time"]
-
-                    # パートが完了した場合の適切なメッセージ
-                    if current_part_count < estimated_total_parts:
-                        status_message = f"音声パート {current_part_count} が完了..."
-                        progress_desc = f"🎵 音声パート {current_part_count}/{estimated_total_parts} 完了..."
-                    else:
-                        status_message = f"音声パート {current_part_count} が完了、最終処理中..."
-                        progress_desc = f"🎵 音声パート {current_part_count}/{estimated_total_parts} 完了、最終処理中..."
-
-                    progress_html = self._create_progress_html(
-                        current_part_count,
-                        estimated_total_parts,
-                        status_message,
-                        start_time=start_time,
-                    )
-
-                    # gr.Progressも更新
-                    progress(
-                        progress_ratio,
-                        desc=progress_desc,
-                    )
-
-                    yield (
-                        audio_path,
-                        user_session,
-                        progress_html,
-                        None,
-                        browser_state,
-                    )  # ストリーミング再生用にyield
-                    time.sleep(0.05)  # 連続再生のタイミング調整
-                elif filename.startswith("audio_"):
-                    # 最終結合ファイルの場合
-                    final_combined_path = audio_path
-                    browser_state["audio_generation_state"]["final_audio_path"] = audio_path
-                    browser_state["audio_generation_state"]["progress"] = 1.0
-                    logger.info(f"結合済み最終音声ファイルを受信: {final_combined_path}")
-
-                    # 最終音声完成の進捗を表示
-                    start_time = browser_state["audio_generation_state"]["start_time"]
-                    complete_html = self._create_progress_html(
-                        estimated_total_parts,
-                        estimated_total_parts,
-                        "音声生成完了！",
-                        is_completed=True,
-                        start_time=start_time,
-                    )
-
-                    # gr.Progressも完了状態に
-                    progress(1.0, desc="✅ 音声生成完了！")
-
-                    yield None, user_session, complete_html, final_combined_path, browser_state
-
-            # 音声生成の完了処理
-            self._finalize_audio_generation_with_browser_state(final_combined_path, parts_paths, user_session, browser_state)
-
-        except Exception as e:
-            logger.error(f"Streaming audio generation exception: {str(e)}")
-            browser_state["audio_generation_state"]["status"] = "failed"
-            browser_state["audio_generation_state"]["is_generating"] = False
-            browser_state["audio_generation_state"]["progress"] = 0.0
-            error_html = self._create_error_html(f"音声生成でエラーが発生しました: {str(e)}")
-            progress(0, desc="❌ 音声生成エラー")
-            yield None, user_session, error_html, None, browser_state
 
     def generate_podcast_audio_streaming_with_browser_state_and_resume(
         self, text: str, user_session: UserSession, browser_state: Dict[str, Any], resume_from_part: int = 0, existing_parts: Optional[List[str]] = None, progress=None
@@ -871,43 +704,6 @@ class PaperPodcastApp:
         user_session.auto_save()  # Save session state after API type change
         return user_session
 
-    def extract_file_text(
-        self,
-        file_obj,
-        existing_text: str,
-        add_separator: bool,
-        user_session: UserSession,
-    ) -> Tuple[None, str, UserSession]:
-        """Extract text from a file and append to existing text for the specific user session."""
-
-        if user_session is None:
-            logger.warning("File extraction called with None user_session - creating temporary session")
-            # Create a temporary session for this operation
-            import uuid
-
-            user_session = UserSession(f"temp_{uuid.uuid4().hex[:8]}")
-            logger.info(f"Created temporary session: {user_session.session_id}")
-
-        if file_obj is None:
-            logger.debug("No file selected for extraction")
-            return None, existing_text, user_session
-
-        # Extract new text from file
-        new_text = ContentExtractor.extract_text(file_obj)
-
-        # Get source name from file
-        source_name = ContentExtractor.get_source_name_from_file(file_obj)
-
-        # Append to existing text with source information
-        combined_text = ContentExtractor.append_text_with_source(existing_text, new_text, source_name, add_separator)
-
-        logger.debug(f"File text extraction completed for session {user_session.session_id}")
-        return (
-            None,
-            combined_text,
-            user_session,
-        )  # Return None for file_input to clear it
-
     def extract_url_text(
         self,
         url: str,
@@ -1186,52 +982,6 @@ class PaperPodcastApp:
             <span style="font-weight: 500; color: var(--error-text-color, #dc2626);">{error_message}</span>
         </div>
         """
-
-    def _create_recovery_progress_html(self, user_session: UserSession, status_message: str, is_active: bool = False) -> str:
-        """
-        Create progress HTML for connection recovery scenarios using new UserSession recovery methods.
-
-        Args:
-            user_session (UserSession): User session instance
-            status_message (str): Status message to display
-            is_active (bool): Whether generation is currently active
-
-        Returns:
-            str: HTML string for recovery progress display
-        """
-        if not status_message:
-            return ""
-
-        # Use new recovery progress info method
-        recovery_info = user_session.get_recovery_progress_info()
-
-        current_part_count = recovery_info["streaming_parts_count"]
-        estimated_total_parts = recovery_info["estimated_total_parts"]
-        start_time = recovery_info["start_time"]
-
-        # Adjust estimated parts if actual parts exceed estimate
-        if current_part_count > estimated_total_parts:
-            estimated_total_parts = current_part_count
-
-        if is_active:
-            # Active generation case
-            return self._create_progress_html(
-                current_part_count,
-                estimated_total_parts,
-                status_message,
-                start_time=start_time,
-            )
-        else:
-            # Completed/failed case
-            # For completed status, show full progress
-            display_parts = estimated_total_parts if recovery_info["status"] == "completed" else current_part_count
-            return self._create_progress_html(
-                display_parts,
-                estimated_total_parts,
-                status_message,
-                is_completed=(recovery_info["status"] == "completed"),
-                start_time=start_time,
-            )
 
     def disable_generate_button(self):
         """音声生成ボタンを無効化します。"""
@@ -2122,37 +1872,6 @@ class PaperPodcastApp:
         """
         return html
 
-    def update_audio_button_state(self, checked: bool, podcast_text: Optional[str] = None) -> Dict[str, Any]:
-        """
-        VOICEVOX利用規約チェックボックスの状態とトーク原稿の有無に基づいて音声生成ボタンの有効/無効を切り替えます。
-
-        Args:
-            checked (bool): チェックボックスの状態
-            podcast_text (Optional[str], optional): 生成されたトーク原稿
-
-        Returns:
-            Dict[str, Any]: gr.update()の結果
-        """
-        has_text = bool(podcast_text and podcast_text.strip() != "")
-        is_enabled = bool(checked and has_text)
-
-        message = ""
-        if not checked:
-            message = "（VOICEVOX利用規約に同意が必要です）"
-        elif not has_text:
-            message = "（トーク原稿が必要です）"
-
-        # Default button text
-        button_text = "音声を生成"
-
-        # gr.update()を使用して、既存のボタンを更新
-        result: Dict[str, Any] = gr.update(
-            value=f"{button_text}{message}",
-            interactive=is_enabled,
-            variant="primary" if is_enabled else "secondary",
-        )
-        return result
-
     def _check_disk_for_final_audio(self, user_session: UserSession, browser_state: Dict[str, Any]) -> bool:
         """Check disk for final audio files and update browser state if found."""
         output_dir = user_session.get_output_dir()
@@ -2289,34 +2008,6 @@ class PaperPodcastApp:
             logger.error(f"Error setting document type: {str(e)}")
 
         return user_session, browser_state
-
-    def reset_audio_state_and_components_with_browser_state(self, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[None, str, None, Dict[str, Any]]:
-        """Reset audio state and components with BrowserState synchronization."""
-        # Preserve current_script for resume functionality
-        current_script = browser_state["audio_generation_state"].get("current_script", "")
-
-        # Reset audio state directly in browser state but preserve current_script
-        browser_state["audio_generation_state"] = {
-            "is_generating": False,
-            "progress": 0.0,
-            "status": "idle",
-            "current_script": current_script,  # Preserve for resume detection
-            "generated_parts": [],
-            "final_audio_path": None,
-            "streaming_parts": [],
-            "generation_id": None,
-            "start_time": None,
-            "last_update": None,
-            "estimated_total_parts": 1,
-        }
-
-        # Reset local user session state as well
-        user_session.audio_generator.reset_audio_generation_state()
-
-        logger.debug(f"Audio generation state reset in browser state and user session, preserved current_script: {current_script}")
-
-        # Return clear values for UI components
-        return None, "", None, browser_state
 
     def prepare_audio_generation_with_browser_state(self, podcast_text: str, browser_state: Dict[str, Any]) -> Tuple[None, str, None, Dict[str, Any]]:
         """Prepare for audio generation by saving current script to browser state."""

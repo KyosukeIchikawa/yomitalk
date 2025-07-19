@@ -128,7 +128,7 @@ def pytest_bdd_apply_tag(tag, function):
 
     Args:
         tag: BDDタグ
-        function: テスト関数
+        function: テスト関数（未使用）
 
     Returns:
         bool: スキップするかどうか
@@ -147,7 +147,13 @@ def pytest_bdd_step_error(request, feature, scenario, step, step_func, step_func
     ステップが失敗した場合のフック
 
     Args:
-        各種パラメータ
+        request: Pytestリクエストオブジェクト
+        feature: BDD機能（未使用）
+        scenario: BDDシナリオ
+        step: BDDステップ
+        step_func: ステップ関数（未使用）
+        step_func_args: ステップ関数引数
+        exception: 発生した例外（未使用）
     """
     logger.error(f"Error in step: {step}")
 
