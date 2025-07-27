@@ -50,6 +50,11 @@ def create_user_dictionary():
             ("LiDAR", "ライダー", 3, "PROPER_NOUN", 8),
             ("Hz", "ヘルツ", 1, "COMMON_NOUN", 7),
             ("KV", "ケーブイ", 2, "COMMON_NOUN", 7),
+            ("章", "ショウ", 1, "COMMON_NOUN", 7),
+            ("他に", "ホカニ", 2, "COMMON_NOUN", 6),
+            ("見せ所", "ミセドコロ", 4, "COMMON_NOUN", 7),
+            ("前頭前野", "ゼントウゼンヤ", 5, "COMMON_NOUN", 7),
+            ("二分法", "ニブンホウ", 3, "COMMON_NOUN", 7),
         ]
 
         # Add words to dictionary
