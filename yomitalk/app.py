@@ -1549,16 +1549,16 @@ class PaperPodcastApp:
 
             # OpenAI Model selection
             openai_model_dropdown.change(
-                fn=self.set_openai_model_name,
-                inputs=[openai_model_dropdown, user_session],
-                outputs=[user_session],
+                fn=self.set_openai_model_name_with_browser_state,
+                inputs=[openai_model_dropdown, user_session, browser_state],
+                outputs=[user_session, browser_state],
             )
 
             # Gemini Model selection
             gemini_model_dropdown.change(
-                fn=self.set_gemini_model_name,
-                inputs=[gemini_model_dropdown, user_session],
-                outputs=[user_session],
+                fn=self.set_gemini_model_name_with_browser_state,
+                inputs=[gemini_model_dropdown, user_session, browser_state],
+                outputs=[user_session, browser_state],
             )
 
             # OpenAI Max tokens selection
@@ -1715,6 +1715,27 @@ class PaperPodcastApp:
         logger.debug(f"OpenAI model set to {model_name}: {success}")
         return user_session
 
+    def set_openai_model_name_with_browser_state(self, model_name: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
+        """
+        OpenAIモデル名を設定し、browser_stateも更新します。
+
+        Args:
+            model_name (str): 使用するモデル名
+            user_session (UserSession): ユーザーセッション
+            browser_state (Dict[str, Any]): ブラウザ状態
+
+        Returns:
+            Tuple[UserSession, Dict[str, Any]]: 更新されたユーザーセッションとブラウザ状態
+        """
+        updated_session = self.set_openai_model_name(model_name, user_session)
+
+        # Update browser state with new model selection
+        if "user_settings" not in browser_state:
+            browser_state["user_settings"] = {}
+        browser_state["user_settings"]["openai_model"] = model_name
+
+        return updated_session, browser_state
+
     def set_gemini_model_name(self, model_name: str, user_session: UserSession) -> UserSession:
         """
         Geminiモデル名を設定します。
@@ -1725,6 +1746,27 @@ class PaperPodcastApp:
         success = user_session.text_processor.gemini_model.set_model_name(model_name)
         logger.debug(f"Gemini model set to {model_name}: {success}")
         return user_session
+
+    def set_gemini_model_name_with_browser_state(self, model_name: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
+        """
+        Geminiモデル名を設定し、browser_stateも更新します。
+
+        Args:
+            model_name (str): 使用するモデル名
+            user_session (UserSession): ユーザーセッション
+            browser_state (Dict[str, Any]): ブラウザ状態
+
+        Returns:
+            Tuple[UserSession, Dict[str, Any]]: 更新されたユーザーセッションとブラウザ状態
+        """
+        updated_session = self.set_gemini_model_name(model_name, user_session)
+
+        # Update browser state with new model selection
+        if "user_settings" not in browser_state:
+            browser_state["user_settings"] = {}
+        browser_state["user_settings"]["gemini_model"] = model_name
+
+        return updated_session, browser_state
 
     def set_openai_max_tokens(self, max_tokens: int, user_session: UserSession) -> UserSession:
         """
@@ -2111,9 +2153,12 @@ class PaperPodcastApp:
         gemini_api_key_input_update = gr.update(placeholder="AIza...", interactive=True)
         openai_api_key_input_update = gr.update(placeholder="sk-...", interactive=True)
 
-        # Enable model dropdowns
-        gemini_model_dropdown_update = gr.update(interactive=True)
-        openai_model_dropdown_update = gr.update(interactive=True)
+        # Enable model dropdowns with values from user_session (restored from browser_state)
+        current_gemini_model = user_session.text_processor.gemini_model.model_name
+        current_openai_model = user_session.text_processor.openai_model.model_name
+
+        gemini_model_dropdown_update = gr.update(value=current_gemini_model, interactive=True)
+        openai_model_dropdown_update = gr.update(value=current_openai_model, interactive=True)
 
         # Enable token sliders with session values
         gemini_max_tokens_slider_update = gr.update(value=gemini_max_tokens, interactive=True)
