@@ -282,6 +282,84 @@ class UserSession:
 
         return browser_state
 
+    def get_default_browser_state_structure(self) -> Dict[str, Any]:
+        """Get default browser state structure based on current user session settings.
+
+        This method provides the single source of truth for default values,
+        preventing duplication between user_session and browser_state defaults.
+
+        Returns:
+            Dict[str, Any]: Default browser state structure with current session values
+        """
+        return {
+            "app_session_id": self.session_id,
+            "audio_generation_state": {
+                "is_generating": False,
+                "progress": 0.0,
+                "status": "idle",
+                "current_script": "",
+                "final_audio_path": None,
+                "streaming_parts": [],
+                "generation_id": None,
+                "start_time": None,
+                "estimated_total_parts": 1,
+            },
+            "user_settings": {
+                "current_api_type": self.text_processor.current_api_type.name.lower() if self.text_processor.current_api_type else "gemini",
+                "document_type": self.text_processor.prompt_manager.current_document_type.value,
+                "podcast_mode": self.text_processor.prompt_manager.current_mode.value,
+                "character1": self.text_processor.prompt_manager.char_mapping.get("Character1", "Zundamon"),
+                "character2": self.text_processor.prompt_manager.char_mapping.get("Character2", "Shikoku Metan"),
+                "openai_max_tokens": self.text_processor.openai_model.get_max_tokens(),
+                "gemini_max_tokens": self.text_processor.gemini_model.get_max_tokens(),
+                "openai_model": self.text_processor.openai_model.model_name,
+                "gemini_model": self.text_processor.gemini_model.model_name,
+            },
+            "ui_state": {"podcast_text": "", "terms_agreed": False},
+        }
+
+    def ensure_browser_state_completeness(self, browser_state: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure browser_state has complete structure using user_session defaults.
+
+        This method merges incomplete browser_state with user_session-based defaults,
+        giving priority to user_session values when browser_state is missing fields.
+
+        Args:
+            browser_state (Dict[str, Any]): Current browser state (might be incomplete)
+
+        Returns:
+            Dict[str, Any]: Complete browser state with user_session defaults applied
+        """
+        # Get default structure from current user session state
+        default_structure = self.get_default_browser_state_structure()
+
+        # If browser_state is completely empty, use defaults
+        if not browser_state:
+            return default_structure
+
+        # Merge browser_state into defaults - this gives priority to user_session defaults
+        # for missing fields while preserving existing browser_state values
+        result = default_structure.copy()
+
+        # Recursively merge dictionaries, keeping browser_state values where they exist
+        def deep_merge(default_dict: dict, browser_dict: dict) -> dict:
+            merged = default_dict.copy()
+            for key, value in browser_dict.items():
+                if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+                    merged[key] = deep_merge(merged[key], value)
+                else:
+                    merged[key] = value
+            return merged
+
+        merged_result = deep_merge(result, browser_state)
+
+        # Special case: always ensure app_session_id matches current session
+        # This handles the case where browser_state has empty session_id
+        if not merged_result.get("app_session_id"):
+            merged_result["app_session_id"] = self.session_id
+
+        return merged_result
+
     # Temporary compatibility methods for tests - will be removed
     @property
     def audio_generation_state(self) -> Dict[str, Any]:

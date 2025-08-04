@@ -64,37 +64,26 @@ class PaperPodcastApp:
             # Restore settings from browser state
             user_session.update_settings_from_browser_state(browser_state)
 
-            # Return browser state as-is since it contains all needed state
-            return user_session, browser_state
+            # Ensure browser_state completeness using user_session defaults
+            complete_browser_state = user_session.ensure_browser_state_completeness(browser_state)
+
+            return user_session, complete_browser_state
         else:
             # Create new session with UUID-based ID
             user_session = UserSession()  # Will generate new UUID
             logger.info(f"User session initialized: {user_session.session_id}")
 
-            # Initialize browser state with new session ID
-            browser_state["app_session_id"] = user_session.session_id
+            # Use user_session's default state structure to complete browser_state
+            complete_browser_state = user_session.ensure_browser_state_completeness(browser_state)
 
-            # Sync current settings to browser state
-            browser_state = user_session.sync_settings_to_browser_state(browser_state)
-
-            return user_session, browser_state
-
-    def update_browser_state_audio_status(self, user_session: UserSession, browser_state: Dict[str, Any]) -> Dict[str, Any]:
-        """Update BrowserState with current audio generation status."""
-        if user_session is None:
-            return browser_state.copy()
-
-        audio_status = user_session.get_audio_generation_status(browser_state)
-
-        # Create a copy of browser state and update audio generation section
-        updated_state = browser_state.copy()
-        updated_state["audio_generation_state"] = browser_state["audio_generation_state"].copy()
-        updated_state["audio_generation_state"].update(audio_status)
-
-        return updated_state
+            return user_session, complete_browser_state
 
     def update_browser_state_ui_content(self, browser_state: Dict[str, Any], podcast_text: str, terms_agreed: bool, extracted_text: str = "") -> Dict[str, Any]:
-        """Update BrowserState with UI content for recovery."""
+        """Update BrowserState with UI content for recovery.
+
+        Note: This method is being phased out in favor of UserSession.ensure_browser_state_completeness.
+        Consider using user_session.ensure_browser_state_completeness instead for new code.
+        """
         updated_state = browser_state.copy()
 
         # Update ui_state section in the new BrowserState structure
@@ -1421,34 +1410,8 @@ class PaperPodcastApp:
                 )
 
             # Initialize BrowserState for persistent session management - stores all session data in localStorage
-            browser_state = gr.BrowserState(
-                {
-                    "app_session_id": "",  # App-generated persistent session ID
-                    "audio_generation_state": {
-                        "is_generating": False,
-                        "progress": 0.0,
-                        "status": "idle",
-                        "current_script": "",
-                        "final_audio_path": None,
-                        "streaming_parts": [],
-                        "generation_id": None,
-                        "start_time": None,
-                        "estimated_total_parts": 1,
-                    },
-                    "user_settings": {
-                        "current_api_type": "gemini",
-                        "document_type": "research_paper",
-                        "podcast_mode": "academic",
-                        "character1": "Zundamon",
-                        "character2": "Shikoku Metan",
-                        "openai_max_tokens": 4000,
-                        "gemini_max_tokens": 8000,
-                        "openai_model": "gpt-4o-mini",
-                        "gemini_model": "gemini-1.5-flash",
-                    },
-                    "ui_state": {"podcast_text": "", "terms_agreed": False},
-                }
-            )
+            # Start with empty dict and let initialize_session_and_ui populate with proper defaults
+            browser_state = gr.BrowserState({})
             # Initialize regular State for UserSession object (not serializable to localStorage)
             user_session = gr.State()
 
@@ -1736,13 +1699,8 @@ class PaperPodcastApp:
                 outputs=[generate_btn, browser_state],
             )
 
-            # extracted_textの変更時にもbrowser_stateを更新
-            extracted_text.change(
-                fn=self.update_browser_state_extracted_text,
-                inputs=[extracted_text, browser_state],
-                outputs=[browser_state],
-                queue=False,
-            )
+            # Note: extracted_text changes don't need to update browser_state
+            # as extracted_text is temporary and not persisted
 
         return app
 
@@ -1962,10 +1920,6 @@ class PaperPodcastApp:
 
         return button_update, updated_browser_state
 
-    def update_browser_state_extracted_text(self, extracted_text: str, browser_state: Dict[str, Any]) -> Dict[str, Any]:
-        """Update browser state with extracted text changes."""
-        return self.update_browser_state_ui_content(browser_state, browser_state.get("podcast_text", ""), browser_state.get("terms_agreed", False))
-
     def set_document_type(self, doc_type: str, user_session: UserSession, browser_state: Dict[str, Any]) -> Tuple[UserSession, Dict[str, Any]]:
         """
         ドキュメントタイプを設定します。
@@ -2119,10 +2073,6 @@ class PaperPodcastApp:
                     # Update browser state with the found final audio
                     updated_browser_state["audio_generation_state"]["final_audio_path"] = final_audio
                     updated_browser_state["audio_generation_state"]["status"] = "completed"
-
-        # Update BrowserState with current session status and UI content
-        updated_browser_state = self.update_browser_state_audio_status(user_session, updated_browser_state)
-        updated_browser_state = self.update_browser_state_ui_content(updated_browser_state, restored_podcast_text, restored_terms_agreed)
 
         # Step 4: Create UI component updates (enable all components)
         logger.info(f"Enabling UI components for session {user_session.session_id}")
