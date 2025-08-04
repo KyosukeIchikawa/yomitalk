@@ -46,8 +46,17 @@ class TestBrowserStateManagement:
         assert user_session.session_id == existing_session_id
         assert updated_browser_state["app_session_id"] == existing_session_id
 
-        # Browser state should remain unchanged
-        assert updated_browser_state == browser_state_with_session
+        # Browser state should be completed with UserSession defaults while preserving existing values
+        # Check that original values are preserved
+        assert updated_browser_state["ui_state"]["podcast_text"] == "Previous session content"
+        assert updated_browser_state["ui_state"]["terms_agreed"] is True
+        assert updated_browser_state["user_settings"]["current_api_type"] == "openai"
+        assert updated_browser_state["user_settings"]["character1"] == "Kyushu Sora"
+
+        # Check that missing fields are filled with defaults
+        assert "current_script" in updated_browser_state["audio_generation_state"]
+        assert "character2" in updated_browser_state["user_settings"]
+        assert "document_type" in updated_browser_state["user_settings"]
 
     def test_session_independence_from_gradio_hash(self):
         """Test that app session ID remains stable even when Gradio session hash changes."""

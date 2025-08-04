@@ -212,62 +212,24 @@ class TestAudioStateUpdate:
         """Set up test fixtures."""
         self.app = PaperPodcastApp()
 
-    def test_update_browser_state_audio_status(self):
-        """Test updating audio status in BrowserState."""
-        from yomitalk.user_session import UserSession
-
-        user_session = UserSession()
+    def test_update_browser_state_ui_content(self):
+        """Test updating UI content in BrowserState."""
         browser_state = {
-            "app_session_id": user_session.session_id,
-            "audio_generation_state": {
-                "is_generating": True,
-                "progress": 0.5,
-                "status": "generating",
-                "current_script": "Test script",
-                "final_audio_path": None,
-                "streaming_parts": ["part1.wav"],
-                "generation_id": "gen123",
-            },
+            "app_session_id": "test-session",
+            "audio_generation_state": {},
             "user_settings": {},
-            "ui_state": {},
+            "ui_state": {"podcast_text": "old text", "terms_agreed": False},
         }
 
-        # Update the browser state audio status
-        updated_state = self.app.update_browser_state_audio_status(user_session, browser_state)
+        # Update UI content
+        updated_state = self.app.update_browser_state_ui_content(browser_state, "new podcast text", True)
 
-        # Verify the audio generation state is preserved/updated
-        audio_state = updated_state["audio_generation_state"]
-        assert "is_generating" in audio_state
-        assert "progress" in audio_state
-        assert "status" in audio_state
-        assert "current_script" in audio_state
+        # Verify UI state was updated
+        ui_state = updated_state["ui_state"]
+        assert ui_state["podcast_text"] == "new podcast text"
+        assert ui_state["terms_agreed"] is True
 
-    def test_update_browser_state_audio_status_with_none_session(self):
-        """Test audio status update handles None user session gracefully."""
-        browser_state = {"app_session_id": "test-uuid", "audio_generation_state": {}, "user_settings": {}, "ui_state": {}}
-
-        # Should handle None session gracefully - create dummy user session for testing
-        user_session = Mock()
-        user_session.session_id = "test-uuid"
-        user_session.is_audio_generating.return_value = False
-        user_session.get_audio_generation_progress.return_value = 0.0
-        user_session.get_audio_generation_status.return_value = {
-            "is_generating": False,
-            "progress": 0.0,
-            "status": "idle",
-            "current_script": "",
-            "final_audio_path": None,
-            "streaming_parts": [],
-            "generation_id": None,
-            "start_time": None,
-            "estimated_total_parts": 1,
-        }
-        user_session.get_current_script.return_value = ""
-        user_session.get_final_audio_path.return_value = None
-        user_session.get_streaming_audio_parts.return_value = []
-
-        updated_state = self.app.update_browser_state_audio_status(user_session, browser_state)
-
-        # Should return updated state with audio information
-        assert updated_state is not browser_state  # Different object
+        # Verify other sections are preserved
+        assert updated_state["app_session_id"] == "test-session"
         assert "audio_generation_state" in updated_state
+        assert "user_settings" in updated_state
