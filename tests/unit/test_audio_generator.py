@@ -214,6 +214,14 @@ class TestAudioGenerator:
             ("Vision-Language-Model", "ビジョンランゲージモデル"),
             ("spatial awareness", "スペイシャルアウエアネス"),
             ("LLMs", "LLMズ"),
+            # "A"の変換テスト
+            ("a pen", "アペン"),  # 冠詞のaは"ア"のまま
+            ("A pen", "アペン"),  # 冠詞のAも"ア"
+            ("AClass", "Aクラス"),  # 複合語の場合はAのまま
+            ("Class A", "クラスA"),  # 技術用語としてAのまま
+            ("(A)", "(A)"),  # 括弧内の技術用語としてAのまま
+            ("A", "A"),  # 単独のAは技術用語としてそのまま
+            ("A-grade", "Aグレード"),  # ハイフン接続の技術用語としてAのまま
         ],
     )
     def test_convert_english_to_katakana(self, text, expected):
