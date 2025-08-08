@@ -334,7 +334,6 @@ class AudioGenerator:
         "i": "アイ",
         "this": "ディス",
         "to": "トゥ",
-        "a": "ア",
         "is": "イズ",
         "your": "ユア",
         "phone": "フォン",
@@ -454,7 +453,7 @@ class AudioGenerator:
         is_english_word = False  # 英語かどうか
         is_last_part_english = False  # 最後の部分が英語かどうか
 
-        for part in parts:
+        for i, part in enumerate(parts):
             is_last_part_english = is_english_word
 
             # 空文字やハイフンはスキップ
@@ -487,8 +486,11 @@ class AudioGenerator:
                     word_count = 0  # カウントリセット
 
             # 変換処理
-            if converted_part := self.CONVERSION_OVERRIDE.get(part.lower()):
-                # 特定の単語は事前定義した変換を使用
+            # "A"の特別な処理: 文脈に応じて変換を決定
+            if part.lower() == "a":
+                part_to_add = self._convert_a_contextually(part, parts, i)
+            elif converted_part := self.CONVERSION_OVERRIDE.get(part.lower()):
+                # 特定の単語は事前定義した変換を使用（ただし"a"は上で処理済み）
                 part_to_add = converted_part
             elif self._is_in_user_dict(part):
                 # ユーザー辞書に登録済みの単語はそのまま使用（VOICEVOXが変換する）
@@ -509,6 +511,32 @@ class AudioGenerator:
             last_part = part_to_add
 
         return "".join(result)
+
+    def _convert_a_contextually(self, part: str, parts: List[str], current_index: int) -> str:
+        """
+        "A"/"a"を文脈に応じて変換する
+
+        Args:
+            part: 現在の部分 ("A" または "a")
+            parts: 全体の分割された部分のリスト
+            current_index: 現在の部分のインデックス
+
+        Returns:
+            str: 変換された文字列
+        """
+        # 冠詞として使われている場合のみ"ア"に変換
+        # 次に空白があり、その後に英単語がある場合（例: "a pen" -> ['a', ' ', 'pen']）
+        if current_index + 1 < len(parts) and parts[current_index + 1] == " ":
+            # 空白の後に英単語を探す
+            next_word_index = current_index + 2
+            if next_word_index < len(parts):
+                next_word = parts[next_word_index]
+                # 次が英単語の場合は冠詞として"ア"
+                if re.match(r"^[A-Za-z]+$", next_word):
+                    return "ア"
+
+        # それ以外の場合は技術用語として"A"のまま
+        return part
 
     def generate_character_conversation(self, podcast_text: str, resume_from_part: int = 0, existing_parts: Optional[List[str]] = None) -> Generator[Optional[str], None, None]:
         """
