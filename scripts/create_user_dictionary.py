@@ -42,6 +42,8 @@ def create_user_dictionary():
             ("Claude", "クロード", 2, "PROPER_NOUN", 8),
             ("AI", "エーアイ", 1, "COMMON_NOUN", 7),
             ("API", "エーピーアイ", 1, "COMMON_NOUN", 7),
+            ("gpt", "ジーピーティー", 5, "PROPER_NOUN", 8),
+            ("GPT", "ジーピーティー", 5, "PROPER_NOUN", 8),
             ("NVIDIA", "エヌビディア", 4, "PROPER_NOUN", 8),
             ("GITHUB", "ギットハブ", 3, "PROPER_NOUN", 8),
             ("GAFA", "ガーファ", 2, "PROPER_NOUN", 8),
@@ -54,6 +56,15 @@ def create_user_dictionary():
             ("他に", "ホカニ", 2, "COMMON_NOUN", 6),
             ("見せ所", "ミセドコロ", 4, "COMMON_NOUN", 7),
             ("前頭前野", "ゼントウゼンヤ", 5, "COMMON_NOUN", 7),
+            ("前頭野", "ゼントウヤ", 3, "COMMON_NOUN", 7),
+            ("頭頂野", "トウチョウヤ", 3, "COMMON_NOUN", 7),
+            ("側頭野", "ソクトウヤ", 3, "COMMON_NOUN", 7),
+            ("後頭野", "コウトウヤ", 3, "COMMON_NOUN", 7),
+            ("海馬", "カイバ", 2, "COMMON_NOUN", 7),
+            ("扁桃体", "ヘントウタイ", 4, "COMMON_NOUN", 7),
+            ("視床", "シショウ", 2, "COMMON_NOUN", 7),
+            ("視床下部", "シショウカブ", 4, "COMMON_NOUN", 7),
+            ("大脳皮質", "ダイノウヒシツ", 5, "COMMON_NOUN", 7),
             ("二分法", "ニブンホウ", 3, "COMMON_NOUN", 7),
         ]
 
@@ -84,7 +95,7 @@ def create_user_dictionary():
         user_dict.save(str(dict_file_path))
 
         logger.info(f"User dictionary saved successfully to {dict_file_path}")
-        logger.info(f"Dictionary contains {len(entries)} entries")
+        logger.info(f"Dictionary contains {len(entries)} entries (including cognitive neuroscience terms)")
 
         return True
 
