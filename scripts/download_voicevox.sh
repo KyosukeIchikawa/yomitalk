@@ -5,7 +5,8 @@
 set -e  # Exit immediately if a command exits with a non-zero status
 
 # Default values
-VOICEVOX_VERSION="0.16.0"
+CORE_VERSION="0.16.1"
+MODELS_VERSION="0.16.0"
 VOICEVOX_DIR="voicevox_core"
 SKIP_IF_EXISTS=false
 ACCEPT_AGREEMENT=false
@@ -17,7 +18,8 @@ show_help() {
   echo "Usage: $0 [options]"
   echo ""
   echo "Options:"
-  echo "  --version VERSION       VOICEVOX Core version to download (default: $VOICEVOX_VERSION)"
+  echo "  --core-version VERSION   VOICEVOX Core library version to download (default: $CORE_VERSION)"
+  echo "  --models-version VERSION Voice models version to download (default: $MODELS_VERSION)"
   echo "  --dir DIR               Directory to install VOICEVOX Core (default: $VOICEVOX_DIR)"
   echo "  --skip-if-exists        Skip download only if VOICEVOX files already exist"
   echo "  --accept-agreement      Auto-accept VOICEVOX license agreement"
@@ -27,8 +29,12 @@ show_help() {
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --version)
-      VOICEVOX_VERSION="$2"
+    --core-version)
+      CORE_VERSION="$2"
+      shift 2
+      ;;
+    --models-version)
+      MODELS_VERSION="$2"
       shift 2
       ;;
     --dir)
@@ -77,6 +83,7 @@ download_voicevox_core() {
   local version="$1"
   local voicevox_dir="$2"
   local accept_agreement="$3"
+  local models_version="$4"
 
   # Create directory if it doesn't exist
   mkdir -p "$voicevox_dir"
@@ -95,9 +102,7 @@ download_voicevox_core() {
   chmod +x "$downloader_path"
 
   # Run the downloader
-  # Note: --c-api-version parameter is required to download the specified version.
-  # Without this parameter, the downloader will always download the latest version
-  # regardless of the specified version due to official downloader behavior.
+  # Note: --models-version parameter is used to download the specified models version.
   echo "Downloading VOICEVOX Core components..."
   cd "$voicevox_dir" || { echo "Error: Failed to change directory to $voicevox_dir"; return 1; }
 
@@ -147,12 +152,12 @@ download_voicevox_core() {
 
   if [ "$accept_agreement" = true ]; then
     echo "Auto-accepting license agreement"
-    if ! run_download_with_retry "env $github_env echo y | ./download --devices cpu --c-api-version=${version}"; then
+    if ! run_download_with_retry "env $github_env echo y | ./download --devices cpu --models-version ${models_version}"; then
       echo "Error: Failed to download VOICEVOX Core components"
       return 1
     fi
   else
-    if ! run_download_with_retry "env $github_env ./download --devices cpu --c-api-version=${version}"; then
+    if ! run_download_with_retry "env $github_env ./download --devices cpu --models-version ${models_version}"; then
       echo "Error: Failed to download VOICEVOX Core components"
       return 1
     fi
@@ -174,7 +179,7 @@ main() {
   fi
 
   echo "VOICEVOX Core not found or missing necessary library files. Starting download..."
-  if download_voicevox_core "$VOICEVOX_VERSION" "$VOICEVOX_DIR" "$ACCEPT_AGREEMENT"; then
+  if download_voicevox_core "$CORE_VERSION" "$VOICEVOX_DIR" "$ACCEPT_AGREEMENT" "$MODELS_VERSION"; then
     echo "VOICEVOX Core files downloaded successfully!"
     return 0
   else

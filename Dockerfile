@@ -20,7 +20,8 @@ COPY . /app/
 # シェルのセットオプション -e を使用して、コマンドが失敗したら即座にDockerビルドを失敗させる
 RUN set -e && \
     scripts/download_voicevox.sh \
-        --version 0.16.0 \
+        --core-version 0.16.1 \
+        --models-version 0.16.0 \
         --dir voicevox_core \
         --skip-if-exists \
         --accept-agreement
@@ -37,7 +38,7 @@ RUN pip install --timeout 300 --retries 3 -r requirements.txt
 
 # VOICEVOX Core Python module installation
 RUN OS_TYPE="manylinux_2_34_x86_64" && \
-    WHEEL_URL="https://github.com/VOICEVOX/voicevox_core/releases/download/0.16.0/voicevox_core-0.16.0-cp310-abi3-${OS_TYPE}.whl" && \
+    WHEEL_URL="https://github.com/VOICEVOX/voicevox_core/releases/download/0.16.1/voicevox_core-0.16.1-cp310-abi3-${OS_TYPE}.whl" && \
     pip install ${WHEEL_URL}
 
 # パーミッション問題を解決するため、dataディレクトリの権限を設定
