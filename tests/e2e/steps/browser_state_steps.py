@@ -68,10 +68,10 @@ def configure_api_and_preferences(page: Page):
         # Look for character dropdowns and select different characters
         character_dropdowns = page.locator("select").all()
         if len(character_dropdowns) >= 2:
-            # Set first character to Zundamon
-            character_dropdowns[0].select_option(value="zundamon")
-            # Set second character to Shikoku Metan
-            character_dropdowns[1].select_option(value="shikoku_metan")
+            # Set first character to Tohoku Kiritan
+            character_dropdowns[0].select_option(value="tohoku_kiritan")
+            # Set second character to Zundamon
+            character_dropdowns[1].select_option(value="zundamon")
             logger.info("Character preferences configured")
     except Exception as e:
         logger.warning(f"Could not set character preferences: {e}")
@@ -475,7 +475,16 @@ def change_character_settings(page: Page, character1: str, character2: str):
 
     if len(character_dropdowns) >= 2:
         # Map character names to dropdown values
-        character_mapping = {"Zundamon": "zundamon", "Shikoku Metan": "shikoku_metan", "Kyushu Sora": "kyushu_sora", "Chugoku Usagi": "chugoku_usagi", "Chubu Tsurugi": "chubu_tsurugi"}
+        character_mapping = {
+            "Zundamon": "zundamon",
+            "Shikoku Metan": "shikoku_metan",
+            "Kyushu Sora": "kyushu_sora",
+            "Chugoku Usagi": "chugoku_usagi",
+            "Chubu Tsurugi": "chubu_tsurugi",
+            "Tohoku Zunko": "tohoku_zunko",
+            "Tohoku Kiritan": "tohoku_kiritan",
+            "Tohoku Itako": "tohoku_itako",
+        }
 
         # Set first character
         char1_value = character_mapping.get(character1, character1.lower().replace(" ", "_"))
@@ -717,7 +726,16 @@ def verify_character_values(page: Page, expected_character1: str, expected_chara
         logger.info(f"Second character dropdown value: {second_char_value}")
 
         # Map expected names to values
-        character_mapping = {"Zundamon": "zundamon", "Shikoku Metan": "shikoku_metan", "Kyushu Sora": "kyushu_sora", "Chugoku Usagi": "chugoku_usagi", "Chubu Tsurugi": "chubu_tsurugi"}
+        character_mapping = {
+            "Zundamon": "zundamon",
+            "Shikoku Metan": "shikoku_metan",
+            "Kyushu Sora": "kyushu_sora",
+            "Chugoku Usagi": "chugoku_usagi",
+            "Chubu Tsurugi": "chubu_tsurugi",
+            "Tohoku Zunko": "tohoku_zunko",
+            "Tohoku Kiritan": "tohoku_kiritan",
+            "Tohoku Itako": "tohoku_itako",
+        }
 
         expected_char1_value = character_mapping.get(expected_character1, expected_character1.lower().replace(" ", "_"))
         expected_char2_value = character_mapping.get(expected_character2, expected_character2.lower().replace(" ", "_"))
@@ -801,7 +819,16 @@ def verify_character_values_bs(page: Page, expected_character1: str, expected_ch
         logger.info(f"Second character dropdown value: {second_char_value}")
 
         # Map expected names to values
-        character_mapping = {"Zundamon": "zundamon", "Shikoku Metan": "shikoku_metan", "Kyushu Sora": "kyushu_sora", "Chugoku Usagi": "chugoku_usagi", "Chubu Tsurugi": "chubu_tsurugi"}
+        character_mapping = {
+            "Zundamon": "zundamon",
+            "Shikoku Metan": "shikoku_metan",
+            "Kyushu Sora": "kyushu_sora",
+            "Chugoku Usagi": "chugoku_usagi",
+            "Chubu Tsurugi": "chubu_tsurugi",
+            "Tohoku Zunko": "tohoku_zunko",
+            "Tohoku Kiritan": "tohoku_kiritan",
+            "Tohoku Itako": "tohoku_itako",
+        }
 
         expected_char1_value = character_mapping.get(expected_character1, expected_character1.lower().replace(" ", "_"))
         expected_char2_value = character_mapping.get(expected_character2, expected_character2.lower().replace(" ", "_"))
