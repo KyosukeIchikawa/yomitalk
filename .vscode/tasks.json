@@ -125,7 +125,7 @@
             "label": "Install VOICEVOX Core",
             "type": "shell",
             "command": "bash",
-            "args": ["scripts/download_voicevox.sh", "--version", "0.16.0", "--dir", "voicevox_core", "--accept-agreement"],
+            "args": ["scripts/download_voicevox.sh", "--core-version", "0.16.1", "--models-version", "0.16.0", "--dir", "voicevox_core", "--accept-agreement"],
             "group": "build",
             "presentation": {
                 "echo": true,

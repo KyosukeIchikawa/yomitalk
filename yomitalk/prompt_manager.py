@@ -77,7 +77,7 @@ class PromptManager:
     }
     DEFAULT_DOCUMENT_TYPE = DocumentType.PAPER
     DEFAULT_MODE = PodcastMode.STANDARD
-    DEFAULT_CHARACTER1 = Character.SHIKOKU_METAN
+    DEFAULT_CHARACTER1 = Character.TOHOKU_KIRITAN
     DEFAULT_CHARACTER2 = Character.ZUNDAMON
 
     def __init__(self):

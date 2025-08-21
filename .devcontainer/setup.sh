@@ -14,7 +14,8 @@ if [ ! -d "voicevox_core" ] || [ -z "$(ls -A voicevox_core 2>/dev/null)" ]; then
     echo "🎤 Setting up VOICEVOX Core..."
     chmod +x scripts/download_voicevox.sh
     scripts/download_voicevox.sh \
-        --version 0.16.0 \
+        --core-version 0.16.1 \
+        --models-version 0.16.0 \
         --dir voicevox_core \
         --skip-if-exists \
         --accept-agreement
@@ -23,7 +24,7 @@ fi
 # Install VOICEVOX Core Python module
 echo "🐍 Installing VOICEVOX Core Python module..."
 OS_TYPE="manylinux_2_34_x86_64"
-VOICEVOX_VERSION="0.16.0"
+VOICEVOX_VERSION="0.16.1"
 WHEEL_URL="https://github.com/VOICEVOX/voicevox_core/releases/download/${VOICEVOX_VERSION}/voicevox_core-${VOICEVOX_VERSION}-cp310-abi3-${OS_TYPE}.whl"
 pip install "${WHEEL_URL}" || echo "⚠️  Warning: Failed to install VOICEVOX Core wheel. You may need to install it manually."
 

@@ -32,16 +32,16 @@ def podcast_script_is_generated(page: Page):
     # Set a sample script in the script generation area
     script_textarea = page.locator("textarea").nth(1)
     sample_script = """
-    四国めたん: こんにちは、今回は機械学習の最新研究についてお話しします。
+    東北きりたん: こんにちは、今回は機械学習の最新研究についてお話しします。
     ずんだもん: よろしくお願いします！機械学習って難しそうですね。
-    四国めたん: 大規模言語モデルは自然言語処理タスクにおいて人間に匹敵する性能を発揮できるようになっています。
+    東北きりたん: 大規模言語モデルは自然言語処理タスクにおいて人間に匹敵する性能を発揮できるようになっています。
     ずんだもん: すごいのだ！どんなことができるんですか？
-    四国めたん: 文章生成や翻訳、質問応答などのタスクで優れた結果を示しています。
+    東北きりたん: 文章生成や翻訳、質問応答などのタスクで優れた結果を示しています。
     """
     script_textarea.fill(sample_script)
 
     # Verify that the script has been set
-    assert "四国めたん:" in script_textarea.input_value()
+    assert "東北きりたん:" in script_textarea.input_value()
 
 
 @given("I have agreed to the VOICEVOX terms of service")
@@ -841,7 +841,16 @@ def change_character_settings_for_state_test(page: Page, character1: str, charac
 
     if character1_dropdown.is_visible() and character2_dropdown.is_visible():
         # Map character names to dropdown values using Japanese display names
-        character_mapping = {"Zundamon": "ずんだもん", "Shikoku Metan": "四国めたん", "Kyushu Sora": "九州そら", "Chugoku Usagi": "中国うさぎ", "Chubu Tsurugi": "中部つるぎ"}
+        character_mapping = {
+            "Zundamon": "ずんだもん",
+            "Shikoku Metan": "四国めたん",
+            "Kyushu Sora": "九州そら",
+            "Chugoku Usagi": "中国うさぎ",
+            "Chubu Tsurugi": "中部つるぎ",
+            "Tohoku Zunko": "東北ずん子",
+            "Tohoku Kiritan": "東北きりたん",
+            "Tohoku Itako": "東北イタコ",
+        }
 
         # Set first character
         char1_value = character_mapping.get(character1, character1)

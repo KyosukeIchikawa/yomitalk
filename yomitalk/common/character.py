@@ -14,6 +14,9 @@ class Character(Enum):
     KYUSHU_SORA = ("九州そら", 16, "2.vvm")  # 九州そら (normal)
     CHUGOKU_USAGI = ("中国うさぎ", 61, "3.vvm")  # 中国うさぎ (normal)
     CHUBU_TSURUGI = ("中部つるぎ", 94, "18.vvm")  # 中部つるぎ (normal)
+    TOHOKU_ZUNKO = ("東北ずん子", 107, "21.vvm")  # 東北ずん子 (normal)
+    TOHOKU_KIRITAN = ("東北きりたん", 108, "21.vvm")  # 東北きりたん (normal)
+    TOHOKU_ITAKO = ("東北イタコ", 109, "21.vvm")  # 東北イタコ (normal)
 
     def __init__(self, display_name: str, style_id: int, model_file: str):
         self.display_name = display_name

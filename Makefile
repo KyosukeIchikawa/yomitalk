@@ -11,7 +11,8 @@ VENV_PIP = $(VENV_DIR)/bin/pip
 VENV_PRECOMMIT = $(VENV_DIR)/bin/pre-commit
 
 # VOICEVOX related
-VOICEVOX_VERSION = 0.16.0
+VOICEVOX_CORE_VERSION = 0.16.1
+VOICEVOX_MODELS_VERSION = 0.16.0
 VOICEVOX_SKIP_IF_EXISTS ?= true
 VOICEVOX_ACCEPT_AGREEMENT ?= false
 VOICEVOX_DIR = voicevox_core
@@ -100,7 +101,8 @@ setup: install-system-deps venv install-python-packages-lint install-python-pack
 download-voicevox-core: venv
 	@echo "Running VOICEVOX Core download script..."
 	@scripts/download_voicevox.sh \
-		--version $(VOICEVOX_VERSION) \
+		--core-version $(VOICEVOX_CORE_VERSION) \
+		--models-version $(VOICEVOX_MODELS_VERSION) \
 		--dir $(VOICEVOX_DIR) \
 		$(if $(filter true, $(VOICEVOX_SKIP_IF_EXISTS)), --skip-if-exists) \
 		$(if $(filter true, $(VOICEVOX_ACCEPT_AGREEMENT)), --accept-agreement)
@@ -113,8 +115,8 @@ download-voicevox-core: venv
 install-voicevox-core-module: venv
 	@echo "Installing VOICEVOX Core Python module..."
 	@OS_TYPE="manylinux_2_34_x86_64"; \
-	WHEEL_URL="https://github.com/VOICEVOX/voicevox_core/releases/download/$(VOICEVOX_VERSION)/voicevox_core-$(VOICEVOX_VERSION)-cp310-abi3-$$OS_TYPE.whl"; \
-	$(VENV_PIP) install $$WHEEL_URL || echo "Failed to install wheel for $$OS_TYPE. Check available wheels at https://github.com/VOICEVOX/voicevox_core/releases/tag/$(VOICEVOX_VERSION)"
+	WHEEL_URL="https://github.com/VOICEVOX/voicevox_core/releases/download/$(VOICEVOX_CORE_VERSION)/voicevox_core-$(VOICEVOX_CORE_VERSION)-cp310-abi3-$$OS_TYPE.whl"; \
+	$(VENV_PIP) install $$WHEEL_URL || echo "Failed to install wheel for $$OS_TYPE. Check available wheels at https://github.com/VOICEVOX/voicevox_core/releases/tag/$(VOICEVOX_CORE_VERSION)"
 	@echo "VOICEVOX Core Python module installed!"
 
 #--------------------------------------------------------------
