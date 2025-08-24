@@ -27,6 +27,7 @@ from yomitalk.common.character import (
     DISPLAY_NAMES,
     REQUIRED_MODEL_FILES,
     STYLE_ID_BY_NAME,
+    CHARACTER_BY_STYLE_ID,
     Character,
 )
 from yomitalk.utils.logger import logger
@@ -162,7 +163,7 @@ class VoicevoxCoreManager:
 
     def text_to_speech(self, text: str, style_id: int) -> bytes:
         """
-        Generate audio data from text using VOICEVOX Core.
+        Generate audio data from text using VOICEVOX Core with character-specific pitch adjustment.
 
         Args:
             text: Text to convert to speech
@@ -175,9 +176,21 @@ class VoicevoxCoreManager:
             return b""
 
         try:
-            # Generate audio data from text
-            wav_data: bytes = self.core_synthesizer.tts(text, style_id)
-            logger.debug(f"Audio generation completed: {len(wav_data) // 1024} KB")
+            # Get character-specific pitch scale
+            character = CHARACTER_BY_STYLE_ID.get(style_id)
+            pitch_scale = character.pitch_scale if character else 0.0
+
+            wav_data: bytes
+            if pitch_scale != 0.0:
+                # Use create_audio_query + synthesis for pitch adjustment
+                audio_query = self.core_synthesizer.create_audio_query(text, style_id)
+                audio_query.pitch_scale = pitch_scale
+                wav_data = self.core_synthesizer.synthesis(audio_query, style_id)
+            else:
+                # Use standard tts method for no pitch adjustment
+                wav_data = self.core_synthesizer.tts(text, style_id)
+
+            logger.debug(f"Audio generation completed: {len(wav_data) // 1024} KB (pitch_scale: {pitch_scale})")
             return wav_data
         except Exception as e:
             logger.error(f"Audio generation error: {e}")
