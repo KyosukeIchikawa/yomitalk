@@ -162,7 +162,7 @@ class VoicevoxCoreManager:
 
     def text_to_speech(self, text: str, style_id: int) -> bytes:
         """
-        Generate audio data from text using VOICEVOX Core.
+        Generate audio data from text using VOICEVOX Core with character-specific pitch adjustment.
 
         Args:
             text: Text to convert to speech
@@ -175,13 +175,42 @@ class VoicevoxCoreManager:
             return b""
 
         try:
-            # Generate audio data from text
-            wav_data: bytes = self.core_synthesizer.tts(text, style_id)
-            logger.debug(f"Audio generation completed: {len(wav_data) // 1024} KB")
+            # Get character-specific pitch scale
+            pitch_scale = self._get_pitch_scale_for_style_id(style_id)
+
+            wav_data: bytes
+            if pitch_scale != 0.0:
+                # Use create_audio_query + synthesis for pitch adjustment
+                audio_query = self.core_synthesizer.create_audio_query(text, style_id)
+                audio_query.pitch_scale = pitch_scale
+                wav_data = self.core_synthesizer.synthesis(audio_query, style_id)
+            else:
+                # Use standard tts method for no pitch adjustment
+                wav_data = self.core_synthesizer.tts(text, style_id)
+
+            logger.debug(f"Audio generation completed: {len(wav_data) // 1024} KB (pitch_scale: {pitch_scale})")
             return wav_data
         except Exception as e:
             logger.error(f"Audio generation error: {e}")
             return b""
+
+    def _get_pitch_scale_for_style_id(self, style_id: int) -> float:
+        """
+        Get the pitch scale value for a given VOICEVOX style ID.
+
+        Args:
+            style_id: VOICEVOX style ID
+
+        Returns:
+            float: Pitch scale value (0.0 = no adjustment)
+        """
+        # Find character with matching style_id and return pitch_scale
+        for character in Character:
+            if character.style_id == style_id:
+                return character.pitch_scale
+
+        # Default: no pitch adjustment
+        return 0.0
 
     def is_available(self) -> bool:
         """Check if VOICEVOX Core is available and initialized."""
