@@ -27,6 +27,7 @@ class Character(Enum):
 
 DISPLAY_NAMES = [character.display_name for character in Character]
 STYLE_ID_BY_NAME = {character.display_name: character.style_id for character in Character}
+CHARACTER_BY_STYLE_ID = {character.style_id: character for character in Character}
 
 # キャラクターが必要とする音声モデルファイル（.vvm）の一覧
 REQUIRED_MODEL_FILES = sorted(set(character.model_file for character in Character))

@@ -27,6 +27,7 @@ from yomitalk.common.character import (
     DISPLAY_NAMES,
     REQUIRED_MODEL_FILES,
     STYLE_ID_BY_NAME,
+    CHARACTER_BY_STYLE_ID,
     Character,
 )
 from yomitalk.utils.logger import logger
@@ -176,7 +177,8 @@ class VoicevoxCoreManager:
 
         try:
             # Get character-specific pitch scale
-            pitch_scale = self._get_pitch_scale_for_style_id(style_id)
+            character = CHARACTER_BY_STYLE_ID.get(style_id)
+            pitch_scale = character.pitch_scale if character else 0.0
 
             wav_data: bytes
             if pitch_scale != 0.0:
@@ -193,24 +195,6 @@ class VoicevoxCoreManager:
         except Exception as e:
             logger.error(f"Audio generation error: {e}")
             return b""
-
-    def _get_pitch_scale_for_style_id(self, style_id: int) -> float:
-        """
-        Get the pitch scale value for a given VOICEVOX style ID.
-
-        Args:
-            style_id: VOICEVOX style ID
-
-        Returns:
-            float: Pitch scale value (0.0 = no adjustment)
-        """
-        # Find character with matching style_id and return pitch_scale
-        for character in Character:
-            if character.style_id == style_id:
-                return character.pitch_scale
-
-        # Default: no pitch adjustment
-        return 0.0
 
     def is_available(self) -> bool:
         """Check if VOICEVOX Core is available and initialized."""
