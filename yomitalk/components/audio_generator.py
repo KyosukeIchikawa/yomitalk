@@ -176,21 +176,21 @@ class VoicevoxCoreManager:
             return b""
 
         try:
-            # Get character-specific pitch scale
+            # Get character-specific speed scale
             character = CHARACTER_BY_STYLE_ID.get(style_id)
-            pitch_scale = character.pitch_scale if character else 0.0
+            speed_scale = character.speed_scale if character else 1.0
 
             wav_data: bytes
-            if pitch_scale != 0.0:
-                # Use create_audio_query + synthesis for pitch adjustment
+            if speed_scale != 1.0:
+                # Use create_audio_query + synthesis for speed adjustment
                 audio_query = self.core_synthesizer.create_audio_query(text, style_id)
-                audio_query.pitch_scale = pitch_scale
+                audio_query.speed_scale = speed_scale
                 wav_data = self.core_synthesizer.synthesis(audio_query, style_id)
             else:
-                # Use standard tts method for no pitch adjustment
+                # Use standard tts method for no speed adjustment
                 wav_data = self.core_synthesizer.tts(text, style_id)
 
-            logger.debug(f"Audio generation completed: {len(wav_data) // 1024} KB (pitch_scale: {pitch_scale})")
+            logger.debug(f"Audio generation completed: {len(wav_data) // 1024} KB (speed_scale: {speed_scale})")
             return wav_data
         except Exception as e:
             logger.error(f"Audio generation error: {e}")
