@@ -241,3 +241,169 @@ class TestAudioGenerator:
         """7文字以上の大文字アルファベット文字列の変換テスト"""
         result = self.audio_generator._convert_english_to_katakana(text)
         assert result == expected
+
+    @pytest.mark.parametrize(
+        "podcast_text, expected_parts",
+        [
+            # 正確なキャラクター名
+            ("ずんだもん: こんにちはなのだ！\n四国めたん: よろしくお願いします。", [("ずんだもん", "こんにちはなのだ！"), ("四国めたん", "よろしくお願いします。")]),
+            # コロンの種類が違う場合
+            ("ずんだもん：こんにちはなのだ！\n四国めたん：よろしくお願いします。", [("ずんだもん", "こんにちはなのだ！"), ("四国めたん", "よろしくお願いします。")]),
+            # 複数行にわたる発言
+            (
+                "ずんだもん: こんにちはなのだ！\nとても良い天気だのだ。\n四国めたん: よろしくお願いします。\nよろしくです。",
+                [("ずんだもん", "こんにちはなのだ！\nとても良い天気だのだ。"), ("四国めたん", "よろしくお願いします。\nよろしくです。")],
+            ),
+            # 空行がある場合
+            ("ずんだもん: こんにちはなのだ！\n\n四国めたん: よろしくお願いします。", [("ずんだもん", "こんにちはなのだ！\n"), ("四国めたん", "よろしくお願いします。")]),
+            # 1つのキャラクターのみ
+            ("ずんだもん: こんにちはなのだ！\nとても良い天気だのだ。", [("ずんだもん", "こんにちはなのだ！\nとても良い天気だのだ。")]),
+            # 空のテキスト
+            ("", []),
+            # キャラクター名がない場合
+            ("これはただのテキストです。", [("ずんだもん", "これはただのテキストです。")]),
+        ],
+    )
+    def test_extract_conversation_parts_basic(self, podcast_text, expected_parts):
+        """_extract_conversation_parts メソッドの基本機能テスト"""
+        result = self.audio_generator._extract_conversation_parts(podcast_text)
+        assert result == expected_parts
+
+    @pytest.mark.parametrize(
+        "podcast_text, expected_parts",
+        [
+            # 間違った文字を含むキャラクター名（将来の改善で対応予定）
+            ("四-めたん: こんにちは。\nずんだもん: よろしくなのだ！", [("四国めたん", "こんにちは。"), ("ずんだもん", "よろしくなのだ！")]),
+            # 部分的なキャラクター名
+            ("ずんだ: こんにちは。\nめたん: よろしくお願いします。", [("ずんだもん", "こんにちは。"), ("四国めたん", "よろしくお願いします。")]),
+            # 曖昧なキャラクター名
+            ("四国メタン: こんにちは。\nずんだ君: よろしくなのだ！", [("四国めたん", "こんにちは。"), ("ずんだもん", "よろしくなのだ！")]),
+            # ひらがな・カタカナの混在
+            ("しこくめたん: こんにちは。\nズンダモン: よろしくなのだ！", [("四国めたん", "こんにちは。"), ("ずんだもん", "よろしくなのだ！")]),
+            # スペースが含まれる場合
+            ("四国 めたん: こんにちは。\nずんだ もん: よろしくなのだ！", [("四国めたん", "こんにちは。"), ("ずんだもん", "よろしくなのだ！")]),
+        ],
+    )
+    def test_extract_conversation_parts_fuzzy_matching(self, podcast_text, expected_parts):
+        """_extract_conversation_parts メソッドの曖昧マッチングテスト（将来の改善機能）"""
+        # 現在の実装では厳密マッチングのみサポートされているため、
+        # このテストは改善後に期待される動作を定義している
+        # TODO: _extract_conversation_parts を改善してこのテストが通るようにする
+        result = self.audio_generator._extract_conversation_parts(podcast_text)
+        # 現在は失敗することが期待されるが、将来の改善のために記録
+        # assert result == expected_parts
+        # 暫定的には空のリストまたは元のテキストが返されることを確認
+        assert isinstance(result, list)
+
+        # 曖昧マッチング機能が実装されたので、実際のテストを実行
+        # 現在は改善されたロジックがあるので期待される結果と比較
+        assert result == expected_parts
+
+    @pytest.mark.parametrize(
+        "podcast_text, expected_parts",
+        [
+            # _fix_conversation_format による修正が期待されるケース
+            ("ずんだもん こんにちはなのだ！\n四国めたん よろしくお願いします。", [("ずんだもん", "こんにちはなのだ！"), ("四国めたん", "よろしくお願いします。")]),
+            # 話者名の後に他のキャラクター名が出現する場合
+            ("ずんだもん: こんにちはなのだ！。四国めたん: よろしくお願いします。", [("ずんだもん", "こんにちはなのだ！。四国めたん: よろしくお願いします。")]),
+        ],
+    )
+    def test_extract_conversation_parts_with_format_fix(self, podcast_text, expected_parts):
+        """_extract_conversation_parts メソッドのフォーマット修正機能テスト"""
+        result = self.audio_generator._extract_conversation_parts(podcast_text)
+        assert result == expected_parts
+
+    @pytest.mark.parametrize(
+        "input_name, expected_character",
+        [
+            # 正確なキャラクター名
+            ("ずんだもん", "ずんだもん"),
+            ("四国めたん", "四国めたん"),
+            ("九州そら", "九州そら"),
+            ("中国うさぎ", "中国うさぎ"),
+            ("中部つるぎ", "中部つるぎ"),
+            # 部分的な名前（将来の改善で対応予定）
+            ("ずんだ", "ずんだもん"),
+            ("めたん", "四国めたん"),
+            ("そら", "九州そら"),
+            ("うさぎ", "中国うさぎ"),
+            ("つるぎ", "中部つるぎ"),
+            # タイポや間違った文字を含む名前
+            ("四-めたん", "四国めたん"),
+            ("四国メタン", "四国めたん"),
+            ("しこくめたん", "四国めたん"),
+            ("ズンダモン", "ずんだもん"),
+            ("ずんだ君", "ずんだもん"),
+            ("九洲そら", "九州そら"),
+            # スペースが含まれる場合
+            ("四国 めたん", "四国めたん"),
+            ("ずんだ もん", "ずんだもん"),
+            ("九州 そら", "九州そら"),
+            # 不明な名前（デフォルトキャラクター）
+            ("不明なキャラクター", "ずんだもん"),
+            ("", "ずんだもん"),
+        ],
+    )
+    def test_find_best_character_match(self, input_name, expected_character):
+        """_find_best_character_match メソッドのテスト（将来実装予定）"""
+        # この機能はまだ実装されていないため、現在はテストを定義するのみ
+        # TODO: _find_best_character_match メソッドを実装してこのテストが通るようにする
+
+        # 現在は該当メソッドが存在しないため、存在チェックのみ行う
+        # 改善後は以下のようなテストになる予定：
+        # result = self.audio_generator._find_best_character_match(input_name)
+        # assert result == expected_character
+
+        # 暫定的にメソッドの存在をチェック
+        has_method = hasattr(self.audio_generator, "_find_best_character_match")
+        if has_method:
+            # メソッドが実装されている場合はテスト実行
+            result = self.audio_generator._find_best_character_match(input_name)
+            assert result == expected_character
+        else:
+            # メソッドがまだ実装されていない場合はスキップ
+            pytest.skip("_find_best_character_match method not yet implemented")
+
+    @pytest.mark.parametrize(
+        "str1, str2, expected_similarity_range",
+        [
+            # 完全一致
+            ("ずんだもん", "ずんだもん", (1.0, 1.0)),
+            ("四国めたん", "四国めたん", (1.0, 1.0)),
+            # 高い類似度
+            ("四国めたん", "四-めたん", (0.7, 1.0)),
+            ("ずんだもん", "ずんだ", (0.6, 1.0)),
+            ("四国めたん", "めたん", (0.5, 1.0)),
+            # 中程度の類似度
+            ("四国めたん", "四国メタン", (0.8, 1.0)),
+            ("ずんだもん", "ズンダモン", (0.8, 1.0)),
+            ("九州そら", "九洲そら", (0.4, 0.8)),
+            # 低い類似度
+            ("ずんだもん", "四国めたん", (0.0, 0.3)),
+            ("九州そら", "中国うさぎ", (0.0, 0.3)),
+            # スペースの扱い
+            ("四国めたん", "四国 めたん", (0.7, 1.0)),
+            ("ずんだもん", "ずんだ もん", (0.7, 1.0)),
+            # 空文字列
+            ("ずんだもん", "", (0.0, 0.1)),
+            ("", "", (1.0, 1.0)),
+        ],
+    )
+    def test_calculate_character_similarity(self, str1, str2, expected_similarity_range):
+        """
+        文字列類似度計算のテスト（正規化を使った表記ゆれ対応）
+
+        このテストは、normalize_text()による正規化を活用した
+        類似度計算が正しく動作することを確認します。
+
+        テスト例：
+        - "四国めたん" vs "四-めたん" → 正規化により高い類似度
+        - "ずんだもん" vs "ずんだ" → 部分文字列マッチングで高い類似度
+        - "四国メタン" vs "四国めたん" → ひらがな/カタカナ正規化で高い類似度
+        """
+        # text_utils の関数を直接テスト
+        from yomitalk.utils.text_utils import calculate_text_similarity
+
+        result = calculate_text_similarity(str1, str2)
+        min_expected, max_expected = expected_similarity_range
+        assert min_expected <= result <= max_expected, f"Similarity {result} not in range [{min_expected}, {max_expected}]"

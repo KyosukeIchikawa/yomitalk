@@ -31,7 +31,10 @@ from yomitalk.common.character import (
     Character,
 )
 from yomitalk.utils.logger import logger
-from yomitalk.utils.text_utils import is_romaji_readable
+from yomitalk.utils.text_utils import (
+    is_romaji_readable,
+    calculate_text_similarity,
+)
 
 
 class VoicevoxCoreManager:
@@ -626,6 +629,43 @@ class AudioGenerator:
             yield None
             return
 
+    def _find_best_character_match(self, input_name: str) -> str:
+        """
+        入力された名前に最も近いキャラクター名を見つける（ファジーマッチング）
+
+        Args:
+            input_name (str): 入力された名前（表記ゆれの可能性あり）
+
+        Returns:
+            str: 最も近いキャラクター名（正式名称）
+        """
+        if not input_name:
+            return Character.ZUNDAMON.display_name
+
+        # まず完全一致をチェック
+        for character_name in DISPLAY_NAMES:
+            if input_name == character_name:
+                return character_name
+
+        # 類似度計算
+        best_match = Character.ZUNDAMON.display_name
+        best_similarity = 0.0
+
+        for character_name in DISPLAY_NAMES:
+            similarity = calculate_text_similarity(input_name, character_name)
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_match = character_name
+
+        # 最低閾値をチェック（類似度が低すぎる場合はデフォルト）
+        similarity_threshold = 0.3
+        if best_similarity < similarity_threshold:
+            logger.debug(f"Character name '{input_name}' similarity too low ({best_similarity:.2f}), using default")
+            return Character.ZUNDAMON.display_name
+
+        logger.debug(f"Character name '{input_name}' matched to '{best_match}' (similarity: {best_similarity:.2f})")
+        return best_match
+
     def _extract_conversation_parts(self, podcast_text: str) -> List[Tuple[str, str]]:
         """
         Podcast textから会話部分を抽出する
@@ -651,25 +691,51 @@ class AudioGenerator:
         for line in lines:
             line = line.strip()
 
-            # 新しい話者の行かチェック
+            # 新しい話者の行かチェック（曖昧マッチング対応）
             found_new_speaker = False
+            matched_speaker = None
+            matched_speech = ""
+
+            # まず完全一致をチェック
             for character, patterns in character_patterns.items():
                 for pattern in patterns:
                     if line.startswith(pattern):
-                        # 前の話者の発言があれば追加
-                        if current_speaker and current_speech:
-                            conversation_parts.append((current_speaker, current_speech))
-
-                        # 新しい話者と発言を設定
-                        current_speaker = character
-                        current_speech = line.replace(pattern, "", 1).strip()
+                        matched_speaker = character
+                        matched_speech = line.replace(pattern, "", 1).strip()
                         found_new_speaker = True
                         break
                 if found_new_speaker:
                     break
 
+            # 完全一致しない場合、曖昧マッチングを試行
+            if not found_new_speaker:
+                # 行が "話者名:" または "話者名：" のパターンかチェック
+                speaker_pattern = re.match(r"^([^:：]+)[：:]\s*(.*)", line)
+                if speaker_pattern:
+                    potential_speaker, speech = speaker_pattern.groups()
+                    potential_speaker = potential_speaker.strip()
+
+                    # 曖昧マッチングで最適なキャラクターを探す
+                    best_character = self._find_best_character_match(potential_speaker)
+
+                    # マッチした場合
+                    if best_character:
+                        matched_speaker = best_character
+                        matched_speech = speech.strip()
+                        found_new_speaker = True
+                        logger.debug(f"Fuzzy matched '{potential_speaker}' to '{best_character}'")
+
+            # 新しい話者が見つかった場合
+            if found_new_speaker and matched_speaker:
+                # 前の話者の発言があれば追加
+                if current_speaker and current_speech:
+                    conversation_parts.append((current_speaker, current_speech))
+
+                # 新しい話者と発言を設定
+                current_speaker = matched_speaker
+                current_speech = matched_speech
             # 話者の切り替えがなく、現在の話者が存在する場合、行を現在の発言に追加
-            if not found_new_speaker and current_speaker:
+            elif not found_new_speaker and current_speaker:
                 if line:  # 行に内容がある場合
                     # すでに発言内容があれば改行を追加
                     if current_speech:
@@ -847,15 +913,11 @@ class AudioGenerator:
 
                 speaker, speech = match.groups()
 
-                # 既知のキャラクター名に最も近いものを探す
-                best_match = None
-                for name in DISPLAY_NAMES:
-                    if name in speaker:
-                        best_match = name
-                        break
+                # 曖昧マッチングで最適なキャラクター名を探す
+                best_match = self._find_best_character_match(speaker)
 
-                # 最適なマッチが見つからない場合、デフォルトを設定
-                current_speaker = best_match or Character.ZUNDAMON.display_name
+                # 曖昧マッチングの結果を使用
+                current_speaker = best_match
 
                 if speech.strip():
                     current_speech.append(speech.strip())
