@@ -1348,7 +1348,7 @@ class PaperPodcastApp:
                 gr.Markdown("## トーク音声の生成")
                 with gr.Column(variant="panel"):
                     msg = """音声は下記の音源を使用して生成されます。
-                    VOICEVOX:四国めたん、VOICEVOX:ずんだもん、VOICEVOX:九州そら、VOICEVOX:中国うさぎ、VOICEVOX:中部つるぎ
+                    VOICEVOX:ずんだもん、VOICEVOX:東北ずん子、VOICEVOX:東北きりたん、VOICEVOX:四国めたん、VOICEVOX:九州そら、VOICEVOX:中国うさぎ、VOICEVOX:中部つるぎ
                     音声を生成するには[VOICEVOX 音源利用規約](https://zunko.jp/con_ongen_kiyaku.html)への同意が必要です。
                     """
                     # VOICEVOX利用規約チェックボックスをここに配置
