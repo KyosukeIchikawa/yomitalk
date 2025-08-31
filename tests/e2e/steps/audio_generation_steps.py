@@ -849,7 +849,6 @@ def change_character_settings_for_state_test(page: Page, character1: str, charac
             "Chubu Tsurugi": "中部つるぎ",
             "Tohoku Zunko": "東北ずん子",
             "Tohoku Kiritan": "東北きりたん",
-            "Tohoku Itako": "東北イタコ",
         }
 
         # Set first character
