@@ -20,10 +20,12 @@ class OpenAIModel:
         "gpt-4.1-nano",
         "gpt-4.1-mini",
         "gpt-4.1",
-        "o4-mini",
+        "gpt-5-nano",
+        "gpt-5-mini",
+        "gpt-5",
     ]
     DEFAULT_MODEL = "gpt-4.1-mini"
-    DEFAULT_MAX_TOKENS = 32768
+    DEFAULT_MAX_TOKENS = 32768  # limit for gpt-4.1 series
 
     def __init__(self) -> None:
         """Initialize OpenAIModel."""
@@ -74,7 +76,7 @@ class OpenAIModel:
             max_tokens_int = int(max_tokens)
             if max_tokens_int < 100:
                 return False
-            if max_tokens_int > 32768:
+            if max_tokens_int > self.DEFAULT_MAX_TOKENS:
                 return False
 
             self.max_tokens = max_tokens_int
@@ -135,8 +137,7 @@ class OpenAIModel:
             response = client.chat.completions.create(
                 model=self.model_name,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=self.max_tokens,
+                max_completion_tokens=self.max_tokens,
             )
 
             # Get response content

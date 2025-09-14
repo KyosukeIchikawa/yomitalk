@@ -1322,7 +1322,7 @@ class PaperPodcastApp:
                             with gr.Row():
                                 openai_max_tokens_slider = gr.Slider(
                                     minimum=100,
-                                    maximum=32768,
+                                    maximum=OpenAIModel.DEFAULT_MAX_TOKENS,
                                     value=OpenAIModel.DEFAULT_MAX_TOKENS,
                                     step=100,
                                     label="最大トークン数",
