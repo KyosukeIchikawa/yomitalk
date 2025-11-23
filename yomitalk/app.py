@@ -1040,8 +1040,11 @@ class PaperPodcastApp:
                     gr.Markdown(
                         """**ドキュメントからポッドキャスト風の解説音声を生成するアプリケーション**
 
-                            **免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。
-                            また、秘密文書のアップロードは推奨されません。当アプリケーションの使用により生じた、いかなる損害についても責任を負いません。""",
+                             **免責事項**: このアプリケーションはLLM（大規模言語モデル）を使用しています。生成される内容の正確性、完全性、適切性について保証することはできません。
+                             また、秘密文書のアップロードは推奨されません。当アプリケーションの使用により生じた、いかなる損害についても責任を負いません。
+
+                             **セキュリティについて**: 入力されたAPIキーはサーバーのメモリ上でのみ使用され、仕様上、保存・ログ出力を行わない設計としています。
+                             ソースコードはGitHubで公開されており、透明性を確保しています。""",
                         elem_id="disclaimer-text",
                     )
 
@@ -1282,7 +1285,7 @@ class PaperPodcastApp:
                                         placeholder="初期化中...",
                                         type="password",
                                         label="Google Gemini APIキー",
-                                        info="APIキーの取得: https://aistudio.google.com/app/apikey",
+                                        info="APIキーの取得: https://aistudio.google.com/app/apikey\n※キーはサーバーのメモリ上でのみ使用され、仕様上、保存・ログ出力を行わない設計としています。ページをリロードするとクリアされます。",
                                         interactive=False,
                                     )
                                 with gr.Column(scale=2):
@@ -1309,7 +1312,7 @@ class PaperPodcastApp:
                                         placeholder="初期化中...",
                                         type="password",
                                         label="OpenAI APIキー",
-                                        info="APIキーの取得: https://platform.openai.com/api-keys",
+                                        info="APIキーの取得: https://platform.openai.com/api-keys\n※キーはサーバーのメモリ上でのみ使用され、仕様上、保存・ログ出力を行わない設計としています。ページをリロードするとクリアされます。",
                                         interactive=False,
                                     )
                                 with gr.Column(scale=2):
