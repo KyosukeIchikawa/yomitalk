@@ -1174,6 +1174,14 @@ class PaperPodcastApp:
             #footer a:hover {
                 color: #555 !important;
             }
+
+            /* API Key Info Text Styling */
+            .api-key-info p {
+                font-size: 0.85em !important;
+                color: #666 !important;
+                margin-bottom: 5px !important;
+                line-height: 1.4 !important;
+            }
             """
             gr.HTML(f"<style>{css}</style>")
 
@@ -1290,6 +1298,7 @@ class PaperPodcastApp:
                                         choices=GeminiModel.AVAILABLE_MODELS,
                                         value=GeminiModel.DEFAULT_MODEL,
                                         label="モデル",
+                                        info="モデルの詳細は公式ドキュメントをご確認ください:\nhttps://ai.google.dev/gemini-api/docs/models/gemini",
                                         interactive=False,
                                     )
                             with gr.Row():
@@ -1317,6 +1326,7 @@ class PaperPodcastApp:
                                         choices=OpenAIModel.AVAILABLE_MODELS,
                                         value=OpenAIModel.DEFAULT_MODEL,
                                         label="モデル",
+                                        info="モデルの詳細は公式ドキュメントをご確認ください:\nhttps://platform.openai.com/docs/models",
                                         interactive=False,
                                     )
                             with gr.Row():
