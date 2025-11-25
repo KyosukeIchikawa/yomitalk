@@ -167,7 +167,7 @@ class PaperPodcastApp:
                 "音声生成を開始しています...",
                 start_time=time.time(),
             )
-            if progress:
+            if progress is not None:
                 progress(0, desc="🎤 音声生成を開始しています...")
             yield None, user_session, start_html, None, browser_state
         else:
@@ -177,7 +177,7 @@ class PaperPodcastApp:
                 f"音声生成を再開しています... (パート{resume_from_part + 1}から)",
                 start_time=browser_state["audio_generation_state"].get("start_time", time.time()),
             )
-            if progress:
+            if progress is not None:
                 progress(resume_from_part / estimated_total_parts, desc=f"🔄 音声生成を再開中... (パート{resume_from_part + 1}から)")
             yield None, user_session, resume_html, None, browser_state
 
@@ -227,7 +227,7 @@ class PaperPodcastApp:
             start_time=start_time,
         )
 
-        if progress:
+        if progress is not None:
             progress(progress_ratio, desc=progress_desc)
 
         yield (
@@ -253,7 +253,7 @@ class PaperPodcastApp:
             start_time=start_time,
         )
 
-        if progress:
+        if progress is not None:
             progress(1.0, desc="✅ 音声生成完了！")
 
         yield None, user_session, complete_html, audio_path, browser_state
@@ -322,7 +322,10 @@ class PaperPodcastApp:
             self._finalize_audio_generation_with_browser_state(final_combined_path, parts_paths, user_session, browser_state)
 
         except Exception as e:
+            import traceback
+
             logger.error(f"Streaming audio generation exception: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             browser_state["audio_generation_state"]["status"] = "failed"
             browser_state["audio_generation_state"]["is_generating"] = False
             browser_state["audio_generation_state"]["progress"] = 0.0
