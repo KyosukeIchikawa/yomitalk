@@ -230,7 +230,7 @@ class PaperPodcastApp:
         if progress:
             progress(progress_ratio, desc=progress_desc)
 
-        return (
+        yield (
             audio_path,
             user_session,
             progress_html,
@@ -256,7 +256,7 @@ class PaperPodcastApp:
         if progress:
             progress(1.0, desc="✅ 音声生成完了！")
 
-        return None, user_session, complete_html, audio_path, browser_state
+        yield None, user_session, complete_html, audio_path, browser_state
 
     def generate_podcast_audio_streaming_with_browser_state_and_resume(
         self, text: str, user_session: UserSession, browser_state: Dict[str, Any], resume_from_part: int = 0, existing_parts: Optional[List[str]] = None, progress=None
@@ -311,12 +311,12 @@ class PaperPodcastApp:
                 if "part_" in filename:
                     # パートカウンターを常にインクリメント
                     current_part_count += 1
-                    yield self._handle_audio_part(audio_path, user_session, browser_state, current_part_count, estimated_total_parts, existing_parts, parts_paths, progress)
+                    yield from self._handle_audio_part(audio_path, user_session, browser_state, current_part_count, estimated_total_parts, existing_parts, parts_paths, progress)
                     time.sleep(0.05)
                 elif filename.startswith("audio_"):
                     # 最終結合ファイルの場合
                     final_combined_path = audio_path
-                    yield self._handle_final_audio(audio_path, user_session, browser_state, estimated_total_parts, progress)
+                    yield from self._handle_final_audio(audio_path, user_session, browser_state, estimated_total_parts, progress)
 
             # 音声生成の完了処理
             self._finalize_audio_generation_with_browser_state(final_combined_path, parts_paths, user_session, browser_state)
