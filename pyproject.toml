@@ -52,6 +52,11 @@ known-first-party = ["yomitalk"]
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
+[tool.ruff.lint.per-file-ignores]
+# Exclude test files from complexity checks
+"tests/**/*.py" = ["C901"]
+".pre-commit-hooks/**/*.py" = ["C901"]
+
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true
