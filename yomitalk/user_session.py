@@ -216,15 +216,8 @@ class UserSession:
             "last_save_time": time.time(),
         }
 
-    def update_settings_from_browser_state(self, browser_state: dict) -> None:
-        """Update session settings from BrowserState.
-
-        Args:
-            browser_state: Current BrowserState dictionary
-        """
-        settings = browser_state.get("user_settings", {})
-
-        # Update API type
+    def _update_api_type(self, settings: dict) -> None:
+        """Update API type from settings."""
         api_type_str = settings.get("current_api_type", "gemini")
         for api_type in APIType:
             if api_type.name.lower() == api_type_str:
@@ -233,7 +226,8 @@ class UserSession:
                     self.text_processor.set_api_type(api_type)
                 break
 
-        # Update model settings
+    def _update_model_settings(self, settings: dict) -> None:
+        """Update model settings from settings."""
         if "openai_max_tokens" in settings:
             self.text_processor.openai_model.set_max_tokens(settings["openai_max_tokens"])
         if "gemini_max_tokens" in settings:
@@ -243,7 +237,8 @@ class UserSession:
         if "gemini_model" in settings:
             self.text_processor.gemini_model.set_model_name(settings["gemini_model"])
 
-        # Update prompt manager settings
+    def _update_prompt_manager_settings(self, settings: dict) -> None:
+        """Update prompt manager settings from settings."""
         if "document_type" in settings:
             for doc_type in DocumentType:
                 if doc_type.value == settings["document_type"]:
@@ -256,6 +251,23 @@ class UserSession:
                     break
         if "character1" in settings and "character2" in settings:
             self.text_processor.prompt_manager.char_mapping = {"Character1": settings["character1"], "Character2": settings["character2"]}
+
+    def update_settings_from_browser_state(self, browser_state: dict) -> None:
+        """Update session settings from BrowserState.
+
+        Args:
+            browser_state: Current BrowserState dictionary
+        """
+        settings = browser_state.get("user_settings", {})
+
+        # Update API type
+        self._update_api_type(settings)
+
+        # Update model settings
+        self._update_model_settings(settings)
+
+        # Update prompt manager settings
+        self._update_prompt_manager_settings(settings)
 
     def sync_settings_to_browser_state(self, browser_state: dict) -> dict:
         """Sync current session settings to BrowserState.
