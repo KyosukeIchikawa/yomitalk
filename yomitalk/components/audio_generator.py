@@ -12,7 +12,7 @@ import uuid
 import wave
 from enum import Enum, auto
 from pathlib import Path
-from typing import Generator, List, Optional, Tuple
+from typing import Dict, Generator, List, Optional, Tuple
 
 import e2k
 
@@ -448,6 +448,46 @@ class AudioGenerator:
                 result.append(part)
         return result
 
+    def _should_add_space(self, part: str, last_part: str, word_count: int, is_last_part_english: bool, is_english_word: bool) -> bool:
+        """Check if a space should be added before the current part."""
+        if not (is_last_part_english and is_english_word):
+            return False
+
+        # 息継ぎのための空白を入れる条件
+        if word_count >= 6:  # 6単語以上続く
+            return True
+
+        # 特定の品詞の前後で息継ぎ
+        # 特定の品詞の前後で息継ぎ
+        return (last_part.lower() in self.BE_VERBS or part.lower() in self.PREPOSITIONS or part.lower() in self.CONJUNCTIONS) and word_count >= 4
+
+    def _convert_single_part(self, part: str, parts: List[str], i: int, is_english_word: bool, is_all_uppercase: bool, converter: e2k.C2K) -> str:
+        """Convert a single part to katakana."""
+        # "A"の特別な処理: 文脈に応じて変換を決定
+        if part.lower() == "a":
+            return self._convert_a_contextually(part, parts, i)
+
+        if converted_part := self.CONVERSION_OVERRIDE.get(part.lower()):
+            # 特定の単語は事前定義した変換を使用（ただし"a"は上で処理済み）
+            return converted_part
+
+        if self._is_in_user_dict(part):
+            # ユーザー辞書に登録済みの単語はそのまま使用（VOICEVOXが変換する）
+            return part
+
+        if not is_english_word:
+            # 英単語でない場合はそのまま
+            return part
+
+        if is_all_uppercase and (len(part) <= 3 or (len(part) <= 6 and not is_romaji_readable(part))):
+            # 大文字のみで構成され、字数が少なくてローマ字読みできない場合はアルファベット読みして欲しいためそのまま
+            return part
+
+        part_to_convert = part.capitalize() if is_all_uppercase else part
+        # 英単語をカタカナに変換
+        converted: str = converter(part_to_convert)
+        return converted
+
     def _convert_parts_to_katakana(
         self,
         parts: List[str],
@@ -489,39 +529,12 @@ class AudioGenerator:
             is_all_uppercase = bool(re.match(r"^[A-Z]+$", part))
 
             # 空白挿入条件の判定
-            if is_last_part_english and is_english_word:
-                # 息継ぎのための空白を入れる条件
-                needs_space = word_count >= 6  # 6単語以上続く
-
-                # 特定の品詞の前後で息継ぎ
-                if (last_part.lower() in self.BE_VERBS or part.lower() in self.PREPOSITIONS or part.lower() in self.CONJUNCTIONS) and word_count >= 4:
-                    needs_space = True
-
-                if needs_space:
-                    result.append(" ")
-                    word_count = 0  # カウントリセット
+            if self._should_add_space(part, last_part, word_count, is_last_part_english, is_english_word):
+                result.append(" ")
+                word_count = 0  # カウントリセット
 
             # 変換処理
-            # "A"の特別な処理: 文脈に応じて変換を決定
-            if part.lower() == "a":
-                part_to_add = self._convert_a_contextually(part, parts, i)
-            elif converted_part := self.CONVERSION_OVERRIDE.get(part.lower()):
-                # 特定の単語は事前定義した変換を使用（ただし"a"は上で処理済み）
-                part_to_add = converted_part
-            elif self._is_in_user_dict(part):
-                # ユーザー辞書に登録済みの単語はそのまま使用（VOICEVOXが変換する）
-                part_to_add = part
-            elif not is_english_word:
-                # 英単語でない場合はそのまま
-                part_to_add = part
-            elif is_all_uppercase and (len(part) <= 3 or (len(part) <= 6 and not is_romaji_readable(part))):
-                # 大文字のみで構成され、字数が少なくてローマ字読みできない場合はアルファベット読みして欲しいためそのまま
-                # （字数が3文字以下なら基本的にアルファベット読みで良く, 駄目であればCONVERSION_OVERRIDEなどで変換する）
-                part_to_add = part
-            else:
-                part_to_add = part.capitalize() if is_all_uppercase else part
-                # 英単語をカタカナに変換
-                part_to_add = converter(part_to_add)
+            part_to_add = self._convert_single_part(part, parts, i, is_english_word, is_all_uppercase, converter)
 
             result.append(part_to_add)
             last_part = part_to_add
@@ -666,6 +679,45 @@ class AudioGenerator:
         logger.debug(f"Character name '{input_name}' matched to '{best_match}' (similarity: {best_similarity:.2f})")
         return best_match
 
+    def _find_speaker_in_line(self, line: str, character_patterns: Dict[str, List[str]]) -> Tuple[Optional[str], str]:
+        """Find speaker in a line using exact or fuzzy matching."""
+        # 1. Exact match
+        for character_name, patterns in character_patterns.items():
+            for pattern in patterns:
+                if line.startswith(pattern):
+                    speech = line.replace(pattern, "", 1).strip()
+                    return character_name, speech
+
+        # 2. Fuzzy match
+        # 行が "話者名:" または "話者名：" のパターンかチェック
+        speaker_pattern = re.match(r"^([^:：]+)[：:]\s*(.*)", line)
+        if speaker_pattern:
+            potential_speaker, speech = speaker_pattern.groups()
+            potential_speaker = potential_speaker.strip()
+
+            # 曖昧マッチングで最適なキャラクターを探す
+            best_character_name = self._find_best_character_match(potential_speaker)
+
+            if best_character_name:
+                logger.debug(f"Fuzzy matched '{potential_speaker}' to '{best_character_name}'")
+                return best_character_name, speech.strip()
+
+        return None, ""
+
+    def _append_line_to_speech(self, current_speech: str, line: str) -> str:
+        """Append a line to the current speech."""
+        if line:  # 行に内容がある場合
+            # すでに発言内容があれば改行を追加
+            if current_speech:
+                return current_speech + "\n" + line
+            else:
+                return line
+        else:  # 空行の場合
+            # 空行も保持（改行として追加）
+            if current_speech:
+                return current_speech + "\n"
+        return current_speech
+
     def _extract_conversation_parts(self, podcast_text: str) -> List[Tuple[str, str]]:
         """
         Podcast textから会話部分を抽出する
@@ -691,42 +743,11 @@ class AudioGenerator:
         for line in lines:
             line = line.strip()
 
-            # 新しい話者の行かチェック（曖昧マッチング対応）
-            found_new_speaker = False
-            matched_speaker = None
-            matched_speech = ""
-
-            # まず完全一致をチェック
-            for character, patterns in character_patterns.items():
-                for pattern in patterns:
-                    if line.startswith(pattern):
-                        matched_speaker = character
-                        matched_speech = line.replace(pattern, "", 1).strip()
-                        found_new_speaker = True
-                        break
-                if found_new_speaker:
-                    break
-
-            # 完全一致しない場合、曖昧マッチングを試行
-            if not found_new_speaker:
-                # 行が "話者名:" または "話者名：" のパターンかチェック
-                speaker_pattern = re.match(r"^([^:：]+)[：:]\s*(.*)", line)
-                if speaker_pattern:
-                    potential_speaker, speech = speaker_pattern.groups()
-                    potential_speaker = potential_speaker.strip()
-
-                    # 曖昧マッチングで最適なキャラクターを探す
-                    best_character = self._find_best_character_match(potential_speaker)
-
-                    # マッチした場合
-                    if best_character:
-                        matched_speaker = best_character
-                        matched_speech = speech.strip()
-                        found_new_speaker = True
-                        logger.debug(f"Fuzzy matched '{potential_speaker}' to '{best_character}'")
+            # 新しい話者の行かチェック
+            matched_speaker, matched_speech = self._find_speaker_in_line(line, character_patterns)
 
             # 新しい話者が見つかった場合
-            if found_new_speaker and matched_speaker:
+            if matched_speaker:
                 # 前の話者の発言があれば追加
                 if current_speaker and current_speech:
                     conversation_parts.append((current_speaker, current_speech))
@@ -735,17 +756,8 @@ class AudioGenerator:
                 current_speaker = matched_speaker
                 current_speech = matched_speech
             # 話者の切り替えがなく、現在の話者が存在する場合、行を現在の発言に追加
-            elif not found_new_speaker and current_speaker:
-                if line:  # 行に内容がある場合
-                    # すでに発言内容があれば改行を追加
-                    if current_speech:
-                        current_speech += "\n" + line
-                    else:
-                        current_speech = line
-                else:  # 空行の場合
-                    # 空行も保持（改行として追加）
-                    if current_speech:
-                        current_speech += "\n"
+            elif current_speaker:
+                current_speech = self._append_line_to_speech(current_speech, line)
 
         # 最後の話者の発言があれば追加
         if current_speaker and current_speech:
@@ -760,6 +772,87 @@ class AudioGenerator:
 
         logger.info(f"Extracted {len(conversation_parts)} conversation parts")
         return conversation_parts
+
+    def _restore_existing_parts(self, existing_parts: List[str], wav_data_list: List[bytes], temp_files: List[str]) -> Generator[str, None, None]:
+        """Restore existing audio parts."""
+        logger.info(f"PROCESSING {len(existing_parts)} existing parts...")
+        for i, existing_part_path in enumerate(existing_parts):
+            if existing_part_path and os.path.exists(existing_part_path):
+                logger.debug(f"Restoring existing part {i}: {os.path.basename(existing_part_path)}")
+                try:
+                    with open(existing_part_path, "rb") as f:
+                        existing_wav_data = f.read()
+                    wav_data_list.append(existing_wav_data)
+                    temp_files.append(existing_part_path)
+                    logger.debug(f"Yielding existing part {i} for streaming")
+                    yield existing_part_path
+                except Exception as e:
+                    logger.error(f"Failed to load existing part {existing_part_path}: {e}")
+            else:
+                logger.warning(f"Existing part {i} does not exist: {os.path.basename(existing_part_path) if existing_part_path else 'None'}")
+
+    def _generate_new_parts(
+        self,
+        conversation_parts: List[Tuple[str, str]],
+        resume_from_part: int,
+        total_parts: int,
+        temp_dir: Path,
+        wav_data_list: List[bytes],
+        temp_files: List[str],
+    ) -> Generator[str, None, None]:
+        """Generate new audio parts."""
+        logger.info(f"Starting NEW generation from part {resume_from_part} to {total_parts - 1}")
+        for i in range(resume_from_part, total_parts):
+            speaker, text = conversation_parts[i]
+            self.audio_generation_progress = (i + 1) / total_parts * 0.8
+
+            if not text.strip():
+                logger.debug(f"Skipping empty text for part {i}")
+                continue
+
+            logger.debug(f"Generating NEW part {i}: {speaker} - {len(text)} chars")
+            style_id = STYLE_ID_BY_NAME[speaker]
+            part_wav_data = self._text_to_speech(text, style_id)
+
+            if part_wav_data:
+                wav_data_list.append(part_wav_data)
+                temp_file_path = temp_dir / f"part_{i:03d}_{speaker}.wav"
+                with open(temp_file_path, "wb") as f:
+                    f.write(part_wav_data)
+                temp_files.append(str(temp_file_path))
+                logger.debug(f"Generated and yielding NEW part {i}: {temp_file_path.name}")
+                yield str(temp_file_path)
+            else:
+                logger.error(f"Failed to generate audio for part {i}")
+
+    def _combine_and_save_final_audio(self, wav_data_list: List[bytes]) -> Generator[str, None, None]:
+        """Combine audio parts and save final file."""
+        if wav_data_list:
+            logger.info(f"Combining {len(wav_data_list)} audio parts into final file")
+            combined_wav_data = self._combine_wav_data_in_memory(wav_data_list)
+
+            if combined_wav_data:
+                now = datetime.datetime.now()
+                date_str = now.strftime("%Y%m%d_%H%M%S")
+                file_id = uuid.uuid4().hex[:8]
+
+                self.output_dir.mkdir(parents=True, exist_ok=True)
+                output_file = str(self.output_dir / f"audio_{date_str}_{file_id}.wav")
+
+                try:
+                    with open(output_file, "wb") as f:
+                        f.write(combined_wav_data)
+
+                    self.final_audio_path = output_file
+                    self.audio_generation_progress = 1.0
+
+                    logger.info(f"Final combined audio created: {output_file}")
+                    yield output_file
+
+                except Exception as e:
+                    logger.error(f"音声ファイルの書き込みエラー: {str(e)}")
+            else:
+                logger.error("音声データの結合に失敗しました")
 
     def _generate_and_combine_audio_with_resume(
         self, conversation_parts: List[Tuple[str, str]], temp_dir: Path, resume_from_part: int = 0, existing_parts: Optional[List[str]] = None
@@ -781,119 +874,35 @@ class AudioGenerator:
         logger.debug(f"Resume from part: {resume_from_part}")
         logger.debug(f"Existing parts count: {len(existing_parts or [])}")
 
-        wav_data_list = []  # メモリ上に直接音声データを保持するリスト
-        temp_files = []  # 一時ファイルのパスを保持するリスト
+        wav_data_list: List[bytes] = []  # メモリ上に直接音声データを保持するリスト
+        temp_files: List[str] = []  # 一時ファイルのパスを保持するリスト
         total_parts = len(conversation_parts)
 
         logger.info(f"Starting audio generation: total_parts={total_parts}, resume_from_part={resume_from_part}, existing_parts={len(existing_parts or [])}")
 
         # 既存のパートがある場合、それらをまず yield し、wav_data_list に追加
         if existing_parts and resume_from_part > 0:
-            logger.info(f"PROCESSING {len(existing_parts)} existing parts...")
-            for i, existing_part_path in enumerate(existing_parts):
-                if existing_part_path and os.path.exists(existing_part_path):
-                    logger.debug(f"Restoring existing part {i}: {os.path.basename(existing_part_path)}")
-                    # 既存パートの音声データを読み込んで wav_data_list に追加
-                    try:
-                        with open(existing_part_path, "rb") as f:
-                            existing_wav_data = f.read()
-                        wav_data_list.append(existing_wav_data)
-                        temp_files.append(existing_part_path)
-
-                        # 既存パートを yield（ストリーミング再生用）
-                        logger.debug(f"Yielding existing part {i} for streaming")
-                        yield existing_part_path
-                    except Exception as e:
-                        logger.error(f"Failed to load existing part {existing_part_path}: {e}")
-                else:
-                    logger.warning(f"Existing part {i} does not exist: {os.path.basename(existing_part_path) if existing_part_path else 'None'}")
+            yield from self._restore_existing_parts(existing_parts, wav_data_list, temp_files)
 
         # resume_from_part から新しい音声生成を開始
-        logger.info(f"Starting NEW generation from part {resume_from_part} to {total_parts - 1}")
-        for i in range(resume_from_part, total_parts):
-            speaker, text = conversation_parts[i]
-
-            # 進捗状況の更新
-            self.audio_generation_progress = (i + 1) / total_parts * 0.8
-
-            if not text.strip():
-                logger.debug(f"Skipping empty text for part {i}")
-                continue
-
-            logger.debug(f"Generating NEW part {i}: {speaker} - {len(text)} chars")
-
-            # 音声生成
-            style_id = STYLE_ID_BY_NAME[speaker]
-            part_wav_data = self._text_to_speech(text, style_id)
-
-            if part_wav_data:
-                wav_data_list.append(part_wav_data)
-
-                # 一時ファイルに書き込み、ストリーミング再生用に提供
-                temp_file_path = temp_dir / f"part_{i:03d}_{speaker}.wav"
-                with open(temp_file_path, "wb") as f:
-                    f.write(part_wav_data)
-
-                temp_files.append(str(temp_file_path))
-
-                # ストリーミング再生用に現在のパートをyield
-                logger.debug(f"Generated and yielding NEW part {i}: {temp_file_path.name}")
-                yield str(temp_file_path)
-            else:
-                logger.error(f"Failed to generate audio for part {i}")
+        yield from self._generate_new_parts(conversation_parts, resume_from_part, total_parts, temp_dir, wav_data_list, temp_files)
 
         # メモリ上で音声データを結合して最終的な音声ファイルを作成
-        if wav_data_list:
-            logger.info(f"Combining {len(wav_data_list)} audio parts into final file")
-            combined_wav_data = self._combine_wav_data_in_memory(wav_data_list)
-
-            if combined_wav_data:
-                # 日付付きの最終的な出力ファイル名を生成
-                now = datetime.datetime.now()
-                date_str = now.strftime("%Y%m%d_%H%M%S")
-                file_id = uuid.uuid4().hex[:8]
-
-                self.output_dir.mkdir(parents=True, exist_ok=True)
-                output_file = str(self.output_dir / f"audio_{date_str}_{file_id}.wav")
-
-                try:
-                    with open(output_file, "wb") as f:
-                        f.write(combined_wav_data)
-
-                    # クラス変数に最終的なファイルパスを保存
-                    self.final_audio_path = output_file
-                    self.audio_generation_progress = 1.0
-
-                    logger.info(f"Final combined audio created: {output_file}")
-                    yield output_file
-
-                except Exception as e:
-                    logger.error(f"音声ファイルの書き込みエラー: {str(e)}")
-            else:
-                logger.error("音声データの結合に失敗しました")
+        yield from self._combine_and_save_final_audio(wav_data_list)
 
     def reset_audio_generation_state(self) -> None:
         """音声生成に関連する状態をリセットする"""
         self.audio_generation_progress = 0.0
         self.final_audio_path = None
 
-    def _fix_conversation_format(self, text: str) -> str:
-        """
-        会話テキストのフォーマット問題を修正する
-
-        Args:
-            text (str): 元の会話テキスト
-
-        Returns:
-            str: 修正された会話テキスト
-        """
-        import re
-
-        # 話者名の後にコロンがない場合修正
+    def _add_missing_colons(self, text: str) -> str:
+        """Add missing colons after speaker names."""
         for name in DISPLAY_NAMES:
             text = re.sub(f"({name})(\\s+)(?=[^\\s:])", f"{name}:\\2", text)
+        return text
 
-        # カスタム名のキャラクターを検出し、標準名にマッピング
+    def _normalize_speaker_names(self, text: str) -> List[str]:
+        """Normalize speaker names and handle multi-line speeches."""
         lines = text.split("\n")
         fixed_lines = []
         speaker_pattern = re.compile(r"^([^:：]+)[：:]\s*(.*)")
@@ -937,7 +946,10 @@ class AudioGenerator:
         if current_speaker and current_speech:
             fixed_lines.append(f"{current_speaker}: {' '.join(current_speech)}")
 
-        # 複数の話者が一行に存在する場合を分割
+        return fixed_lines
+
+    def _split_multi_speaker_lines(self, fixed_lines: List[str]) -> str:
+        """Split lines containing multiple speakers."""
         result = []
         for line in fixed_lines:
             modified_line = line
@@ -951,6 +963,25 @@ class AudioGenerator:
             result.append(modified_line)
 
         return "\n".join(result)
+
+    def _fix_conversation_format(self, text: str) -> str:
+        """
+        会話テキストのフォーマット問題を修正する
+
+        Args:
+            text (str): 元の会話テキスト
+
+        Returns:
+            str: 修正された会話テキスト
+        """
+        # 話者名の後にコロンがない場合修正
+        text = self._add_missing_colons(text)
+
+        # カスタム名のキャラクターを検出し、標準名にマッピング
+        fixed_lines = self._normalize_speaker_names(text)
+
+        # 複数の話者が一行に存在する場合を分割
+        return self._split_multi_speaker_lines(fixed_lines)
 
     def _combine_wav_data_in_memory(self, wav_data_list: List[bytes]) -> bytes:
         """
